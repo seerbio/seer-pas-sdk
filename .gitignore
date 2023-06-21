@@ -120,7 +120,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -152,7 +151,15 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-/constants/*.json
+# Constant files that I use for reference in the common directory
+/common/*.json
+
+.DS_Store
+
+testing
+testing/*.raw
+testing/*.csv
+
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore

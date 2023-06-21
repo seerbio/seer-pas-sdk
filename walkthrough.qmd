@@ -1,0 +1,460 @@
+---
+title: "Seer SDK Guide"
+format: 
+    html: default
+    ipynb: default
+
+---
+
+## Installation
+The package can be installed and imported using the official SeerSDK package on pip. This can be installed using: 
+
+```{python}
+installation = !pip install SeerSDK
+print(installation)
+```
+
+<hr>
+
+The SDK uses a `requirements.txt` file to manage dependencies. All dependencies for the SDK can be installed using the following command.
+```{python}
+requirements = !pip install -r requirements.txt
+print(requirements)
+```
+
+## Usage
+
+### Configuration
+PAS has a simple authorization system that just involves your username and password fields like on the web app. You can define your username and password for your own ready reference and convenience as follows:
+```{python}
+USERNAME = "gnu403"
+PASSWORD = "Test!234567"
+```
+
+### Instantiation
+After importing the SeerSDK module, you can instantiate an object in the following way:
+```{python}
+from core import SeerSDK
+
+# You could alternatively pass your username and password directly into the instatiated object.
+sdk = SeerSDK(USERNAME, PASSWORD)
+```
+
+### [Optional] Logging
+For your own convenience, you can define a log function that allows you to print data from the SDK in a much better and presentable manner.
+```{python}
+import json
+
+def log(fn):
+    try:
+        print(fn)
+    except:
+        print(fn)
+```
+
+
+
+
+## Examples
+
+### Get Spaces
+Fetches a list of spaces for the authenticated user.
+
+###### <u>Params</u>
+None.
+<br>
+
+###### <u>Returns</u>
+`spaces`: (`list`) List of space objects for the authenticated user.
+
+###### <u>Example</u>
+```{python}
+#| code-overflow: wrap 
+spaces = sdk.get_spaces()
+log(spaces)
+```
+
+
+<hr>
+
+
+### Get Samples Metadata
+Fetches a list of samples for the authenticated user, filtered by `plate_id`. Returns all samples for the plate with the given `plate_id`, provided it exists.
+
+If both `plate_id` and `project_id` are passed in, only the `plate_id` is validated first.
+
+The function returns a dict containing DataFrame objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
+
+###### <u>Params</u>
+* `plate_id`: (`str`, optional) ID of the plate for which samples are to be fetched, defaulted to `None`.
+* `project_id`: (`str`, optional) Unique ID of the project to be fetched. Defaulted to `None`
+* `df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+<br>
+
+###### <u>Returns</u>
+`samples`: (`list` or `DataFrame`) `List` or `DataFrame` of samples for the authenticated user.
+
+###### <u>Example</u>
+You could use the `project_id` as in the example below:
+```{python}
+plate_id = "7ec8cad0-15e0-11ee-bdf1-bbaa73585acf"
+project_id = "7e48e150-8a47-11ed-b382-bf440acece26"
+sample_project = sdk.get_samples_metadata(project_id=project_id)
+log(sample_project)
+```
+
+Alteratively, you could use the `plate_id` as in the example below:
+```{python}
+plate_id = "7ec8cad0-15e0-11ee-bdf1-bbaa73585acf"
+project_id = "7e48e150-8a47-11ed-b382-bf440acece26"
+sample_plate = sdk.get_samples_metadata(plate_id=plate_id)
+log(sample_plate)
+```
+
+However, when you pass both `plate_id` and `project_id`, only the `plate_id` is validated.
+
+```{python}
+plate_id = "7ec8cad0-15e0-11ee-bdf1-bbaa73585acf"
+project_id = "7e48e150-8a47-11ed-b382-bf440acece26"
+example = sdk.get_samples_metadata(plate_id, project_id, df=True)
+log(example)
+```
+
+### Get Plate Metadata
+Fetches a list of plates for the authenticated user. If no `plate_id` is provided, returns all plates for the authenticated user. If `plate_id` is provided, returns the plate with the given `plate_id`, provided it exists. 
+
+Same as `get_plate_metadata` but returns a `DataFrame` object instead.
+
+###### <u>Params</u>
+* `plate_id`: (`str`, optional) Unique ID of the plate to be fetched, defaulted to `None`.
+* `df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+<br>
+
+###### <u>Returns</u>
+`plates`: (`list` or `DataFrame`) `list` or `DataFrame` of plate objects for the authenticated user.
+
+###### <u>Example</u>
+```{python}
+plates = sdk.get_plate_metadata()
+log(plates)
+```
+
+You can also pass in a specific `plate_id` to specifically fetch a plate.
+```{python}
+plate_id = "00d1ac50-1149-11ee-85b5-bd8ec5ef4e32"
+sample_plate = sdk.get_plate_metadata(plate_id)
+log(sample_plate)
+```
+
+With the `df` flag set to `True`:
+```{python}
+sample_plate = sdk.get_plate_metadata(plate_id, df=True)
+log(sample_plate)
+```
+
+<hr>
+
+
+
+### Get Plate
+Fetches MS data files for a `plate_id` (provided that the `plate_id` is valid and has samples associated with it) for an authenticated user. 
+
+The function returns a dict containing `DataFrame` objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
+
+###### <u>Params</u>
+* `plate_id`: (`str`, optional) Unique ID of the plate to be fetched, defaulted to `None`.
+* `df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+<br>
+
+###### <u>Returns</u>
+`res`: (`DataFrame`) List/`DataFrame` of MS data file objects for the authenticated user.
+
+###### <u>Example</u>
+
+```{python}
+plate_id = "00d1ac50-1149-11ee-85b5-bd8ec5ef4e32"
+sample_plate = sdk.get_plate(plate_id)
+log(sample_plate)
+```
+
+With `df` flag set to `True`:
+```{python}
+sample_plate = sdk.get_plate(plate_id=plate_id, df=True)
+log(sample_plate)
+```
+
+<hr>
+
+### Get MS Data
+Fetches MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user. 
+
+The function returns a dict containing `DataFrame` objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
+
+###### <u>Params</u>
+* `sample_ids`: (`list`) List of unique sample IDs.
+* `df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+<br>
+
+###### <u>Returns</u>
+`res`: (`DataFrame`) `List` or `DataFrame` of MS data file objects for the authenticated user.
+
+###### <u>Example</u>
+
+```{python}
+sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
+example = sdk.get_msdata(sample_ids)
+log(example)
+```
+
+There is also an option to return everything as a DataFrame instead:
+```{python}
+example = sdk.get_msdata(sample_ids, df=True)
+log(example)
+```
+
+<hr>
+
+
+### Get Project Metadata
+Fetches a list of projects for the authenticated user. If no `project_id` is provided, returns all projects for the authenticated user. If `project_id` is provided, returns the project with the given `project_id`, provided it exists.
+
+The function returns a dict containing `DataFrame` objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
+
+###### <u>Params</u>
+* `project_id`: (`str`, optional) Unique ID of the project to be fetched, defaulted to `None`.
+* `df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+<br>
+
+###### <u>Returns</u>
+`projects`: (`list` or `DataFrame`) `list` or `DataFrame` of plate objects for the authenticated user.
+
+###### <u>Example</u>
+```{python}
+projects = sdk.get_project_metadata()
+log(projects)
+```
+
+You can also pass in a specific `project_id` to specifically fetch a project.
+```{python}
+project_id = "222e0890-0f95-11ee-9c0f-3bf27c252a07"
+sample_project = sdk.get_project_metadata(project_id)
+log(sample_project)
+```
+
+
+<hr>
+
+### Get Project
+Fetches samples (and MS data files) for a `project_id` (provided that the `project_id` is valid and has samples associated with it) for an authenticated user. 
+
+The function returns a dict containing DataFrame objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
+
+###### <u>Params</u>
+* `project_id`: (`str`, optional) Unique ID of the project to be fetched.
+* `msdata`: (`bool`, optional) Boolean flag denoting whether the user wants relevant MS data files associated with the samples.
+* `df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+<br>
+
+###### <u>Returns</u>
+`res`: (`list` or `DataFrame`) `List` or `DataFrame` of project objects for the authenticated user.
+
+###### <u>Example</u>
+```{python}
+project_id = "7e48e150-8a47-11ed-b382-bf440acece26"
+sample_project = sdk.get_project(project_id=project_id, msdata=False, df=False)
+log(sample_project)
+```
+
+With the `msdata` and `df` flags set as True:
+```{python}
+sample_project = sdk.get_project(project_id=project_id, msdata=True, df=True)
+log(sample_project)
+```
+<hr>
+
+
+### Get Analysis Protocols
+Fetches a list of analysis protocols for the authenticated user. If no analysis_id is provided, returns all analysis protocols for the authenticated user. If name (and no analysis_id) is provided, returns the analysis protocol with the given name, provided it exists. 
+
+###### <u>Params</u>
+* `analysis_id`: (`str`, optional) Unique ID of the analysis protocol to be fetched, defaulted to None.
+* `name`: (`str`, optional) Name of the analysis protocol to be fetched, defaulted to None.
+<br>
+
+###### <u>Returns</u>
+`protocols`: (`list`) List of analysis protocol objects for the authenticated user.
+
+###### <u>Example</u>
+```{python}
+analysis_protocols = sdk.get_analysis_protocols()
+log(analysis_protocols)
+```
+
+You can also pass in a specific `name` to specifically fetch an analysis protocol.
+```{python}
+protocol_name = "testMSFraggerUpload26"
+sample_analysis_protocol = sdk.get_analysis_protocols(analysis_protocol_name=protocol_name)
+log(sample_analysis_protocol)
+```
+
+The same can be done for `analysis_id`.
+```{python}
+protocol_id = "dc61a360-6b77-11ed-8ac3-37d35135f08e"
+sample_analysis_protocol = sdk.get_analysis_protocols(analysis_protocol_id=protocol_id)
+log(sample_analysis_protocol)
+```
+
+<hr>
+
+
+
+
+### Get Analysis
+Returns a list of analyses objects for the authenticated user. If no `analysis_id` is provided, returns all analyses for the authenticated user.
+
+###### <u>Params</u>
+`analysis_id`: (`str`, optional) Unique ID of the analysis to be fetched, defaulted to None.
+<br>
+
+###### <u>Returns</u>
+`analyses`: (`dict`) Contains a list of analyses objects for the authenticated user.
+
+###### <u>Example</u>
+```{python}
+analyses = sdk.get_analysis()
+log(analyses)
+```
+
+You can also pass in a specific `analysis_id` to specifically fetch an analysis.
+```{python}
+analysis_id = "00425a60-a850-11ea-b3d7-0171d11d0807"
+sample_analysis = sdk.get_analysis(analysis_id)
+log(sample_analysis)
+```
+
+
+<hr>
+
+
+### Get Analysis Result
+Given an `analysis_id`, this function returns all relevant analysis data files in form of DataFrames, if the input is valid and the analysis has succeeded.
+
+In case the analysis has failed for the given `analysis_id`, the function will return a `ValueError`.
+
+
+###### <u>Params</u>
+* `analysis_id`: (`str`) Unique ID of the analysis for which the data is to be fetched.
+* `download`: (`bool`, optional) Boolean flag denoting whether the user wants the files downloaded to a local directory or not.
+
+###### <u>Returns</u>
+`links`: (`dict`) Contains `DataFrame` objects for the `analysis_id`, given that the analysis has been complete.
+
+###### <u>Example</u>
+If you want the result as `DataFrame` objects:
+```{python}
+analysis_id = "ddff8c40-0493-11ee-bd19-a77197cd1a6b"
+analysis_data = sdk.get_analysis_result(analysis_id)
+log(analysis_data)
+```
+
+If you want the resulting CSV downloaded to the local directory:
+```{python}
+analysis_data = sdk.get_analysis_result(analysis_id, download=True)
+log(analysis_data)
+```
+
+The file will be stored in `/downloads/` directory under the unique `analysis_id` you entered.
+<hr>
+
+
+### Add Project
+Creates a new project with a given `project_name` and a list containing `project_id` strings.
+
+###### <u>Params</u>
+* `project_name`: (`str`) Name of the project.
+* `plate_ids`: (`list[str]`) List of the plate ids to be added to the project.
+* `description`: (`str`, optional) Description of the project.
+* `notes`: (`str`, optional) Notes for the project.
+* `space`: (`str`, optional) Space where the object is contained. Defaults to the space of the user who is creating the project (or `None`).
+<br>
+
+###### <u>Returns</u>
+`res`: (`dict`) A sictionary containing the status of the request if succeeded.
+
+###### <u>Example</u>
+```{python}
+project_name = "test_project" 
+plate_ids = ["9872e3f0-544e-11ea-ad9e-1991e0725494", "5b05d440-6610-11ea-96e3-d5a4dab4ebf6"]
+print(sdk.add_project(project_name, plate_ids))
+```
+
+<hr>
+
+
+
+### Analysis Complete
+Returns the status of the analysis with the given `analysis_id`.
+
+###### <u>Params</u>
+`analysis_id`: (`str`) Unique ID of the analysis.
+
+###### <u>Returns</u>
+`res`: (`dict`) A dictionary containing the status of the analysis.
+
+###### <u>Example</u>
+```{python}
+analysis_id = "ddff8c40-0493-11ee-bd19-a77197cd1a6b" 
+print(sdk.analysis_complete(analysis_id))
+```
+<hr>
+
+### Add Plate
+Add a plate given a list of `ms_data_files`, `plate_map_file`, `plate_id`, `plate_name`, and `space`.
+
+###### <u>Params</u>
+* `ms_data_files`: (`list[str]`) List of MS Data files.
+* `plate_map_file`: (`str`) The plate map file.
+* `plate_id`: (`str`) The plate ID. Must be unique.
+* `plate_name`: (`str`) The plate name.
+* `space`: (`str`, optional) Space where the plate is contained. Defaults to the space of the user who is creating the project (or `None`).
+<br>
+
+###### <u>Returns</u>
+`res`: (`dict`) A sictionary containing the status of the request if succeeded.
+
+###### <u>Example</u>
+```{python}
+data_file_locations = ["testing/AgamSDKTest1.raw", "testing/AgamSDKTest2.raw"]
+plate_map_location = "testing/AgamSDKPlateMapATest.csv"
+sample_plate_id= "unique223id"
+sample_plate_name = "some_plate_name" 
+
+print(sdk.add_plate(data_file_locations, plate_map_location, sample_plate_id, sample_plate_name))
+```
+
+<hr>
+
+### Start Analysis
+Start a new analysis for the authenticated_user given an `analysis_name`, `analysis_protocol_id`, and `project_id`.
+
+###### <u>Params</u>
+* `analysis_name`: (`str`) Name of the analysis.
+* `project_ids`: (`str`) ID of the project to which the analysis belongs. Can be fetched using the `get_project_metadatas()` function.
+* `analysis_protocol_name`: (`str`, optional) Name of the analysis protocol to be used for the analysis. Can be fetched using the `get_analysis_protocols()` function. Should be omitted if analysis_protocol_id is provided.
+* `analysis_protocol_id`: (`str`, optional) ID of the analysis protocol to be used for the analysis. Can be fetched using the `get_analysis_protocols()` function. Should be omitted if `analysis_protocol_name` is provided.
+* `notes`: (`str`, optional): Notes for the analysis, defaulted to an empty string
+* `description`: (`str`, optional): Description for the analysis, defaulted to an empty string.
+* `space`: (`str`, optional) Space where the object is contained. Defaults to the space of the user who is creating the project (or `None`).
+<br>
+
+###### <u>Returns</u>
+`res`: (`dict`) Contains message whether the analysis was started or not.
+
+###### <u>Example</u>
+```{python}
+name = "testAnalysis"
+project_id = "1e324300-0496-11ee-bd19-a77197cd1a6b"
+analysis_protocol_name = "testMSFraggerUpload26" # you can also specify `analysis_protocol_id` instead
+print(sdk.start_analysis(name, project_id, analysis_protocol_name=analysis_protocol_name))
+```
+<hr>
