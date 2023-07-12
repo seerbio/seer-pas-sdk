@@ -1,6 +1,7 @@
 from common import *
 from auth import Auth
 from dotenv import load_dotenv
+from objects import PlateMap
 
 import os
 import requests
@@ -609,9 +610,8 @@ class SeerSDK:
                 return analyses.json()["data"]
 
             return [analyses.json()["analysis"]]
-  
-    # TODO: Explore download functionality to this.
-    def get_analysis_result(self, analysis_id: str, download: bool=False):
+    
+    def get_analysis_result(self, analysis_id: str, download_path: str=""):
         """
         Given an `analysis_id`, this function returns all relevant analysis data files in form of downloadable content, if applicable.
 
@@ -620,8 +620,8 @@ class SeerSDK:
         analysis_id : str
             ID of the analysis for which the data is to be fetched.
 
-        download : bool
-            Boolean flag denoting whether the user wants the files downloaded to a local directory or not.
+        download_path : bool
+            String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid. Defaults to an empty string.
 
         Returns
         -------
@@ -633,7 +633,7 @@ class SeerSDK:
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
 
-        >>> seer_sdk.download_analysis_data("YOUR_ANALYSIS_ID_HERE")
+        >>> seer_sdk.get_analysis_result("YOUR_ANALYSIS_ID_HERE")
         >>> {
                 "peptide_np": <peptide_np dataframe object>,
                 "peptide_panel": <peptide_panel dataframe object>,
@@ -641,12 +641,15 @@ class SeerSDK:
                 "protein_panel": <protein_panel dataframe object>
             }
         
-        >>> seer_sdk.download_analysis_data("YOUR_ANALYSIS_ID_HERE", download=True)
+        >>> seer_sdk.get_analysis_result("YOUR_ANALYSIS_ID_HERE", download_path="/Users/Downloads")
         >>> { "status": "Download complete." }
         """
 
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
+        
+        if download_path and not os.path.exists(download_path):
+            raise ValueError("The download path you entered is invalid.")
 
         if self.get_analysis(analysis_id)[0]["status"] in ["FAILED", None]:
                 raise ValueError("Cannot generate links for failed or null analyses.")
@@ -683,8 +686,8 @@ class SeerSDK:
                 "protein_panel": url_to_df(protein_data["panelLink"]["url"]),
             }
 
-            if download:
-                name = f"downloads/{analysis_id}"
+            if download_path:
+                name = f"{download_path}/downloads/{analysis_id}"
                 if not os.path.exists(name):
                     os.makedirs(name)
 
@@ -835,7 +838,7 @@ class SeerSDK:
         ----------
         ms_data_files : list[str]
             List of ms_data_files.
-        plate_map_file : str
+        plate_map_file : str or `PlateMap` Object
             The plate map file.
         plate_id : str
             The plate ID. Must be unique.
@@ -925,7 +928,15 @@ class SeerSDK:
             s3_upload_path = config_response.json()["s3UploadPath"]
 
         # Step 4: Upload the platemap file to the S3 bucket.
-        plate_map_file_name = os.path.basename(plate_map_file)
+
+        if isinstance(plate_map_file, PlateMap):
+            plate_map_file_name = f"plateMap_{id_uuid}.csv"
+            plate_map_file.to_csv(f"testing/{plate_map_file_name}")
+            plate_map_file = f"testing/{plate_map_file_name}"
+            
+        else:
+            plate_map_file_name = os.path.basename(plate_map_file)
+
         res = upload_file(plate_map_file, s3_bucket, f"{s3_upload_path}{plate_map_file_name}")
 
         if not res:
@@ -1127,3 +1138,95 @@ class SeerSDK:
                 raise ValueError("Invalid request. Please check your parameters.")
 
             return analysis.json()
+
+    def upload_ms_data_files(self, ms_data_files: list, path: str="", space: str=None):
+        """
+        Upload MS data files to the backend.
+
+        Parameters
+        ----------
+        ms_data_files : List
+            List of MS data files to be uploaded.
+        space: str, optional
+            ID of the user group to which the files belongs, defaulted to None.
+
+        Returns 
+        -------
+        dict
+            Contains message whether the files were uploaded or not.
+
+        Example
+        -------
+        >>> from core import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk.upload_ms_data_files(["/path/to/file1", "/path/to/file2"])
+        >>> { "message": "Files uploaded successfully." }
+        """
+
+        files = []
+        tenant_id = ""
+        s3_bucket = ""
+
+        # Step 1: Check if paths and file extensions are valid.
+        for file in ms_data_files:
+            if not valid_ms_data_file(file):
+                raise ValueError("Invalid file or file format. Please check your file.")
+
+        # Step 2: Fetch the tenant id by making a call to `/api/v1/usersetting`
+        TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{TOKEN}"}
+        URL = f"{self.auth.url}api/v1/usersetting"
+
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            response = s.get(URL)
+
+            if response.status_code != 200:
+                raise ValueError("Could not connect to the backend.")
+
+            tenant_id = response.json()["tenant_id"]
+
+        # Step 3: Fetch the S3 bucket name by making a call to `/api/v1/auth/getawscredential`
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            config_response = s.get(
+                f"{self.auth.url}auth/getawscredential",)
+
+            if config_response.status_code != 200 or not config_response.json():
+                raise ValueError("Could not fetch config for user.")
+
+            if "S3Bucket" not in config_response.json()["credentials"]:
+                raise ValueError("Upload failed. Please check if the backend is still running.") 
+
+            s3_bucket = config_response.json()["credentials"]["S3Bucket"]
+
+        # Step 4: Upload each msdata file to the S3 bucket.
+        for file in ms_data_files:
+            filename = os.path.basename(file)
+            filesize = os.stat(file).st_size
+            s3_upload_path = f"{tenant_id}/{path}"
+
+            res = upload_file(file, s3_bucket, f"{s3_upload_path}/{filename}")
+
+            if not res:
+                raise ValueError("Upload to AWS S3 failed.")
+
+            files.append({
+                "filePath": f"{s3_upload_path}/{filename}",
+                "fileSize": filesize,
+                "userGroupId": space
+            })   
+        
+        # Step 5: Make a call to `/api/v1/msdataindex/file` to sync with frontend. This should only be done after all files have finished uploading, simulating an async "promise"-like scenario in JavaScript.
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            file_response = s.post(
+                f"{self.auth.url}api/v1/msdataindex/file", 
+                json={ 
+                    "files": files
+                })
+
+            if file_response.status_code != 200 or not file_response.json() or "created" not in file_response.json():
+                raise ValueError("Upload failed, please check if backend is still active and running.")
+
+        return { "message": "Files uploaded successfully." }

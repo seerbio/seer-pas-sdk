@@ -160,6 +160,12 @@ testing
 testing/*.raw
 testing/*.csv
 
+walkthrough/
+walkthrough_files/
+walkthrough.html
+walkthrough.ipynb
+walkthrough.qmd
+
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore

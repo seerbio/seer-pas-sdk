@@ -2,7 +2,7 @@
 title: "Seer SDK Guide"
 format: 
     html: default
-    ipynb: default
+    # ipynb: default
 
 ---
 
@@ -40,16 +40,112 @@ from core import SeerSDK
 sdk = SeerSDK(USERNAME, PASSWORD)
 ```
 
+### `PlateMap` Object
+
+The PAS Python SDK would allow users to make plate maps file from within the SDK using the `PlateMap` object located in the `objects` module. This module is imported by default within the SDK. The interface of the plate map file contains the following parameters, all of which need to be passed in as lists:
+
+* MS file name as `ms_file_name` 
+* Sample name as `sample_name`
+* Sample ID as `sample_id`
+* Well location as `well_location`
+* Nanoparticle as `nanoparticle` 
+* Nanoparticle ID as `nanoparticle_id`
+* Control as `control`
+* Control ID as `control_id`
+* Instrument name as `instrument_name`
+* Date sample preparation as `date_sample_preparation`
+* Sample volume as `sample_volume`
+* Peptide concentration as `peptide_concentration`
+* Peptide mass sample as `peptide_mass_sample`
+* Dilution factor as `dilution_factor`
+* Kit ID as `kid_id`
+* Plate ID as `plate_id`
+* Plate Name as `plate_name`
+
+Based on the length of the `ms_file_name` list passed, if the number of parameters passed in for the rest of the fields are less than the length of the `ms_file_name` list, then the rest of the fields are defaulted to `None`. If more number of fields are passed, then the class would throw a `ValueError`
+
+This is how a plate map file could be made: 
+```{python}
+from objects import PlateMap
+
+sample_plate_map_file = PlateMap(
+    ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],
+    sample_name = ["A111", "A112"], 
+    sample_id = ["A111", "A112"], 
+    well_location = ["C11, D11"], 
+    nanoparticle = ["NONE"], 
+    nanoparticle_id = ["NONE"], 
+    control = ["MPE Control"], 
+    control_id = ["MPE Control"], 
+    instrument_name = [], 
+    date_sample_preparation = [], 
+    sample_volume = [20], 
+    peptide_concentration = [59.514], 
+    peptide_mass_sample = [8.57], 
+    dilution_factor = [1], 
+    kit_id = [], 
+    plate_id = ["A11", "A11"], 
+    plate_name = ["A11", "A11"] 
+)
+
+# Or alternatively, this would be the same as the following (we've left some fields empty which would default them to `None`):
+another_plate_map_file = PlateMap(
+    ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],
+    sample_name = ["A111", "A112"], 
+    sample_id = ["A111", "A112"], 
+    well_location = ["C11, D11"], 
+    nanoparticle = ["NONE"], 
+    nanoparticle_id = ["NONE"], 
+    control = ["MPE Control"], 
+    control_id = ["MPE Control"], 
+    sample_volume = [20], 
+    peptide_concentration = [59.514], 
+    peptide_mass_sample = [8.57], 
+    dilution_factor = [1], 
+    plate_id = ["A11", "A11"], 
+    plate_name = ["A11", "A11"] 
+)
+
+import pickle
+print(pickle.dumps(another_plate_map_file) == pickle.dumps(sample_plate_map_file)) # checks for equality
+print(sample_plate_map_file)
+```
+
+You could also convert the `PlateMap` object into a `DataFrame` using the `to_df` function implemented within the class. Example:
+```{python}
+pm_file_df = sample_plate_map_file.to_df()
+print(pm_file_df)
+```
+
+You could also convert it to a CSV file (which can also be exported) using the `to_csv` function implemented within the class:
+
+```{python}
+pm_file_csv = sample_plate_map_file.to_csv()
+print(pm_file_csv)
+```
+
 ### [Optional] Logging
 For your own convenience, you can define a log function that allows you to print data from the SDK in a much better and presentable manner.
 ```{python}
 import json
+import pandas as pd
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', 1000)
+pd.set_option('display.colheader_justify', 'center')
+pd.set_option('display.precision', 3)
 
 def log(fn):
-    try:
+    if isinstance(fn, pd.DataFrame):
+            print(fn.head()) # shorten the output
+    else:
         print(fn)
-    except:
-        print(fn)
+
+def log_df(fn):
+    for entry in fn:
+        fn[entry] = fn[entry].head()
+    print(fn)
 ```
 
 
@@ -344,7 +440,7 @@ In case the analysis has failed for the given `analysis_id`, the function will r
 
 ###### <u>Params</u>
 * `analysis_id`: (`str`) Unique ID of the analysis for which the data is to be fetched.
-* `download`: (`bool`, optional) Boolean flag denoting whether the user wants the files downloaded to a local directory or not.
+* `download_path`: (`str`, optional) String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid. Defaults to an empty string.
 
 ###### <u>Returns</u>
 `links`: (`dict`) Contains `DataFrame` objects for the `analysis_id`, given that the analysis has been complete.
@@ -354,16 +450,16 @@ If you want the result as `DataFrame` objects:
 ```{python}
 analysis_id = "ddff8c40-0493-11ee-bd19-a77197cd1a6b"
 analysis_data = sdk.get_analysis_result(analysis_id)
-log(analysis_data)
+log_df(analysis_data)
 ```
 
 If you want the resulting CSV downloaded to the local directory:
 ```{python}
-analysis_data = sdk.get_analysis_result(analysis_id, download=True)
+analysis_data = sdk.get_analysis_result(analysis_id, download_path="/Users/ajolly/Desktop/seer-sdk")
 log(analysis_data)
 ```
 
-The file will be stored in `/downloads/` directory under the unique `analysis_id` you entered.
+The file will be stored in `downloads/` in the user-specified path under the unique `analysis_id` you entered.
 <hr>
 
 
@@ -413,7 +509,7 @@ Add a plate given a list of `ms_data_files`, `plate_map_file`, `plate_id`, `plat
 
 ###### <u>Params</u>
 * `ms_data_files`: (`list[str]`) List of MS Data files.
-* `plate_map_file`: (`str`) The plate map file.
+* `plate_map_file`: (`str` or `PlateMap` object) The plate map file path or `PlateMap` object. 
 * `plate_id`: (`str`) The plate ID. Must be unique.
 * `plate_name`: (`str`) The plate name.
 * `space`: (`str`, optional) Space where the plate is contained. Defaults to the space of the user who is creating the project (or `None`).
@@ -430,6 +526,29 @@ sample_plate_id= "unique223id"
 sample_plate_name = "some_plate_name" 
 
 print(sdk.add_plate(data_file_locations, plate_map_location, sample_plate_id, sample_plate_name))
+```
+
+Alternatively, instead of the `plate_map_location`, we could use the `PlateMap` object:
+
+```{python}
+generated_plate_map_file = PlateMap(
+    ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],
+    sample_name = ["A111", "A112"], 
+    sample_id = ["A111", "A112"], 
+    well_location = ["C11, D11"], 
+    nanoparticle = ["NONE"], 
+    nanoparticle_id = ["NONE"], 
+    control = ["MPE Control"], 
+    control_id = ["MPE Control"], 
+    sample_volume = [20], 
+    peptide_concentration = [59.514], 
+    peptide_mass_sample = [8.57], 
+    dilution_factor = [1], 
+    plate_id = ["A11", "A11"], 
+    plate_name = ["A11", "A11"] 
+)
+
+print(sdk.add_plate(data_file_locations, generated_plate_map_file, sample_plate_id, sample_plate_name))
 ```
 
 <hr>
@@ -457,4 +576,24 @@ project_id = "1e324300-0496-11ee-bd19-a77197cd1a6b"
 analysis_protocol_name = "testMSFraggerUpload26" # you can also specify `analysis_protocol_id` instead
 print(sdk.start_analysis(name, project_id, analysis_protocol_name=analysis_protocol_name))
 ```
+<hr>
+
+### Upload MS Data
+Upload just MS data files to the PAS backend.
+
+###### <u>Params</u>
+* `ms_data_files`: (`list[str]`) List of MS Data files.
+* `space`: (`str`, optional) ID of the user group to which the files belongs, defaulted to None.
+<br>
+
+###### <u>Returns</u>
+`res`: (`dict`) Contains message whether the files were uploaded or not.
+
+###### <u>Example</u>
+```{python}
+data_file_locations = ["testing/AgamSDKTest1.raw", "testing/AgamSDKTest2.raw"]
+
+print(sdk.upload_ms_data_files(data_file_locations))
+```
+
 <hr>

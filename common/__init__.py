@@ -12,7 +12,7 @@ import json
 
 load_dotenv()
 
-def upload_file(file_name, bucket="rise-data", object_name=None):
+def upload_file(file_name, bucket, object_name=None):
     """
     Upload a file to an S3 bucket.
 
@@ -48,6 +48,35 @@ def upload_file(file_name, bucket="rise-data", object_name=None):
     return True
 
 def dict_to_df(data):
+    """
+    Returns a Pandas DataFrame from a dictionary.
+
+    Parameters
+    ----------
+    data : dict
+        The dictionary to convert to a Pandas DataFrame.
+
+    Returns
+    -------
+    pandas.core.frame.DataFrame
+        A Pandas DataFrame.
+
+    Examples
+    --------
+    >>> data = {
+            "Sample ID": [1, 2, 3, 4, 5, 6],
+            "Sample name": ["SampleName1", "SampleName2", "SampleName3", "SampleName4", "SampleName5", "SampleName6"],
+            "Well location": [1, 2, 3, 4, 5, 6],
+        }
+    >>> df = dict_to_df(data)
+    >>> print(df)
+    >>>     Sample ID  Sample name  Well location
+        0           1  SampleName1              1
+        1           2  SampleName2              2
+        2           3  SampleName3              3
+        ...         ...          ...            ...
+
+    """
     df = pd.DataFrame.from_dict(data)
     return df
 
@@ -233,3 +262,24 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
         })
     
     return res
+
+def valid_ms_data_file(path):
+    """
+    Checks if an MS data file exists and if its extension is valid for upload.
+
+    Parameters
+    ----------
+    path : str
+        The path to the MS data file.
+
+    Returns
+    -------
+    bool
+        True if the file exists and its extension is valid, False otherwise.
+    """
+
+    if not os.path.exists(path):
+        return False
+
+    filename, file_extension = os.path.splitext(path)
+    return file_extension.lower() in [".raw", ".mzml", ".wiff", ".wiff.scan"]
