@@ -7,6 +7,7 @@ import os
 import requests
 import json
 import uuid
+import urllib.request
 
 class SeerSDK:
     def __init__(self, username, password):
@@ -1230,3 +1231,134 @@ class SeerSDK:
                 raise ValueError("Upload failed, please check if backend is still active and running.")
 
         return { "message": "Files uploaded successfully." }
+    
+    def download_analysis_files(self, analysis_id: str, download_path: str="", file_name: str=""):
+        """
+        Download a specific analysis file from the backend given an `analysis_id` to the specified `download_path`.
+
+        If no `download_path` is specified, the file will be downloaded to the current working directory.
+
+        If no `file_name` is specified, all files for the analysis will be downloaded.
+
+        Parameters
+        ----------
+        analysis_id : str
+            ID of the analysis to download.
+        download_path : str, optional
+            Path to download the analysis file to, defaulted to current working directory.
+        file_name : str, optional
+            Name of the analysis file to download, defaulted to None.
+
+        Returns
+        -------
+        dict
+            Message containing whether the file was downloaded or not.
+
+        Example
+        -------
+        >>> from core import SeerSDK
+        >>> sdk = SeerSDK()
+        >>> sdk.download_analysis_files("analysis_id", "/path/to/download")
+        >>> Downloading EXP22006_2022ms0031bX25_B_BA4_1_4768/diann.log
+            Finished downloading EXP22006_2022ms0031bX25_B_BA4_1_4768/diann.log
+
+            Downloading EXP20004_2020ms0007X11_A.mzML.quant
+            Finished downloading EXP20004_2020ms0007X11_A.mzML.quant
+
+            Downloading EXP20004_2020ms0007X11_A/0714-diann181-libfree-mbr.json
+            Finished downloading EXP20004_2020ms0007X11_A/0714-diann181-libfree-mbr.json
+
+            Downloading EXP20004_2020ms0007X11_A/diann.log
+            Finished downloading EXP20004_2020ms0007X11_A/diann.log
+        >>> { "message": "File downloaded successfully." }
+        """
+        def get_url(analysis_id, file_name, project_id):
+            TOKEN = self.auth.get_token()
+            HEADERS = {"Authorization": f"{TOKEN}"}
+            URL = f"{self.auth.url}api/v1/analysisResultFiles/getUrl" 
+
+            with requests.Session() as s:
+                s.headers.update(HEADERS)
+
+                download_url = s.post(
+                    URL,
+                    json={
+                        "analysisId": analysis_id,
+                        "filename": file_name,
+                        "projectId": project_id
+                    })
+
+                if download_url.status_code != 200:
+                    raise ValueError("Could not download file. Please check if the analysis ID is valid or the backend is running.")
+
+                return download_url.json()["url"]
+
+        if not analysis_id:
+            raise ValueError("Analysis ID cannot be empty.")
+
+        try:
+            valid_analysis = self.get_analysis(analysis_id)[0]
+        except:
+            raise ValueError("Invalid analysis ID. Please check if the analysis ID is valid or the backend is running.")
+
+        project_id = valid_analysis["project_id"]
+
+        if not download_path:
+            download_path = os.getcwd()
+            print(f"\nDownload path not specified, downloading to {download_path}/downloads/{analysis_id}\n")
+
+        if not os.path.isdir(download_path):
+            download_path = os.getcwd()
+            print(f"\nThe path you entered was invalid. Downloading to current working directory at {download_path}/downloads/{analysis_id}\n")
+
+        name = f"{download_path}/downloads/{analysis_id}"
+        
+        if not os.path.exists(name):
+            os.makedirs(name)
+
+        TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{TOKEN}"}
+        URL = f"{self.auth.url}api/v1/analysisResultFiles"
+
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+
+            analysis_files = s.get(f"{URL}/{analysis_id}")
+
+            if analysis_files.status_code != 200:
+                raise ValueError("Invalid request. Please check if the analysis ID is valid or the backend is running.")
+            
+            res = analysis_files.json()
+
+        if file_name:
+            filenames = set([file["filename"] for file in res])
+
+            if file_name not in filenames:
+                raise ValueError("Invalid file name. Please check if the file name is correct.")
+            
+            res = [file for file in res if file["filename"] == file_name]
+
+        for file in res:
+            filename = file["filename"]
+            name = f"{download_path}/downloads/{analysis_id}"
+            url = get_url(analysis_id, filename, project_id)
+
+            print(f"Downloading {filename}") 
+
+            for _ in range(2):
+                try:
+                    urllib.request.urlretrieve(url, f"{name}/{filename}")
+                    break
+                except:
+                    filename = filename.split("/")
+                    name += "/" + "/".join([filename[i] for i in range(len(filename) - 1)])
+                    filename = filename[-1]
+                    if not os.path.isdir(f"{name}/{filename}"):
+                        os.makedirs(f"{name}/")
+            
+            else:
+                raise ValueError("Your download failed. Please check if the backend is still running.")
+
+            print(f"Finished downloading {filename}\n") 
+
+        return { "message": f"Files downloaded successfully to {download_path}/downloads/{analysis_id}" }

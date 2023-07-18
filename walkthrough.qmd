@@ -486,8 +486,6 @@ print(sdk.add_project(project_name, plate_ids))
 
 <hr>
 
-
-
 ### Analysis Complete
 Returns the status of the analysis with the given `analysis_id`.
 
@@ -594,6 +592,31 @@ Upload just MS data files to the PAS backend.
 data_file_locations = ["testing/AgamSDKTest1.raw", "testing/AgamSDKTest2.raw"]
 
 print(sdk.upload_ms_data_files(data_file_locations))
+```
+
+<hr>
+
+### Download Analysis Files
+Download a specific analysis file from the backend given an `analysis_id` to the specified `download_path`.
+
+If no `download_path` is specified or the `download_path` is invalid, the file will be downloaded to the current working directory. 
+
+If no `file_name` is specified, all files for the analysis will be downloaded.
+
+###### <u>Params</u>
+* `analysis_id` : (`str`) ID of the analysis to download.
+* `download_path` : (`str`, optional) Path to download the analysis file to, defaulted to current working directory.
+* file_name : (`str`, optional) Name of the analysis file to download, defaulted to None.
+
+###### <u>Returns</u>
+(`dict`) Message containing whether the file was downloaded or not.
+
+###### <u>Example</u>
+```{python}
+analysis_id = "dd4314d0-22b5-11ee-b604-61b98afbb084"
+download_path = "agamjolly/something"
+
+log(sdk.download_analysis_files(analysis_id, download_path=download_path))
 ```
 
 <hr>

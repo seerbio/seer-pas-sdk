@@ -1,0 +1,3 @@
+MS file name,Sample name,Sample ID,Well location,Nanoparticle,Nanoparticle ID,Control,Control ID,Instrument name,Date sample preparation,Sample volume,Peptide concentration,Peptide mass sample,Dilution factor,Kit ID,Plate ID,Plate Name
+AgamSDKTest1.raw,A111,A111,C11,NONE,NONE,MPE Control,MPE Control,,,20,59.514,8.57,1,,A11,A11
+AgamSDKTest2.raw,A112,A112,D11,,,,,,,,,,,,A11,A11
