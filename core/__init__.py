@@ -2,6 +2,7 @@ from common import *
 from auth import Auth
 from dotenv import load_dotenv
 from objects import PlateMap
+from tqdm import tqdm
 
 import os
 import requests
@@ -1347,8 +1348,9 @@ class SeerSDK:
 
             for _ in range(2):
                 try:
-                    urllib.request.urlretrieve(url, f"{name}/{filename}")
-                    break
+                    with tqdm(unit = 'B', unit_scale = True, unit_divisor = 1024, miniters = 1, desc = f"Progress") as t:
+                        urllib.request.urlretrieve(url, f"{name}/{filename}", reporthook=download_hook(t), data=None)
+                        break
                 except:
                     filename = filename.split("/")
                     name += "/" + "/".join([filename[i] for i in range(len(filename) - 1)])

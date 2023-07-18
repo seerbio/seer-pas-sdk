@@ -283,3 +283,31 @@ def valid_ms_data_file(path):
 
     filename, file_extension = os.path.splitext(path)
     return file_extension.lower() in [".raw", ".mzml", ".wiff", ".wiff.scan"]
+
+def download_hook(t):
+    """
+    Wraps tqdm instance.
+
+    Example
+    -------
+    >>> with tqdm(...) as t:
+    ...     reporthook = download_hook(t)
+    ...     urllib.urlretrieve(..., reporthook=reporthook)
+    """
+    last_b = [0]
+
+    def update_to(b=1, bsize=1, tsize=None):
+        """
+        b : int, optional
+            Number of blocks transferred so far [default: 1].
+        bsize : int, optional
+            Size of each block (in tqdm units) [default: 1].
+        tsize : int, optional
+            Total size (in tqdm units). If [default: None] remains unchanged.
+        """
+        if tsize is not None:
+            t.total = tsize
+        t.update((b - last_b[0]) * bsize)
+        last_b[0] = b
+
+    return update_to
