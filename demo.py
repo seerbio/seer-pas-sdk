@@ -9,7 +9,4 @@ def log(fn):
     except:
         print(fn)
 
-sdk = SeerSDK("gnu403", "Test!234567")
-
-##### Add a plate
-# log(sdk.add_plate(ms_filepaths, "testing/AgamSDKPlateMapATest.csv", "finalPlateIdTest", "finalPlateNameTest", f"Generated from SDK at {str(datetime.datetime.now())})"))
+sdk = SeerSDK("Tenant-admin", "Abcd1234*")

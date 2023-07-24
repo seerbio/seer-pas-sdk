@@ -29,6 +29,8 @@ class SeerSDK:
                 username, 
                 password, 
                 os.getenv("URL"))
+
+            self.auth.get_token()
             
             print(f"User '{username}' logged in.")
         
