@@ -343,7 +343,7 @@ log(sample_project)
 ### Get Project
 Fetches samples (and MS data files) for a `project_id` (provided that the `project_id` is valid and has samples associated with it) for an authenticated user. 
 
-The function returns a dict containing DataFrame objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
+The function returns a DataFrame object if the `df` flag is passed in as True, otherwise a nested dict object is returned instead. If the both the `df` and `msdata` flags are passed in as True, then a nested DataFrame object is returned instead.
 
 ###### <u>Params</u>
 * `project_id`: (`str`, optional) Unique ID of the project to be fetched.

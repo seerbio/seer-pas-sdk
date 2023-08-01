@@ -401,7 +401,7 @@ class SeerSDK:
         """
         Fetches samples (and MS data files) for a `project_id` (provided that the `project_id` is valid and has samples associated with it) for an authenticated user. 
 
-        The function returns a dict containing DataFrame objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
+        The function returns a DataFrame object if the `df` flag is passed in as True, otherwise a nested dict object is returned instead. If the both the `df` and `msdata` flags are passed in as True, then a nested DataFrame object is returned instead.
 
         Parameters
         ----------
@@ -442,69 +442,86 @@ class SeerSDK:
         }
 
         >>> seer_sdk.get_project(project_id=project_id, msdata=True, df=False)
-        >>> {
-                "msdata": [
-                    { 
-                        "id": "MS_DATA_ID_1_HERE",
-                        "raw_file_path": "/directory/one"
-                    },
-                    { 
-                        "id": "MS_DATA_ID_2_HERE",
-                        "raw_file_path": "/directory/two"
-                    }
-                ],
-                
-                "project_samples": [ 
-                    {
-                        "id": "SAMPLE_ID_1_HERE",
-                        "sample_type": "Plasma",
-                        ...
-                        ...
-                    }, 
-                    { 
-                        "id": "SAMPLE_ID_2_HERE",
-                        "sample_type": "Plasma",
-                        ...
-                        ...
-                    }
-                ]
-            }
+        >>> [
+                {
+                    "id": "SAMPLE_ID_1_HERE",
+                    "sample_type": "Plasma",
+                    ...
+                    ...
+                    "ms_data_files": [ 
+                        { 
+                            "id": MS_DATA_FILE_ID_1_HERE,
+                            "tenant_id": "TENANT_ID_HERE",
+                            ...
+                            ...
+                        }, 
+                        { 
+                            "id": MS_DATA_FILE_ID_1_HERE,
+                            "tenant_id": "TENANT_ID_HERE",
+                            ...
+                            ...
+                        }
+                    ]
+                }, 
+
+                {
+                    "id": "SAMPLE_ID_2_HERE",
+                    "sample_type": "Plasma",
+                    ...
+                    ...
+                    "ms_data_files": [ 
+                        { 
+                            "id": MS_DATA_FILE_ID_2_HERE,
+                            "tenant_id": "TENANT_ID_HERE",
+                            ...
+                            ...
+                        }, 
+                        { 
+                            "id": MS_DATA_FILE_ID_2_HERE,
+                            "tenant_id": "TENANT_ID_HERE",
+                            ...
+                            ...
+                        }
+                    ]
+                }
+            ]
         
         >>> seer_sdk.get_project(project_id=project_id, msdata=True, df=True)
-        >>> {
-            'msdata':                                      
-                                             id  ... gradient
-        0  83365300-8a47-11ed-b382-bf440acece26  ...     None
-        1  8335b6c0-8a47-11ed-b382-bf440acece26  ...     None
-        2  832e63c0-8a47-11ed-b382-bf440acece26  ...     None
-        3  8326e9b0-8a47-11ed-b382-bf440acece26  ...     None
+        >>> id  ...                                                                           ms_data_files
+            0  829509f0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
+            1  828d41c0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
+            2  8294e2e0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
+            3  8285eec0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
 
-        [4 rows x 26 columns], 
-        
-        'project_samples':                                                                                 id  ... control
-        0  829509f0-8a47-11ed-b382-bf440acece26  ...
-        1  828d41c0-8a47-11ed-b382-bf440acece26  ...
-        2  8294e2e0-8a47-11ed-b382-bf440acece26  ...
-        3  8285eec0-8a47-11ed-b382-bf440acece26  ...
-
-        [4 rows x 59 columns]}
-
+            [4 rows x 60 columns]
         """
         if not project_id:
             return ValueError("No project ID specified.")
 
-        res = {}
+        sample_ids = []
         project_samples = self.get_samples_metadata(project_id=project_id, df=False)
 
         if msdata:
-            sample_ids = [sample["id"] for sample in project_samples]
-            res["msdata"] = self.get_msdata(sample_ids=sample_ids, df=df)
+            sample_ids = [sample["id"] for sample in project_samples] # will always contain unique values
+            ms_data_files = self.get_msdata(sample_ids=sample_ids, df=False)
+
+            for ms_data_file in ms_data_files:
+                for sample_index in range(len(project_samples)):
+                    if project_samples[sample_index]["id"] == ms_data_file["sample_id"]:
+                        if "ms_data_file" not in project_samples[sample_index]:
+                            project_samples[sample_index]["ms_data_files"] = [ms_data_file]
+                        else:
+                            project_samples[sample_index]["ms_data_files"].append(ms_data_file)
+
 
         if df:
-            project_samples = dict_to_df(project_samples)
+            for sample_index in range(len(project_samples)):
+                if "ms_data_files" in project_samples[sample_index]:
+                    project_samples[sample_index]["ms_data_files"] = dict_to_df(project_samples[sample_index]["ms_data_files"])
 
-        res["project_samples"] = project_samples
-        return res        
+            project_samples = dict_to_df(project_samples)
+        
+        return project_samples
 
     def get_analysis_protocols(self, analysis_protocol_name: str=None, analysis_protocol_id: str=None):
         """
