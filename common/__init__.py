@@ -282,7 +282,7 @@ def valid_ms_data_file(path):
         return False
 
     filename, file_extension = os.path.splitext(path)
-    return file_extension.lower() in [".raw", ".mzml", ".wiff", ".wiff.scan"]
+    return file_extension.lower() in [".d", ".d.zip", ".mzml", ".raw", ".mzml", ".wiff", ".wiff.scan"]
 
 def download_hook(t):
     """

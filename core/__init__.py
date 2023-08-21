@@ -136,6 +136,9 @@ class SeerSDK:
                 res = plates.json()["data"]
             else:
                 res = [plates.json()]
+            
+            for entry in res:
+                del entry["tenant_id"]
 
         return res if not df else dict_to_df(res)
    
@@ -205,10 +208,25 @@ class SeerSDK:
             else:
                 res = [projects.json()]
 
+        for entry in res:
+            if "tenant_id" in entry:
+                del entry["tenant_id"]
+
+            if "raw_file_path" in entry:
+                # Simple lambda function to find the third occurence of '/' in the raw file path
+                location = lambda s: len(s) - len(s.split('/', 3)[-1])
+                
+                # Slicing the string from the location
+                entry["raw_file_path"] = entry["raw_file_path"][location(entry["raw_file_path"]):]
+            
         return res if not df else dict_to_df(res)
     
     def get_samples_metadata(self, plate_id: str=None, project_id: str=None, df: bool=False):
         """
+        ****************
+        [UNEXPOSED METHOD CALL]
+        ****************
+
         Fetches a list of samples for the authenticated user, filtered by `plate_id`. Returns all samples for the plate with the given `plate_id`, provided it exists.
 
         If both `plate_id` and `project_id` are passed in, only the `plate_id` is validated first.
@@ -294,6 +312,9 @@ class SeerSDK:
             
             res = samples.json()["data"]
 
+            for entry in res:
+                del entry["tenant_id"]
+
         return res if not df else dict_to_df(res)
 
     def get_msdata(self, sample_ids: list, df: bool=False):
@@ -354,6 +375,17 @@ class SeerSDK:
 
                 res.append(msdatas.json()["data"][0])
 
+        for entry in res:
+            if "tenant_id" in entry:
+                del entry["tenant_id"]
+
+            if "raw_file_path" in entry:
+                # Simple lambda function to find the third occurence of '/' in the raw file path
+                location = lambda s: len(s) - len(s.split('/', 3)[-1])
+                
+                # Slicing the string from the location
+                entry["raw_file_path"] = entry["raw_file_path"][location(entry["raw_file_path"]):]
+           
         return res if not df else dict_to_df(res)
         
     def get_plate(self, plate_id: str, df: bool=False):
@@ -565,6 +597,7 @@ class SeerSDK:
         TOKEN = self.auth.get_token()
         HEADERS = {"Authorization": f"{TOKEN}"}
         URL = f"{self.auth.url}api/v1/analysisProtocols" if not analysis_protocol_id else f"{self.auth.url}api/v1/analysisProtocols/{analysis_protocol_id}"
+        res = []
         
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -577,12 +610,23 @@ class SeerSDK:
                 raise ValueError("Invalid request. Please check your parameters.")
             
             if not analysis_protocol_id and not analysis_protocol_name:
-                return protocols.json()["data"]
+                res = protocols.json()["data"]
 
             if analysis_protocol_name and not analysis_protocol_id:
-                return [protocol for protocol in protocols.json()["data"] if protocol["analysis_protocol_name"] == analysis_protocol_name]
+                res = [protocol for protocol in protocols.json()["data"] if protocol["analysis_protocol_name"] == analysis_protocol_name]
+
+            for entry in range(len(res)):
+                if "tenant_id" in res[entry]:
+                    del res[entry]["tenant_id"]
+
+                if "parameter_file_path" in res[entry]:
+                    # Simple lambda function to find the third occurence of '/' in the raw file path
+                    location = lambda s: len(s) - len(s.split('/', 3)[-1])
+                    
+                    # Slicing the string from the location
+                    res[entry]["parameter_file_path"] = res[entry]["parameter_file_path"][location(res[entry]["parameter_file_path"]):]
             
-            return [protocols.json()] 
+            return res 
 
     def get_analysis(self, analysis_id: str=None):
         """
@@ -616,6 +660,7 @@ class SeerSDK:
         TOKEN = self.auth.get_token()
         HEADERS = {"Authorization": f"{TOKEN}"}
         URL = f"{self.auth.url}api/v1/analyses"
+        res = []
         
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -628,9 +673,23 @@ class SeerSDK:
                 raise ValueError("Invalid request. Please check your parameters.")
             
             if not analysis_id:
-                return analyses.json()["data"]
+                res = analyses.json()["data"]
 
-            return [analyses.json()["analysis"]]
+            else:
+                res = [analyses.json()["analysis"]]
+            
+            for entry in range(len(res)):
+                if "tenant_id" in res[entry]:
+                    del res[entry]["tenant_id"]
+
+                if "parameter_file_path" in res[entry]:
+                    # Simple lambda function to find the third occurence of '/' in the raw file path
+                    location = lambda s: len(s) - len(s.split('/', 3)[-1])
+                    
+                    # Slicing the string from the location
+                    res[entry]["parameter_file_path"] = res[entry]["parameter_file_path"][location(res[entry]["parameter_file_path"]):]
+            
+            return res
     
     def get_analysis_result(self, analysis_id: str, download_path: str=""):
         """
@@ -787,7 +846,7 @@ class SeerSDK:
 
             if response.status_code != 200:
                 raise ValueError("Invalid request. Please check your parameters.")
-            
+
             return response.json()
 
     def add_project(self, project_name: str, plate_ids: list[str], description: str=None, notes: str=None, space: str=None):

@@ -174,48 +174,6 @@ log(spaces)
 <hr>
 
 
-### Get Samples Metadata
-Fetches a list of samples for the authenticated user, filtered by `plate_id`. Returns all samples for the plate with the given `plate_id`, provided it exists.
-
-If both `plate_id` and `project_id` are passed in, only the `plate_id` is validated first.
-
-The function returns a dict containing DataFrame objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
-
-###### <u>Params</u>
-* `plate_id`: (`str`, optional) ID of the plate for which samples are to be fetched, defaulted to `None`.
-* `project_id`: (`str`, optional) Unique ID of the project to be fetched. Defaulted to `None`
-* `df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
-<br>
-
-###### <u>Returns</u>
-`samples`: (`list` or `DataFrame`) `List` or `DataFrame` of samples for the authenticated user.
-
-###### <u>Example</u>
-You could use the `project_id` as in the example below:
-```{python}
-plate_id = "7ec8cad0-15e0-11ee-bdf1-bbaa73585acf"
-project_id = "7e48e150-8a47-11ed-b382-bf440acece26"
-sample_project = sdk.get_samples_metadata(project_id=project_id)
-log(sample_project)
-```
-
-Alteratively, you could use the `plate_id` as in the example below:
-```{python}
-plate_id = "7ec8cad0-15e0-11ee-bdf1-bbaa73585acf"
-project_id = "7e48e150-8a47-11ed-b382-bf440acece26"
-sample_plate = sdk.get_samples_metadata(plate_id=plate_id)
-log(sample_plate)
-```
-
-However, when you pass both `plate_id` and `project_id`, only the `plate_id` is validated.
-
-```{python}
-plate_id = "7ec8cad0-15e0-11ee-bdf1-bbaa73585acf"
-project_id = "7e48e150-8a47-11ed-b382-bf440acece26"
-example = sdk.get_samples_metadata(plate_id, project_id, df=True)
-log(example)
-```
-
 ### Get Plate Metadata
 Fetches a list of plates for the authenticated user. If no `plate_id` is provided, returns all plates for the authenticated user. If `plate_id` is provided, returns the plate with the given `plate_id`, provided it exists. 
 
