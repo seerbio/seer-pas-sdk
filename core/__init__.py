@@ -9,6 +9,7 @@ import requests
 import json
 import uuid
 import urllib.request
+import ssl
 
 class SeerSDK:
     def __init__(self, username, password):
@@ -1007,6 +1008,23 @@ class SeerSDK:
             s3_bucket = config_response.json()["s3Bucket"]
             s3_upload_path = config_response.json()["s3UploadPath"]
 
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            config_response = s.get(
+                f"{self.auth.url}auth/getawscredential",)
+
+            if config_response.status_code != 200 or not config_response.json():
+                raise ValueError("Could not fetch config for user.")
+
+            if "S3Bucket" not in config_response.json()["credentials"]:
+                raise ValueError("Upload failed. Please check if the backend is still running.") 
+            
+            credentials = config_response.json()["credentials"]
+
+            os.environ["AWS_ACCESS_KEY_ID"] = credentials["AccessKeyId"]
+            os.environ["AWS_SECRET_ACCESS_KEY"] = credentials["SecretAccessKey"]
+            os.environ["AWS_SESSION_TOKEN"] = credentials["SessionToken"]
+
         # Step 4: Upload the platemap file to the S3 bucket.
 
         if isinstance(plate_map_file, PlateMap):
@@ -1068,6 +1086,23 @@ class SeerSDK:
                     raise ValueError("Upload failed, please check if backend is still active and running.")
 
         # Step 9: Upload each msdata file to the S3 bucket.
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            config_response = s.get(
+                f"{self.auth.url}auth/getawscredential",)
+
+            if config_response.status_code != 200 or not config_response.json():
+                raise ValueError("Could not fetch config for user.")
+
+            if "S3Bucket" not in config_response.json()["credentials"]:
+                raise ValueError("Upload failed. Please check if the backend is still running.") 
+            
+            credentials = config_response.json()["credentials"]
+
+            os.environ["AWS_ACCESS_KEY_ID"] = credentials["AccessKeyId"]
+            os.environ["AWS_SECRET_ACCESS_KEY"] = credentials["SecretAccessKey"]
+            os.environ["AWS_SESSION_TOKEN"] = credentials["SessionToken"]
+
         for file in ms_data_files:
             filename = os.path.basename(file)
             filesize = os.stat(file).st_size
@@ -1280,6 +1315,12 @@ class SeerSDK:
 
             s3_bucket = config_response.json()["credentials"]["S3Bucket"]
 
+            credentials = config_response.json()["credentials"]
+
+            os.environ["AWS_ACCESS_KEY_ID"] = credentials["AccessKeyId"]
+            os.environ["AWS_SECRET_ACCESS_KEY"] = credentials["SecretAccessKey"]
+            os.environ["AWS_SESSION_TOKEN"] = credentials["SessionToken"]
+
         # Step 4: Upload each msdata file to the S3 bucket.
         for file in ms_data_files:
             filename = os.path.basename(file)
@@ -1427,6 +1468,7 @@ class SeerSDK:
             for _ in range(2):
                 try:
                     with tqdm(unit = 'B', unit_scale = True, unit_divisor = 1024, miniters = 1, desc = f"Progress") as t:
+                        ssl._create_default_https_context = ssl._create_unverified_context
                         urllib.request.urlretrieve(url, f"{name}/{filename}", reporthook=download_hook(t), data=None)
                         break
                 except:
