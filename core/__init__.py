@@ -6,8 +6,6 @@ from tqdm import tqdm
 
 import os
 import requests
-import json
-import uuid
 import urllib.request
 import ssl
 
@@ -23,7 +21,7 @@ class SeerSDK:
         >>> seer_sdk = SeerSDK()
         """
 
-        load_dotenv() # load environment variables from .env file
+        load_dotenv(override=True) # load environment variables from .env file
 
         try:
             self.auth = Auth(
@@ -33,7 +31,7 @@ class SeerSDK:
 
             self.auth.get_token()
             
-            print(f"User '{username}' logged in.")
+            print(f"User '{username}' logged in.\n")
         
         except:
             print("Could not log in.\nPlease check your username and password.")
@@ -1425,11 +1423,11 @@ class SeerSDK:
 
         if not download_path:
             download_path = os.getcwd()
-            print(f"\nDownload path not specified, downloading to {download_path}/downloads/{analysis_id}\n")
+            print(f"\nDownload path not specified.\n")
 
         if not os.path.isdir(download_path):
+            print(f'\nThe path "{download_path}" you specified does not exist, was either invalid or not absolute.\n')
             download_path = os.getcwd()
-            print(f"\nThe path you entered was invalid. Downloading to current working directory at {download_path}/downloads/{analysis_id}\n")
 
         name = f"{download_path}/downloads/{analysis_id}"
         
@@ -1458,9 +1456,10 @@ class SeerSDK:
             
             res = [file for file in res if file["filename"] == file_name]
 
+        print(f'Downloading files to "{name}"\n')
+
         for file in res:
             filename = file["filename"]
-            name = f"{download_path}/downloads/{analysis_id}"
             url = get_url(analysis_id, filename, project_id)
 
             print(f"Downloading {filename}") 

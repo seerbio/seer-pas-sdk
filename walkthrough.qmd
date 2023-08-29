@@ -433,7 +433,7 @@ Creates a new project with a given `project_name` and a list containing `project
 <br>
 
 ###### <u>Returns</u>
-`res`: (`dict`) A sictionary containing the status of the request if succeeded.
+`res`: (`dict`) A dictionary containing the status of the request if succeeded.
 
 ###### <u>Example</u>
 ```{python}
@@ -472,7 +472,7 @@ Add a plate given a list of `ms_data_files`, `plate_map_file`, `plate_id`, `plat
 <br>
 
 ###### <u>Returns</u>
-`res`: (`dict`) A sictionary containing the status of the request if succeeded.
+`res`: (`dict`) A dictionary containing the status of the request if succeeded.
 
 ###### <u>Example</u>
 ```{python}
