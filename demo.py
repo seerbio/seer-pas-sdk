@@ -1,3 +1,5 @@
+ENVIRONMENT = "staging" # change to `dev` 
+
 from core import SeerSDK
 from common import *
 
@@ -18,9 +20,11 @@ def delete_directory(download_path):
         shutil.rmtree(tmpdir)
     
 
-# SDK INSTANCE
-ENVIRONMENT = "staging" # change to `dev` 
+# TEST CODE BELOW
+delete_directory("downloads/")
 
+
+# SDK INSTANCE
 if ENVIRONMENT == "staging":
     USERNAME = "Tenant-admin"
     PASSWORD = "Abcd1234*"
@@ -31,9 +35,3 @@ else:
     os.environ["URL"] = "http://localhost:3006/"
 
 sdk = SeerSDK(USERNAME, PASSWORD)
-
-
-# TEST CODE BELOW
-analysis_id = "271077a0-311c-11ee-a5ea-d92acb8672b3"
-download_path = "downloads/"
-delete_directory(download_path)

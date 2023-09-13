@@ -1260,6 +1260,8 @@ class SeerSDK:
         ----------
         ms_data_files : List
             List of MS data files to be uploaded.
+        path : str, optional
+            Path to upload the files to in the S3, defaulted to an empty string. Should NOT contain trailing slashes.
         space: str, optional
             ID of the user group to which the files belongs, defaulted to None.
 
@@ -1323,7 +1325,7 @@ class SeerSDK:
         for file in ms_data_files:
             filename = os.path.basename(file)
             filesize = os.stat(file).st_size
-            s3_upload_path = f"{tenant_id}/{path}"
+            s3_upload_path = f"{tenant_id}" if not path else f"{tenant_id}/{path}" 
 
             res = upload_file(file, s3_bucket, f"{s3_upload_path}/{filename}")
 
