@@ -1,7 +1,8 @@
-ENVIRONMENT = "staging" # change to `dev` 
+ENVIRONMENT = "dev" # change to `dev` 
 
 from core import SeerSDK
 from common import *
+from objects import * 
 
 import json
 import os
@@ -19,11 +20,6 @@ def delete_directory(download_path):
     if os.path.exists(tmpdir):
         shutil.rmtree(tmpdir)
     
-
-# TEST CODE BELOW
-delete_directory("downloads/")
-
-
 # SDK INSTANCE
 if ENVIRONMENT == "staging":
     USERNAME = "Tenant-admin"

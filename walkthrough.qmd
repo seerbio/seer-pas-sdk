@@ -36,7 +36,7 @@ After importing the SeerSDK module, you can instantiate an object in the followi
 ```{python}
 from core import SeerSDK
 
-# You could alternatively pass your username and password directly into the instatiated object.
+# You could alternatively pass your username and password directly into the instantiated object.
 sdk = SeerSDK(USERNAME, PASSWORD)
 ```
 
@@ -72,7 +72,7 @@ sample_plate_map_file = PlateMap(
     ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],
     sample_name = ["A111", "A112"], 
     sample_id = ["A111", "A112"], 
-    well_location = ["C11, D11"], 
+    well_location = ["C11", "D11"], 
     nanoparticle = ["NONE"], 
     nanoparticle_id = ["NONE"], 
     control = ["MPE Control"], 
@@ -93,7 +93,7 @@ another_plate_map_file = PlateMap(
     ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],
     sample_name = ["A111", "A112"], 
     sample_id = ["A111", "A112"], 
-    well_location = ["C11, D11"], 
+    well_location = ["C11", "D11"], 
     nanoparticle = ["NONE"], 
     nanoparticle_id = ["NONE"], 
     control = ["MPE Control"], 
@@ -491,7 +491,7 @@ generated_plate_map_file = PlateMap(
     ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],
     sample_name = ["A111", "A112"], 
     sample_id = ["A111", "A112"], 
-    well_location = ["C11, D11"], 
+    well_location = ["C11", "D11"], 
     nanoparticle = ["NONE"], 
     nanoparticle_id = ["NONE"], 
     control = ["MPE Control"], 
@@ -539,6 +539,7 @@ Upload just MS data files to the PAS backend.
 
 ###### <u>Params</u>
 * `ms_data_files`: (`list[str]`) List of MS Data files.
+* `path`: (`str`, optional) Path to upload the files to in the S3, defaulted to an empty string. Should <b>not</b> contain trailing slashes.
 * `space`: (`str`, optional) ID of the user group to which the files belongs, defaulted to None.
 <br>
 

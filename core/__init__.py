@@ -8,20 +8,23 @@ import os
 import requests
 import urllib.request
 import ssl
+import shutil
 
 class SeerSDK:
     def __init__(self, username, password):
         """
-        Constructor for SeerSDK class. Creates an instance of the Auth class and uses environment variables conatined in the .env file to authenticate a user.
+        Constructor for SeerSDK class. Creates an instance of the Auth class and uses environment variables contained in the .env file to authenticate a user.
 
         Example
         -------
 
         >>> from core import SeerSDK
-        >>> seer_sdk = SeerSDK()
+        >>> USERNAME = "test"
+        >>> PASSWORD = "test-password"
+        >>> seer_sdk = SeerSDK(USERNAME, PASSWORD)
         """
 
-        load_dotenv(override=True) # load environment variables from .env file
+        load_dotenv() # load environment variables from .env file
 
         try:
             self.auth = Auth(
@@ -212,7 +215,7 @@ class SeerSDK:
                 del entry["tenant_id"]
 
             if "raw_file_path" in entry:
-                # Simple lambda function to find the third occurence of '/' in the raw file path
+                # Simple lambda function to find the third occurrence of '/' in the raw file path
                 location = lambda s: len(s) - len(s.split('/', 3)[-1])
                 
                 # Slicing the string from the location
@@ -379,7 +382,7 @@ class SeerSDK:
                 del entry["tenant_id"]
 
             if "raw_file_path" in entry:
-                # Simple lambda function to find the third occurence of '/' in the raw file path
+                # Simple lambda function to find the third occurrence of '/' in the raw file path
                 location = lambda s: len(s) - len(s.split('/', 3)[-1])
                 
                 # Slicing the string from the location
@@ -619,7 +622,7 @@ class SeerSDK:
                     del res[entry]["tenant_id"]
 
                 if "parameter_file_path" in res[entry]:
-                    # Simple lambda function to find the third occurence of '/' in the raw file path
+                    # Simple lambda function to find the third occurrence of '/' in the raw file path
                     location = lambda s: len(s) - len(s.split('/', 3)[-1])
                     
                     # Slicing the string from the location
@@ -682,7 +685,7 @@ class SeerSDK:
                     del res[entry]["tenant_id"]
 
                 if "parameter_file_path" in res[entry]:
-                    # Simple lambda function to find the third occurence of '/' in the raw file path
+                    # Simple lambda function to find the third occurrence of '/' in the raw file path
                     location = lambda s: len(s) - len(s.split('/', 3)[-1])
                     
                     # Slicing the string from the location
@@ -953,8 +956,9 @@ class SeerSDK:
         raw_file_paths = {} # list of all the AWS raw file paths
         s3_upload_path = None
         s3_bucket = ""
+        dir_exists = True # flag to check if the generated_files directory exists
         
-        # Step 1: Check for duplicacy in the user-inputted plate id. Populates `plate_ids` set.
+        # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -1027,8 +1031,13 @@ class SeerSDK:
 
         if isinstance(plate_map_file, PlateMap):
             plate_map_file_name = f"plateMap_{id_uuid}.csv"
-            plate_map_file.to_csv(f"testing/{plate_map_file_name}")
-            plate_map_file = f"testing/{plate_map_file_name}"
+
+            if not os.path.exists("generated_files"):
+                dir_exists = False
+                os.makedirs("generated_files")
+
+            plate_map_file.to_csv(f"generated_files/{plate_map_file_name}")
+            plate_map_file = f"generated_files/{plate_map_file_name}"
             
         else:
             plate_map_file_name = os.path.basename(plate_map_file)
@@ -1126,6 +1135,9 @@ class SeerSDK:
 
             if file_response.status_code != 200 or not file_response.json() or "created" not in file_response.json():
                 raise ValueError("Upload failed, please check if backend is still active and running.")
+
+        if os.path.exists("generated_files") and not dir_exists:
+            shutil.rmtree("generated_files")
 
         return {
             "message": f"Plate generated with id = {id_uuid}"
