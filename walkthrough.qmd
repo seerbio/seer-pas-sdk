@@ -40,6 +40,8 @@ from core import SeerSDK
 sdk = SeerSDK(USERNAME, PASSWORD)
 ```
 
+You may also choose to pass in an `instance` param in the SDK object to instantiate the PAS SDK to the EU or US instance. By default, if you don't specify an instance, the PAS SDK will be instantiated with the US instance.
+
 ### `PlateMap` Object
 
 The PAS Python SDK would allow users to make plate maps file from within the SDK using the `PlateMap` object located in the `objects` module. This module is imported by default within the SDK. The interface of the plate map file contains the following parameters, all of which need to be passed in as lists:
@@ -58,7 +60,7 @@ The PAS Python SDK would allow users to make plate maps file from within the SDK
 * Peptide concentration as `peptide_concentration`
 * Peptide mass sample as `peptide_mass_sample`
 * Dilution factor as `dilution_factor`
-* Kit ID as `kid_id`
+* Kit ID as `kit_id`
 * Plate ID as `plate_id`
 * Plate Name as `plate_name`
 
@@ -125,7 +127,7 @@ print(pm_file_csv)
 ```
 
 ### [Optional] Logging
-For your own convenience, you can define a log function that allows you to print data from the SDK in a much better and presentable manner.
+For your own convenience, you can define a log function that allows you to print data from the SDK in a much better and readable manner.
 ```{python}
 import json
 import pandas as pd

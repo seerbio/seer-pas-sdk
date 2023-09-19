@@ -1,19 +1,19 @@
 from common import *
 from auth import Auth
-from dotenv import load_dotenv
 from objects import PlateMap
 from tqdm import tqdm
 
 import os
+import jwt
 import requests
 import urllib.request
 import ssl
 import shutil
 
 class SeerSDK:
-    def __init__(self, username, password):
+    def __init__(self, username, password, instance="US"):
         """
-        Constructor for SeerSDK class. Creates an instance of the Auth class and uses environment variables contained in the .env file to authenticate a user.
+        Constructor for SeerSDK class. Creates an instance of the Auth class and authenticates a user. Takes in the optional `instance` param denoting the production instance of PAS; defaults to "US".
 
         Example
         -------
@@ -21,23 +21,21 @@ class SeerSDK:
         >>> from core import SeerSDK
         >>> USERNAME = "test"
         >>> PASSWORD = "test-password"
-        >>> seer_sdk = SeerSDK(USERNAME, PASSWORD)
+        >>> INSTANCE = "EU"
+        >>> seer_sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
         """
-
-        load_dotenv() # load environment variables from .env file
-
         try:
             self.auth = Auth(
                 username, 
                 password, 
-                os.getenv("URL"))
+                instance)
 
             self.auth.get_token()
             
             print(f"User '{username}' logged in.\n")
         
         except:
-            print("Could not log in.\nPlease check your username and password.")
+            print("Could not log in.\nPlease check your credentials and/or instance.")
 
     def get_spaces(self):
         """
@@ -1299,19 +1297,10 @@ class SeerSDK:
             if not valid_ms_data_file(file):
                 raise ValueError("Invalid file or file format. Please check your file.")
 
-        # Step 2: Fetch the tenant id by making a call to `/api/v1/usersetting`
+        # Step 2: Fetch the tenant id by decoding the JWT token.
         TOKEN = self.auth.get_token()
         HEADERS = {"Authorization": f"{TOKEN}"}
-        URL = f"{self.auth.url}api/v1/usersetting"
-
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
-            response = s.get(URL)
-
-            if response.status_code != 200:
-                raise ValueError("Could not connect to the backend.")
-
-            tenant_id = response.json()["tenant_id"]
+        tenant_id = jwt.decode(TOKEN, options={'verify_signature': False})["custom:tenantId"]
 
         # Step 3: Fetch the S3 bucket name by making a call to `/api/v1/auth/getawscredential`
         with requests.Session() as s:

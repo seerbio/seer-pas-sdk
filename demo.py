@@ -1,8 +1,6 @@
-ENVIRONMENT = "dev" # change to `dev` 
-
 from core import SeerSDK
 from common import *
-from objects import * 
+from objects import *
 
 import json
 import os
@@ -21,13 +19,19 @@ def delete_directory(download_path):
         shutil.rmtree(tmpdir)
     
 # SDK INSTANCE
-if ENVIRONMENT == "staging":
-    USERNAME = "Tenant-admin"
-    PASSWORD = "Abcd1234*"
-    os.environ["URL"] = "https://api.pas.seer-staging.com/"
-else:
-    USERNAME = "gnu403"
-    PASSWORD = "Test!234567"
-    os.environ["URL"] = "http://localhost:3006/"
+INSTANCE = "staging"
 
-sdk = SeerSDK(USERNAME, PASSWORD)
+credentials = { 
+    "staging": ["Tenant-admin", "Abcd1234*"],
+    "dev": ["gnu403", "Test!234567"],
+    "US": ["css_apps_lab", "QXX!chqN!GswA9M"],
+    "EU": ["", ""]
+}
+
+if INSTANCE in credentials:
+    USERNAME = credentials[INSTANCE][0]
+    PASSWORD = credentials[INSTANCE][1]
+else:
+    raise Exception("Invalid instance")
+
+sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
