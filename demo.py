@@ -19,7 +19,7 @@ def delete_directory(download_path):
         shutil.rmtree(tmpdir)
     
 # SDK INSTANCE
-INSTANCE = "staging"
+INSTANCE = "dev"
 
 credentials = { 
     "staging": ["Tenant-admin", "Abcd1234*"],

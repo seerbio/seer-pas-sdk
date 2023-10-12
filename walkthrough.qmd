@@ -31,16 +31,19 @@ USERNAME = "gnu403"
 PASSWORD = "Test!234567"
 ```
 
+You may also choose to pass in an `instance` param in the SDK object to instantiate the PAS SDK to the EU or US instance. As an example for this tutorial, we will define the instance as `dev`:
+```{python}
+INSTANCE = "dev"
+```
+
 ### Instantiation
-After importing the SeerSDK module, you can instantiate an object in the following way:
+By default, if you don't specify an instance, the PAS SDK will be instantiated with the US instance. After importing the SeerSDK module, you can instantiate an object in the following way:
 ```{python}
 from core import SeerSDK
 
-# You could alternatively pass your username and password directly into the instantiated object.
-sdk = SeerSDK(USERNAME, PASSWORD)
+# You could alternatively pass your credentials and/or the instance directly into the instantiated object.
+sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
 ```
-
-You may also choose to pass in an `instance` param in the SDK object to instantiate the PAS SDK to the EU or US instance. By default, if you don't specify an instance, the PAS SDK will be instantiated with the US instance.
 
 ### `PlateMap` Object
 

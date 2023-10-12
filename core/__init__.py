@@ -35,7 +35,7 @@ class SeerSDK:
             print(f"User '{username}' logged in.\n")
         
         except:
-            print("Could not log in.\nPlease check your credentials and/or instance.")
+            raise ValueError("Could not log in.\nPlease check your credentials and/or instance.")
 
     def get_spaces(self):
         """
@@ -612,7 +612,10 @@ class SeerSDK:
             if not analysis_protocol_id and not analysis_protocol_name:
                 res = protocols.json()["data"]
 
-            if analysis_protocol_name and not analysis_protocol_id:
+            if analysis_protocol_id and not analysis_protocol_name:
+                res = [protocols.json()]
+
+            if not analysis_protocol_id and analysis_protocol_name:
                 res = [protocol for protocol in protocols.json()["data"] if protocol["analysis_protocol_name"] == analysis_protocol_name]
 
             for entry in range(len(res)):
@@ -758,7 +761,7 @@ class SeerSDK:
                 raise ValueError("Invalid request. Could not fetch peptide data. Please check your parameters.")
 
             peptide_data = peptide_data.json()
-
+            
             links = {
                 "peptide_np": url_to_df(peptide_data["npLink"]["url"]),
                 "peptide_panel": url_to_df(peptide_data["panelLink"]["url"]),

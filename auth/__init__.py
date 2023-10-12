@@ -50,9 +50,7 @@ class Auth:
                 })
 
         if not response:
-            return { 
-                "error": "Check if the credentials are correct or if the backend is running or not."
-            }
+            raise ValueError("Check if the credentials are correct or if the backend is running or not.")
 
         if response.status_code == 200:
             return response.json()
