@@ -281,8 +281,14 @@ def valid_ms_data_file(path):
     if not os.path.exists(path):
         return False
 
-    filename, file_extension = os.path.splitext(path)
-    return file_extension.lower() in [".d", ".d.zip", ".mzml", ".raw", ".mzml", ".wiff", ".wiff.scan"]
+    full_filename = path.split("/")[-1].split(".")
+    
+    if len(full_filename) >= 3:
+        extension = f'.{".".join(full_filename[-2:])}'
+    else:
+        extension = f".{full_filename[-1]}"
+
+    return extension.lower() in [".d", ".d.zip", ".mzml", ".raw", ".mzml", ".wiff", ".wiff.scan"]
 
 def download_hook(t):
     """

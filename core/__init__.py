@@ -31,7 +31,7 @@ class SeerSDK:
                 instance)
 
             self.auth.get_token()
-            
+
             print(f"User '{username}' logged in.\n")
         
         except:
@@ -888,6 +888,12 @@ class SeerSDK:
         if not project_name:
             raise ValueError("Project name cannot be empty.")
 
+        all_plate_ids = set([plate["id"] for plate in self.get_plate_metadata()])
+
+        for plate_id in plate_ids:
+            if plate_id not in all_plate_ids:
+                raise ValueError(f"Plate ID '{plate_id}' is not valid. Please check your parameters again.")
+
         TOKEN = self.auth.get_token()
         HEADERS = {"Authorization": f"{TOKEN}"}
         URL = f"{self.auth.url}api/v1/projects"
@@ -913,9 +919,9 @@ class SeerSDK:
 
             return res
 
-    def add_plate(self, ms_data_files: list[str], plate_map_file: str, plate_id: str, plate_name: str, sample_description_file: str=None, space: str=None):
+    def add_plate(self, ms_data_files: list[str], plate_map_file: str, plate_id: str, plate_name: str, sample_description_file: str=None, link: bool=False, space: str=None):
         """
-        Add a plate given a list of ms_data_files, plate_map_file, plate_id, plate_name, sample_description_file and space.
+        Add a plate given a list of (existing or new) ms_data_files, plate_map_file, plate_id, plate_name, sample_description_file and space.
 
         Parameters
         ----------
@@ -929,6 +935,8 @@ class SeerSDK:
             The plate name.
         sample_description_file : str, optional
             The sample description file. Defaults to None.
+        link : bool, optional
+            Boolean flag denoting whether the user wants to link existing MS data files to the plate. Defaults to False. If the flag is set to true, the ms_data_files list must contain paths to existing files in the system.
         space : str, optional
             The space or usergroup. Defaults to the user group id of the user who is creating the plate (i.e None).
 
@@ -1141,7 +1149,7 @@ class SeerSDK:
             shutil.rmtree("generated_files")
 
         return {
-            "message": f"Plate generated with id = {id_uuid}"
+            "message": f"Plate generated with id: '{id_uuid}'"
         }
     
     def analysis_complete(self, analysis_id: str):
@@ -1489,3 +1497,136 @@ class SeerSDK:
             print(f"Finished downloading {filename}\n") 
 
         return { "message": f"Files downloaded successfully to {download_path}/downloads/{analysis_id}" }
+
+    def list_ms_data_files(self, folder="", space=None):
+        """
+        Lists all the MS data files in the given folder as long as the folder path passed in the params is valid.
+
+        Parameters
+        ----------
+        folder : str, optional
+            Folder path to list the files from. Defaults to an empty string and displays all files for the user.
+        space : str, optional
+            ID of the user group to which the files belong, defaulted to None.
+
+        Returns
+        -------
+        list
+            Contains the list of files in the folder.
+
+        Example
+        -------
+        >>> from core import SeerSDK
+        >>> sdk = SeerSDK()
+        >>> folder_path = "test-may-2/"
+        >>> sdk.list_ms_data_files(folder_path)
+        >>> [
+            "test-may-2/EXP20028/EXP20028_2020ms0096X10_A.raw",
+            "test-may-2/agilent/05_C2_19ug-r001.d.zip",
+            "test-may-2/agilent/08_BC_24ug-r001.d.zip",
+            "test-may-2/d.zip/EXP22023_2022ms0143bX10_A_GA2_1_6681.d/EXP22023_2022ms0143bX10_A_GA2_1_6681.d.zip",
+            "test-may-2/DIA/EXP20002_2020ms0142X10_A.wiff",
+            "test-may-2/DIA/EXP20002_2020ms0142X10_A.wiff.scan",
+            "test-may-2/DIA/EXP20002_2020ms0142X17_A.wiff",
+            "test-may-2/DIA/EXP20002_2020ms0142X17_A.wiff.scan",
+            "test-may-2/DIA/EXP20002_2020ms0142X18_A.wiff",
+            "test-may-2/DIA/EXP20002_2020ms0142X18_A.wiff.scan"
+        ]
+        """
+        
+        TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{TOKEN}"}
+        URL = f"{self.auth.url}api/v1/msdataindex/filesinfolder?folder={folder}" if not space else f"{self.auth.url}api/v1/msdataindex/filesinfolder?folder={folder}&userGroupId={space}"
+        
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+
+            files = s.get(URL)
+            
+            if files.status_code != 200:
+                raise ValueError("Invalid request. Please check your parameters.")
+            
+            return files.json()["filesList"]
+    
+    def download_ms_data_files(self, paths: list[str], download_path: str, space: str=None):
+        """
+        Downloads all MS data files for paths passed in the params to the specified download path.
+
+        Parameters
+        ----------
+        paths : list[str]
+            List of paths to download.
+        download_path : str
+            Path to download the files to.
+        space : str, optional
+            ID of the user group to which the files belongs, defaulted to None.
+
+        Returns
+        -------
+        message: dict
+            Contains the message whether the files were downloaded or not.
+        """
+
+        urls = []
+
+        if not download_path:
+            download_path = os.getcwd()
+            print(f"\nDownload path not specified.\n")
+
+        if not os.path.isdir(download_path):
+            print(f'\nThe path "{download_path}" you specified does not exist, was either invalid or not absolute.\n')
+            download_path = f"{os.getcwd()}/downloads"
+
+        name = download_path if download_path[-1] != "/" else download_path[:-1]
+
+        if not os.path.exists(name):
+            os.makedirs(name)
+        
+        print(f'Downloading files to "{name}"\n')
+
+        TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{TOKEN}"}
+        URL = f"{self.auth.url}api/v1/msdataindex/download/getUrl" 
+
+        for path in paths:
+            with requests.Session() as s:
+                s.headers.update(HEADERS)
+
+                download_url = s.post(
+                    URL,
+                    json={
+                        "filepath": path,
+                        "userGroupId": space
+                    })
+
+                if download_url.status_code != 200:
+                    raise ValueError("Could not download file. Please check if the backend is running.")
+                
+                urls.append(download_url.text)
+
+        for i in range(len(urls)):
+            filename = paths[i].split("/")[-1]
+            url = urls[i]
+
+            print(f"Downloading {filename}") 
+
+            for _ in range(2):
+                try:
+                    with tqdm(unit = 'B', unit_scale = True, unit_divisor = 1024, miniters = 1, desc = f"Progress") as t:
+                        ssl._create_default_https_context = ssl._create_unverified_context
+                        urllib.request.urlretrieve(url, f"{name}/{filename}", reporthook=download_hook(t), data=None)
+                        break
+                except:
+                    filename = filename.split("/")
+                    name += "/" + "/".join([filename[i] for i in range(len(filename) - 1)])
+                    filename = filename[-1]
+                    if not os.path.isdir(f"{name}/{filename}"):
+                        os.makedirs(f"{name}/")
+            
+            else:
+                raise ValueError("Your download failed. Please check if the backend is still running.")
+
+            print(f"Finished downloading {filename}\n")
+        
+        return { "message": f"Files downloaded successfully to {name}" }
+        

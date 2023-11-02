@@ -584,3 +584,49 @@ log(sdk.download_analysis_files(analysis_id, download_path=download_path))
 ```
 
 <hr>
+
+### List MS Data Files
+Lists all the MS data files in the given folder as long as the folder path passed in the params is valid.
+
+###### <u>Params</u>
+* `folder` : (`str`, optional) Folder path to list the files from. Defaults to an empty string and displays all files for the user.
+* `space` : (`str`, optional) ID of the user group to which the files belong, defaulted to None.
+
+###### <u>Returns</u>
+(`list`) Contains the list of files in the folder.
+
+###### <u>Example</u>
+```{python}
+folder_path = "2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449"
+log(sdk.list_ms_data_files(folder_path))
+```
+
+If the folder path is invalid, the result is an empty list.
+```{python}
+folder_path = "some-invalid-path"
+log(sdk.list_ms_data_files(folder_path))
+```
+
+<hr>
+
+### Download MS Data Files
+Downloads all MS data files for `paths` passed in the params to the specified `download path`.
+
+If no `download_path` is specified or the `download_path` is invalid, the file will be downloaded to the current working directory. 
+
+###### <u>Params</u>
+* `paths` : (`list[str]`) List of paths to download.
+* `download_path` : (`str`) Path to download the analysis file to, defaulted to current working directory.
+* `space` : (`str`, optional) ID of the user group to which the file belongs, defaulted to None.
+
+###### <u>Returns</u>
+(`dict`) Message containing whether the file was downloaded or not.
+
+###### <u>Example</u>
+```{python}
+download_paths = ["2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest1.raw", "2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest2.raw"]
+
+log(sdk.download_ms_data_files(paths=download_paths, download_path="testing/"))
+```
+
+<hr>
