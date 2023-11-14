@@ -966,9 +966,16 @@ class SeerSDK:
         s3_upload_path = None
         s3_bucket = ""
         dir_exists = True # flag to check if the generated_files directory exists
+
+        # Step 0: Check if the file paths are valid.
+        for file in ms_data_files:
+            if not os.path.exists(file):
+                raise ValueError(f"File path '{file}' is invalid. Please check your parameters again.")
+        
+        if not os.path.exists(plate_map_file):
+            raise ValueError(f"File path '{plate_map_file}' is invalid. Please check your parameters again.")
         
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
-
         with requests.Session() as s:
             s.headers.update(HEADERS)
             plate_response = s.get(f"{self.auth.url}api/v1/plateids")
@@ -1037,7 +1044,6 @@ class SeerSDK:
             os.environ["AWS_SESSION_TOKEN"] = credentials["SessionToken"]
 
         # Step 4: Upload the platemap file to the S3 bucket.
-
         if isinstance(plate_map_file, PlateMap):
             plate_map_file_name = f"plateMap_{id_uuid}.csv"
 
@@ -1587,6 +1593,7 @@ class SeerSDK:
         TOKEN = self.auth.get_token()
         HEADERS = {"Authorization": f"{TOKEN}"}
         URL = f"{self.auth.url}api/v1/msdataindex/download/getUrl" 
+        tenant_id = jwt.decode(TOKEN, options={'verify_signature': False})["custom:tenantId"]
 
         for path in paths:
             with requests.Session() as s:
@@ -1595,7 +1602,7 @@ class SeerSDK:
                 download_url = s.post(
                     URL,
                     json={
-                        "filepath": path,
+                        "filepath": f"{tenant_id}/{path}",
                         "userGroupId": space
                     })
 

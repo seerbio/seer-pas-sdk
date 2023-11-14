@@ -21,26 +21,18 @@ def delete_directory(download_path):
 # SDK INSTANCE
 INSTANCE = "staging"
 
-credentials = { 
-    "staging": ["Tenant-admin", "Abcd1234*"],
-    "dev": ["gnu403", "Test!234567"],
-    "US": ["css_apps_lab", "QXX!chqN!GswA9M"],
-    "EU": ["", ""]
-}
+if __name__ == "__main__":
+    credentials = { 
+        "staging": ["Tenant-admin", "Abcd1234*"],
+        "dev": ["gnu403", "Test!234567"],
+        "US": ["css_apps_lab", "QXX!chqN!GswA9M"],
+        "EU": ["", ""]
+    }
 
-if INSTANCE in credentials:
-    USERNAME = credentials[INSTANCE][0]
-    PASSWORD = credentials[INSTANCE][1]
-else:
-    raise Exception("Invalid instance")
+    if INSTANCE in credentials:
+        USERNAME = credentials[INSTANCE][0]
+        PASSWORD = credentials[INSTANCE][1]
+    else:
+        raise Exception("Invalid instance")
 
-sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
-
-# Works for staging: 
-# paths = ["4cb4d870-d184-11ea-9748-a18558edfdce/AgamSDKTest2.raw"] 
-
-# Works for dev: 
-# paths = sdk.list_ms_data_files("2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/"); print()
-
-# Works for staging but not for dev:
-# log(sdk.download_ms_data_files(paths=paths, download_path="downloads/"))
+    sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
