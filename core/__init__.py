@@ -972,7 +972,7 @@ class SeerSDK:
             if not os.path.exists(file):
                 raise ValueError(f"File path '{file}' is invalid. Please check your parameters again.")
         
-        if not os.path.exists(plate_map_file):
+        if type(plate_map_file) == str and not os.path.exists(plate_map_file):
             raise ValueError(f"File path '{plate_map_file}' is invalid. Please check your parameters again.")
         
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
@@ -1502,7 +1502,7 @@ class SeerSDK:
 
             print(f"Finished downloading {filename}\n") 
 
-        return { "message": f"Files downloaded successfully to {download_path}/downloads/{analysis_id}" }
+        return { "message": f"Files downloaded successfully to '{download_path}/downloads/{analysis_id}'" }
 
     def list_ms_data_files(self, folder="", space=None):
         """
@@ -1635,5 +1635,5 @@ class SeerSDK:
 
             print(f"Finished downloading {filename}\n")
         
-        return { "message": f"Files downloaded successfully to {name}" }
+        return { "message": f"Files downloaded successfully to '{name}'" }
         

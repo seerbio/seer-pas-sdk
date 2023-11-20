@@ -603,7 +603,7 @@ log(sdk.list_ms_data_files(folder_path))
 
 If the folder path is invalid, the result is an empty list.
 ```{python}
-folder_path = "some-invalid-path"
+folder_path = "some/invalid/path"
 log(sdk.list_ms_data_files(folder_path))
 ```
 
