@@ -783,20 +783,17 @@ class SeerSDK:
 
             return links
 
-    def add_sample(self, plate_id: str, sample_id: str, sample_name: str, space: str=None):
+    def add_sample(self, sample_entry: dict):
         """
+        ****************
+        [UNEXPOSED METHOD CALL]
+        ****************
         Add a sample given a plate_id, sample_id, sample_name and space.
 
         Parameters
         ----------
-        plate_id : str
-            The plate ID.
-        sample_id : str
-            The sample ID.
-        sample_name : str   
-            The sample name.
-        space : str 
-            The space.
+        sample_entry: dict
+            A dictionary containing all keys and values for the sample entry. These may or may not have been inferred from the sample description file.
 
         Returns
         -------
@@ -820,15 +817,9 @@ class SeerSDK:
                 ...
             }
         """
-        if not "plate_id":
-            raise ValueError("Plate ID cannot be empty.")
-        
-        if not "sample_id":
-            raise ValueError("Sample ID cannot be empty.")
-
-        if not "sample_name":
-            raise ValueError("Sample name cannot be empty.")
-
+        for key in ["plateID", "sampleID", "sampleName"]:
+            if key not in sample_entry:
+                raise ValueError(f"{key} is missing. Please check your parameters again.")
 
         TOKEN = self.auth.get_token()
         HEADERS = {"Authorization": f"{TOKEN}"}
@@ -839,12 +830,7 @@ class SeerSDK:
 
             response = s.post(
                 URL,
-                json={ 
-                    "plateID": plate_id,
-                    "sampleID": sample_id,
-                    "sampleName": sample_name,
-                    "sampleUserGroup": space
-                }
+                json=sample_entry
             )
 
             if response.status_code != 200:
@@ -919,7 +905,7 @@ class SeerSDK:
 
             return res
 
-    def add_plate(self, ms_data_files: list[str], plate_map_file: str, plate_id: str, plate_name: str, sample_description_file: str=None, link: bool=False, space: str=None):
+    def add_plate(self, ms_data_files: list[str], plate_map_file: str, plate_id: str, plate_name: str, sample_description_file: str=None, space: str=None):
         """
         Add a plate given a list of (existing or new) ms_data_files, plate_map_file, plate_id, plate_name, sample_description_file and space.
 
@@ -935,8 +921,6 @@ class SeerSDK:
             The plate name.
         sample_description_file : str, optional
             The sample description file. Defaults to None.
-        link : bool, optional
-            Boolean flag denoting whether the user wants to link existing MS data files to the plate. Defaults to False. If the flag is set to true, the ms_data_files list must contain paths to existing files in the system.
         space : str, optional
             The space or usergroup. Defaults to the user group id of the user who is creating the plate (i.e None).
 
@@ -974,6 +958,9 @@ class SeerSDK:
         
         if type(plate_map_file) == str and not os.path.exists(plate_map_file):
             raise ValueError(f"File path '{plate_map_file}' is invalid. Please check your parameters again.")
+
+        if sample_description_file and not os.path.exists(sample_description_file):
+            raise ValueError(f"File path '{sample_description_file}' is invalid. Please check your parameters again.")
         
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
         with requests.Session() as s:
@@ -1083,11 +1070,35 @@ class SeerSDK:
             filesize = os.stat(file).st_size
             raw_file_paths[f"{filename}"] = f"/{s3_bucket}/{s3_upload_path}{filename}"
         
-        # Step 6: Get sample info from the plate map file and make a call to `/api/v1/samples` with the sample_info. This returns the plateId, sampleId and sampleName for each sample in the plate map file.
-        sample_info = get_sample_info(id_uuid, ms_data_files, plate_map_file, space)
+        # Step 6: Get sample info from the plate map file and make a call to `/api/v1/samples` with the sample_info. This returns the plateId, sampleId and sampleName for each sample in the plate map file. Also validate and upload the sample_description_file if it exists.
+        if sample_description_file:
+            sample_info = get_sample_info(id_uuid, ms_data_files, plate_map_file, space, sample_description_file)
+
+            sdf_upload = upload_file(sample_description_file, s3_bucket, f"{s3_upload_path}{os.path.basename(sample_description_file)}")
+
+            if not sdf_upload:
+                raise ValueError("Sample description file upload failed.")
+            
+            with requests.Session() as s:
+                s.headers.update(HEADERS)
+                sdf_response = s.post(
+                    f"{self.auth.url}api/v1/msdataindex/file", 
+                    json={ 
+                        "files": [{ 
+                            "filePath": f"{s3_upload_path}{os.path.basename(sample_description_file)}",
+                            "fileSize": os.stat(sample_description_file).st_size,
+                            "userGroupId": space 
+                        }]
+                    })
+
+                if sdf_response.status_code != 200 or not sdf_response.json() or "created" not in sdf_response.json():
+                    raise ValueError("Upload failed, please check if backend is still active and running.")
+
+        else:
+            sample_info = get_sample_info(id_uuid, ms_data_files, plate_map_file, space)
 
         for entry in sample_info:
-            sample = self.add_sample(entry["plateID"], entry["sampleID"], entry["sampleName"], entry["sampleUserGroup"])
+            sample = self.add_sample(entry)
             samples.append(sample)
 
         # Step 7: Parse the plate map file and convert the data into a form that can be POSTed to `/api/v1/msdatas`.
@@ -1192,7 +1203,7 @@ class SeerSDK:
         
         return { "status": res[0]["status"] }
 
-    def start_analysis(self, name: str, project_id: str, analysis_protocol_name: str=None, analysis_protocol_id: str=None, notes: str="", description: str="", space: str=None):
+    def start_analysis(self, name: str, project_id: str, sample_ids: list=None, analysis_protocol_name: str=None, analysis_protocol_id: str=None, notes: str="", description: str="", space: str=None):
         """
         Given a name, analysis_protocol_id, project_id, creates a new analysis for the authenticated user.
 
@@ -1203,6 +1214,9 @@ class SeerSDK:
 
         project_id : str
             ID of the project to which the analysis belongs. Can be fetched using the get_project_metadata() function.
+
+        sample_ids: list[str], optional
+            List of sample IDs to be used for the analysis. Should be omitted if analysis is to be run with all samples.   
 
         analysis_protocol_name : str, optional
             Name of the analysis protocol to be used for the analysis. Can be fetched using the get_analysis_protocols() function. Should be omitted if analysis_protocol_id is provided.
@@ -1239,7 +1253,7 @@ class SeerSDK:
             raise ValueError("Project ID cannot be empty.")
         
         if not analysis_protocol_id and analysis_protocol_name:
-            valid_analysis_protocol = self.get_analysis_protocols(analysis_protocol_name)
+            valid_analysis_protocol = self.get_analysis_protocols(analysis_protocol_name=analysis_protocol_name)
 
             if not valid_analysis_protocol:
                 raise ValueError("Analysis protocol not found. Your protocol name is incorrect.")
@@ -1247,7 +1261,7 @@ class SeerSDK:
             analysis_protocol_id = valid_analysis_protocol[0]["id"]
 
         if analysis_protocol_id and not analysis_protocol_name:
-            valid_analysis_protocol = self.get_analysis_protocols(analysis_protocol_id)
+            valid_analysis_protocol = self.get_analysis_protocols(analysis_protocol_id=analysis_protocol_id)
             
             if not valid_analysis_protocol:
                 raise ValueError("Analysis protocol not found. Your protocol ID is incorrect.")
@@ -1255,23 +1269,35 @@ class SeerSDK:
         if not analysis_protocol_id and not analysis_protocol_name:
             raise ValueError("You must specify either analysis protocol ID or analysis protocol name. Both cannot be empty.")
 
+        if sample_ids:
+            valid_ids = [entry["id"] for entry in self.get_samples_metadata(project_id=project_id)]
+
+            for sample_id in sample_ids:
+                if sample_id not in valid_ids:
+                    raise ValueError(f"Sample ID '{sample_id}' is either not valid or not associated with the project. Please check your parameters again.")
+
         TOKEN = self.auth.get_token()
         HEADERS = {"Authorization": f"{TOKEN}"}
         URL = f"{self.auth.url}api/v1/analyze"
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
-
-            analysis = s.post(
-                URL,
-                json={
+            req_payload = {
                     "analysisName": name,
                     "analysisProtocolId": analysis_protocol_id,
                     "projectId": project_id,
                     "notes": notes,
                     "description": description,
                     "userGroupId": space
-                }
+            }
+
+            if sample_ids:
+                sample_ids = ",".join(sample_ids)
+                req_payload["selectedSampleIDs"] = sample_ids
+            
+            analysis = s.post(
+                URL,
+                json=req_payload
             )
 
             if analysis.status_code != 200:
@@ -1636,4 +1662,3 @@ class SeerSDK:
             print(f"Finished downloading {filename}\n")
         
         return { "message": f"Files downloaded successfully to '{name}'" }
-        

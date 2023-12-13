@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 from auth import Auth
 from botocore.config import Config
 from botocore.exceptions import ClientError
+from re import sub
 
 import pandas as pd
 import os
@@ -111,7 +112,7 @@ def url_to_df(url):
     csv = pd.read_csv(url_content, sep="\t")
     return csv
 
-def get_sample_info(plate_id, ms_data_files, plate_map_file, space):
+def get_sample_info(plate_id, ms_data_files, plate_map_file, space, sample_description_file=None):
     """
     Returns all `sample_id` and `sample_name` values for a plate_map_file and checks if ms_data_files are contained within the plate_map_file.
 
@@ -155,20 +156,42 @@ def get_sample_info(plate_id, ms_data_files, plate_map_file, space):
     for file in files:
         if file not in local_file_names:
             raise ValueError("Plate map file does not contain the attached MS data files.")
-    
-    # Step 2: CSV manipulation.
+
+    # Step 2: Validating and mapping the contents of the sample description file.
+    if sample_description_file:
+        sdf = pd.read_csv(sample_description_file, on_bad_lines="skip")
+        sdf_data = sdf.iloc[:, :]
+        sdf_files = sdf_data["Sample ID"]
+
+        if len(sdf_files) != len(files):
+            raise ValueError("Sample description file is invalid.")
+        
+        sdf.rename(columns={"Sample Name":"Sample name"}, inplace=True)
+
+    # Step 3: CSV manipulation.
     number_of_rows = df.shape[0]
 
     for i in range(number_of_rows):
         row = df.iloc[i]
         sample_id = row["Sample ID"]
         sample_name = row["Sample name"]
-        res.append({ 
+        sample_info = { 
             "plateID": plate_id,
             "sampleID": sample_id,
             "sampleName": sample_name,
             "sampleUserGroup": space
-        })
+        }
+
+        if sample_description_file:
+            sdf_row = dict(sdf.iloc[i])   
+            row_names = list(sdf_row.keys())
+
+            if sdf_row["Sample ID"] == sample_id and sdf_row["Sample name"] == sample_name:
+                for row_name in row_names:
+                    sdf_data = sdf_row[row_name]
+                    sample_info[camel_case(row_name)] = sdf_data if pd.notna(sdf_data) else ""
+
+        res.append(sample_info)
 
     return res
 
@@ -317,3 +340,11 @@ def download_hook(t):
         last_b[0] = b
 
     return update_to
+
+def camel_case(s):
+    # Use regular expression substitution to replace underscores and hyphens with spaces,
+    # then title case the string (capitalize the first letter of each word), and remove spaces
+    s = sub(r"(_|-)+", " ", s).title().replace(" ", "")
+    
+    # Join the string, ensuring the first letter is lowercase
+    return ''.join([s[0].lower(), s[1:]])

@@ -466,13 +466,14 @@ print(sdk.analysis_complete(analysis_id))
 <hr>
 
 ### Add Plate
-Add a plate given a list of `ms_data_files`, `plate_map_file`, `plate_id`, `plate_name`, and `space`.
+Add a plate given a list of `ms_data_files`, `plate_map_file`, `plate_id`, `plate_name`, `sample_description_file` and `space`.
 
 ###### <u>Params</u>
 * `ms_data_files`: (`list[str]`) List of MS Data files.
 * `plate_map_file`: (`str` or `PlateMap` object) The plate map file path or `PlateMap` object. 
 * `plate_id`: (`str`) The plate ID. Must be unique.
 * `plate_name`: (`str`) The plate name.
+* `sample_description_file`: (`str`, optional) Path to the sample description file which adds more detail to samples.
 * `space`: (`str`, optional) Space where the plate is contained. Defaults to the space of the user who is creating the project (or `None`).
 <br>
 
@@ -512,6 +513,17 @@ generated_plate_map_file = PlateMap(
 print(sdk.add_plate(data_file_locations, generated_plate_map_file, sample_plate_id, sample_plate_name))
 ```
 
+Similarly, you could specify a `sample_description_file` that would specify more parameters for all samples uploaded.
+
+```{python}
+data_file_locations = ["testing/AgamSDKTest1.raw", "testing/AgamSDKTest2.raw"]
+plate_map_location = "testing/AgamSDKPlateMapATest.csv"
+sample_description_file = "testing/AgamSDKSampleDesc.csv"
+sample_plate_id= "unique2123id"
+sample_plate_name = "some_plate_name" 
+
+print(sdk.add_plate(data_file_locations, plate_map_location, sample_plate_id, sample_plate_name, sample_description_file))
+```
 <hr>
 
 ### Start Analysis
@@ -519,7 +531,8 @@ Start a new analysis for the authenticated_user given an `analysis_name`, `analy
 
 ###### <u>Params</u>
 * `analysis_name`: (`str`) Name of the analysis.
-* `project_ids`: (`str`) ID of the project to which the analysis belongs. Can be fetched using the `get_project_metadatas()` function.
+* `project_id`: (`str`) ID of the project to which the analysis belongs. Can be fetched using the `get_project_metadatas()` function.
+* `sample_ids`: (`list[str]`, optional): List of sample IDs to be used for the analysis. Must always belong to the project being chosen to start an analysis with. Should be omitted if analysis is to be run with all samples.
 * `analysis_protocol_name`: (`str`, optional) Name of the analysis protocol to be used for the analysis. Can be fetched using the `get_analysis_protocols()` function. Should be omitted if analysis_protocol_id is provided.
 * `analysis_protocol_id`: (`str`, optional) ID of the analysis protocol to be used for the analysis. Can be fetched using the `get_analysis_protocols()` function. Should be omitted if `analysis_protocol_name` is provided.
 * `notes`: (`str`, optional): Notes for the analysis, defaulted to an empty string
@@ -531,13 +544,32 @@ Start a new analysis for the authenticated_user given an `analysis_name`, `analy
 `res`: (`dict`) Contains message whether the analysis was started or not.
 
 ###### <u>Example</u>
+Since no `sample_ids` are specified, the analysis is run on all samples.
 ```{python}
 name = "testAnalysis"
 project_id = "1e324300-0496-11ee-bd19-a77197cd1a6b"
 analysis_protocol_name = "testMSFraggerUpload26" # you can also specify `analysis_protocol_id` instead
 print(sdk.start_analysis(name, project_id, analysis_protocol_name=analysis_protocol_name))
 ```
+
+You can also specify select samples using the following:
+```{python}
+name = "testAnalysis"
+project_id = "1e324300-0496-11ee-bd19-a77197cd1a6b"
+sample_ids = ["1b1ff390-048e-11ee-bd19-a77197cd1a6b"] # this sample id is contained in the project
+analysis_protocol_name = "testMSFraggerUpload26"
+print(sdk.start_analysis(name, project_id, sample_ids=sample_ids, analysis_protocol_name=analysis_protocol_name))
+```
 <hr>
+
+However, if the sample specified are invalid, the code will throw an error.
+```{python}
+name = "testAnalysis"
+project_id = "1e324300-0496-11ee-bd19-a77197cd1a6b"
+sample_ids = ["ABC1234"] # sample not contained in the project
+analysis_protocol_name = "testMSFraggerUpload26"
+print(sdk.start_analysis(name, project_id, sample_ids=sample_ids, analysis_protocol_name=analysis_protocol_name))
+```
 
 ### Upload MS Data
 Upload just MS data files to the PAS backend.
@@ -610,7 +642,7 @@ log(sdk.list_ms_data_files(folder_path))
 <hr>
 
 ### Download MS Data Files
-Downloads all MS data files for `paths` passed in the params to the specified `download path`.
+Downloads all MS data files for `paths` passed in the params to the specified `download_path`.
 
 If no `download_path` is specified or the `download_path` is invalid, the file will be downloaded to the current working directory. 
 
