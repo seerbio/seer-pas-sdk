@@ -1662,3 +1662,379 @@ class SeerSDK:
             print(f"Finished downloading {filename}\n")
         
         return { "message": f"Files downloaded successfully to '{name}'" }
+
+    def link_plate(self, ms_data_files: list[str], plate_map_file: str, plate_id: str, plate_name: str, sample_description_file: str=None, space: str=None):
+        """
+        Links existing MS data files to user uploaded files to create a new plate.
+
+        Parameters
+        ----------
+        ms_data_files : list[str]
+            Path to MS data files on the PAS backend or S3 bucket.
+        plate_map_file : str
+            Path to the plate map file to be linked.
+        plate_id : str
+            ID of the plate to be linked.
+        plate_name : str
+            Name of the plate to be linked.
+        sample_description_file : str, optional
+            Path to the sample description file to be linked, defaulted to None.
+        space : str, optional
+            ID of the user group to which the files belongs, defaulted to None.
+
+        Returns
+        -------
+        dict
+            Contains the message whether the plate was created or not.
+
+        Example
+        -------
+        >>> from core import SeerSDK
+        >>> sdk = SeerSDK()
+        >>> sdk.link_plate(["/path/to/file1", "/path/to/file2"], "/path/to/plate_map_file", "plate_id", "plate_name")
+        >>> { "message": "Plate generated with id: 'plate_id'" }
+        """
+
+        TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{TOKEN}"}
+
+        plate_ids = set() # contains all the plate_ids fetched from self.get_plate_metadata()
+        files = [] # to be uploaded to sync frontend
+        samples = [] # list of all the sample responses from the backend
+        id_uuid = "" # uuid for the plate id
+        raw_file_paths = {} # list of all the AWS raw file paths
+        s3_upload_path = None
+        s3_bucket = ""
+        ms_data_file_names = []
+        dir_exists = True # flag to check if the generated_files directory exists
+
+        # Step 0: Check if the file paths exist in the S3 bucket.
+        for file in ms_data_files:
+            if not self.list_ms_data_files(file):
+                raise ValueError(f"File '{file}' does not exist. Please check your parameters again.")
+        
+        if sample_description_file and not os.path.exists(sample_description_file):
+            raise ValueError(f"File path '{sample_description_file}' is invalid. Please check your parameters again.")
+
+        # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            plate_response = s.get(f"{self.auth.url}api/v1/plateids")
+
+            if plate_response.status_code != 200:
+                raise ValueError("Cannot connect to the server.")
+
+            plate_ids = set(plate_response.json()["data"])            
+
+            if not plate_ids:
+                raise ValueError("Cannot connect to the server.")
+        
+        # Step 2: Fetch the UUID that needs to be passed into the backend from `/api/v1/plates` to fetch the AWS upload config and raw file path. This will sync the plates backend with samples when the user uploads later. This UUID will also be void of duplicates since duplication is handled by the backend.
+
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            plate_response = s.post(
+                f"{self.auth.url}api/v1/plates",
+                json={ 
+                    "plateId": plate_id,
+                    "plateName": plate_name,
+                    "plateUserGroup": space
+                })
+
+            if plate_response.status_code != 200:
+                raise ValueError("Cannot connect to the server while fetching plates.")
+            
+            id_uuid = plate_response.json()["id"]
+        
+            if not id_uuid:
+                raise ValueError("Cannot connect to the server while fetching plates.")
+        
+        # Step 3: Fetch AWS upload config from the backend with the plateId we just generated. Populates `s3_upload_path` and `s3_bucket` global variables.
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            config_response = s.post(
+                f"{self.auth.url}api/v1/msdatas/getuploadconfig", 
+                json={ 
+                    "plateId": id_uuid
+                })
+
+            if config_response.status_code != 200 or not config_response.json():
+                raise ValueError("Upload failed, please check if backend is still running.")
+
+            if "s3Bucket" not in config_response.json() or "s3UploadPath" not in config_response.json():
+                raise ValueError("Upload failed. Please check if the backend is still running.") 
+
+            s3_bucket = config_response.json()["s3Bucket"]
+            s3_upload_path = config_response.json()["s3UploadPath"]
+
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            config_response = s.get(
+                f"{self.auth.url}auth/getawscredential",)
+
+            if config_response.status_code != 200 or not config_response.json():
+                raise ValueError("Could not fetch config for user.")
+
+            if "S3Bucket" not in config_response.json()["credentials"]:
+                raise ValueError("Upload failed. Please check if the backend is still running.") 
+            
+            credentials = config_response.json()["credentials"]
+
+            os.environ["AWS_ACCESS_KEY_ID"] = credentials["AccessKeyId"]
+            os.environ["AWS_SECRET_ACCESS_KEY"] = credentials["SecretAccessKey"]
+            os.environ["AWS_SESSION_TOKEN"] = credentials["SessionToken"]
+
+        # Step 4: Upload the platemap file to the S3 bucket.
+        if isinstance(plate_map_file, PlateMap):
+            plate_map_file_name = f"plateMap_{id_uuid}.csv"
+
+            if not os.path.exists("generated_files"):
+                dir_exists = False
+                os.makedirs("generated_files")
+
+            plate_map_file.to_csv(f"generated_files/{plate_map_file_name}")
+            plate_map_file = f"generated_files/{plate_map_file_name}"
+            
+        else:
+            plate_map_file_name = os.path.basename(plate_map_file)
+
+        res = upload_file(plate_map_file, s3_bucket, f"{s3_upload_path}{plate_map_file_name}")
+
+        if not res:
+            raise ValueError("Platemap upload failed.")
+        
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            plate_map_response = s.post(
+                f"{self.auth.url}api/v1/msdataindex/file", 
+                json={ 
+                    "files": [{ 
+                        "filePath": f"{s3_upload_path}{plate_map_file_name}",
+                        "fileSize": os.stat(plate_map_file).st_size,
+                        "userGroupId": space 
+                    }]
+                })
+
+            if plate_map_response.status_code != 200 or not plate_map_response.json() or "created" not in plate_map_response.json():
+                raise ValueError("Upload failed, please check if backend is still active and running.")
+        
+        # Step 5: Populate `raw_file_paths` for sample upload.
+        for file in ms_data_files:
+            filename = file.split("/")[-1]
+            ms_data_file_names.append(filename)
+            raw_file_paths[f"{filename}"] = file
+
+        # Step 6: Get sample info from the plate map file and make a call to `/api/v1/samples` with the sample_info. This returns the plateId, sampleId and sampleName for each sample in the plate map file. Also validate and upload the sample_description_file if it exists.
+        if sample_description_file:
+            sample_info = get_sample_info(id_uuid, ms_data_files, plate_map_file, space, sample_description_file)
+
+            sdf_upload = upload_file(sample_description_file, s3_bucket, f"{s3_upload_path}{os.path.basename(sample_description_file)}")
+
+            if not sdf_upload:
+                raise ValueError("Sample description file upload failed.")
+            
+            with requests.Session() as s:
+                s.headers.update(HEADERS)
+                sdf_response = s.post(
+                    f"{self.auth.url}api/v1/msdataindex/file", 
+                    json={ 
+                        "files": [{ 
+                            "filePath": f"{s3_upload_path}{os.path.basename(sample_description_file)}",
+                            "fileSize": os.stat(sample_description_file).st_size,
+                            "userGroupId": space 
+                        }]
+                    })
+
+                if sdf_response.status_code != 200 or not sdf_response.json() or "created" not in sdf_response.json():
+                    raise ValueError("Upload failed, please check if backend is still active and running.")
+
+        else:
+            sample_info = get_sample_info(id_uuid, ms_data_files, plate_map_file, space)
+
+        for entry in sample_info:
+            sample = self.add_sample(entry)
+            samples.append(sample)
+
+        # Step 7: Parse the plate map file and convert the data into a form that can be POSTed to `/api/v1/msdatas`.
+        plate_map_data = parse_plate_map_file(plate_map_file, samples, raw_file_paths, space)
+
+        # Step 8: Make a request to `/api/v1/msdatas` with the processed samples data.
+        for file_index in range(len(ms_data_file_names)):
+            file = ms_data_file_names[file_index]
+            
+            with requests.Session() as s:
+                s.headers.update(HEADERS)
+                ms_data_response = s.post(
+                    f"{self.auth.url}api/v1/msdatas",
+                    json=plate_map_data[file_index]
+                )
+
+                if ms_data_response.status_code != 200:
+                    raise ValueError("Upload failed, please check if backend is still active and running.")
+
+        return {
+            "message": f"Plate generated with id: '{id_uuid}'"
+        }
+    
+    def group_analysis_results(self, analysis_id: str, box_plot: dict=None):
+        """
+        Returns the group analysis data for the given analysis id, provided it exists.
+
+        Parameters
+        ----------
+        analysis_id : str
+            The analysis id.
+        
+        box_plot : dict, optional
+            The box plot configuration needed for the analysis, defaulted to None. Contains `feature_type` ("protein" or "peptide") and `feature_ids` (comma separated list of feature IDs) keys.
+
+        Returns
+        -------
+        res : dict
+            A dictionary containing the group analysis data.
+
+        Example
+        -------
+        >>> from core import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk.group_analysis_results("YOUR_ANALYSIS_ID_HERE")
+        >>> {
+                "pre": {
+                    "protein": [],
+                    "peptide": [],
+                },
+                "post": { 
+                    "protein": {},
+                    "protein_url": { 
+                        "protein_processed_file_url": "", 
+                        "protein_processed_long_form_file_url": "",
+                    }, 
+
+                    "peptide": {},
+                    "peptide_url": { 
+                        "peptide_processed_file_url": "", 
+                        "peptide_processed_long_form_file_url": "",
+                    }, 
+                },
+                "box_plot": []
+            }
+        """
+
+        if not analysis_id:
+            raise ValueError("Analysis ID cannot be empty.")
+
+        TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{TOKEN}"}
+        URL = f"{self.auth.url}"
+
+        res = { 
+            "pre": {
+                "protein": [],
+                "peptide": [],
+            },
+            "post": { 
+                "protein": {},
+                "protein_url": { 
+                    "protein_processed_file_url": "", 
+                    "protein_processed_long_form_file_url": "",
+                }, 
+
+                "peptide": {},
+                "peptide_url": { 
+                    "peptide_processed_file_url": "", 
+                    "peptide_processed_long_form_file_url": "",
+                }, 
+            },
+            "box_plot": []
+        }
+
+        # Pre-GA data call
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+
+            protein_pre_data = s.post(
+                url=f"{URL}api/v2/groupanalysis/protein",
+                json={ 
+                    "analysisId": analysis_id,
+                    "grouping": "condition"
+                }) 
+            
+            if protein_pre_data.status_code != 200:
+                raise ValueError("Invalid request. Could not fetch group analysis protein pre data. Please check your parameters.")
+
+            protein_pre_data = protein_pre_data.json()
+            
+            res["pre"]["protein"] = protein_pre_data
+        
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+
+            peptide_pre_data = s.post(
+                url=f"{URL}api/v2/groupanalysis/peptide",
+                json={ 
+                    "analysisId": analysis_id,
+                    "grouping": "condition"
+                }) 
+            
+            if peptide_pre_data.status_code != 200:
+                raise ValueError("Invalid request. Could not fetch group analysis peptide pre data. Please check your parameters.")
+
+            peptide_pre_data = peptide_pre_data.json()
+            res["pre"]["peptide"] = peptide_pre_data
+
+        # Post-GA data call
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+
+            get_saved_result = s.get(f"{URL}api/v1/groupanalysis/getSavedResults?analysisid={analysis_id}")
+
+            if get_saved_result.status_code != 200:
+                raise ValueError("Invalid request. Could not fetch group analysis post data. Please check your parameters.")
+            
+            get_saved_result = get_saved_result.json()
+
+            # Protein data
+            if "pgResult" in get_saved_result:
+                res["post"]["protein"] = get_saved_result["pgResult"]
+            
+            # Peptide data
+            if "peptideResult" in get_saved_result:
+                res["post"]["peptide"] = get_saved_result["peptideResult"]
+
+            # Protein URLs
+            if "pgProcessedFileUrl" in get_saved_result:
+                res["post"]["protein_url"]["protein_processed_file_url"] = get_saved_result["pgProcessedFileUrl"]
+            
+            if "pgProcessedLongFormFileUrl" in get_saved_result:
+                res["post"]["protein_url"]["protein_processed_long_form_file_url"] = get_saved_result["pgProcessedLongFormFileUrl"]
+
+            # Peptide URLs
+            if "peptideProcessedFileUrl" in get_saved_result:
+                res["post"]["peptide_url"]["peptide_processed_file_url"] = get_saved_result["peptideProcessedFileUrl"]
+
+            if "peptideProcessedLongFormFileUrl" in get_saved_result:
+                res["post"]["peptide_url"]["peptide_processed_long_form_file_url"] = get_saved_result["peptideProcessedLongFormFileUrl"]
+
+        # Box plot data call
+        if not box_plot: 
+            del res["box_plot"]
+            return res
+
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            box_plot["feature_type"] = box_plot["feature_type"].lower()
+            box_plot_data = s.post(
+                url=f"{URL}api/v1/groupanalysis/rawdata",
+                json={ 
+                    "analysisId": analysis_id,
+                    "featureIds": ",".join(box_plot["feature_ids"]) if len(box_plot["feature_ids"]) > 1 else box_plot["feature_ids"][0],
+                    "featureType": f"{box_plot['feature_type']}group"
+                }) 
+            
+            if box_plot_data.status_code != 200:
+                raise ValueError("Invalid request, could not fetch box plot data. Please verify your 'box_plot' parameters, including 'feature_ids' (comma-separated list of feature IDs) and 'feature_type' (needs to be a either 'protein' or 'peptide').")
+
+            box_plot_data = box_plot_data.json()
+            res["box_plot"] = box_plot_data
+
+        return res

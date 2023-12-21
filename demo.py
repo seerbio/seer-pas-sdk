@@ -5,7 +5,7 @@ from objects import *
 import json
 import os
 import shutil
-
+import sys
 import random
 import string
 import datetime
@@ -28,10 +28,17 @@ def id_generator(size=4, chars=string.ascii_uppercase):
 def get_timestamp():
     return datetime.datetime.now().strftime("%I%M%p%B%d")
     
-# SDK INSTANCE
-INSTANCE = "staging"
-
 if __name__ == "__main__":
+
+    # DEFAULTING INSTANCE TO STAGING
+    INSTANCE = "staging"
+
+    if len(sys.argv) > 1:
+        INSTANCE = "".join(sys.argv[1][2:])
+        print(f"Using '{INSTANCE}' instance.\n")
+    else:
+        print("No args passed, defaulting to staging instance.\n")
+
     credentials = { 
         "staging": { 
             "username": "Tenant-admin",
@@ -60,6 +67,31 @@ if __name__ == "__main__":
         raise Exception("Invalid instance")
 
     sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
+
+    # GROUP ANALYSIS TEST ON DEV
+    '''
+    a = sdk.group_analysis_results("c4089c00-16ab-11ec-b589-634014ca2005",     { 
+            "feature_type": "protein",
+            "feature_ids": ["Q96RL7-2"]
+        })
+    
+    pre = { 
+        "protein": len(a["pre"]["protein"]),
+        "peptide": len(a["pre"]["peptide"]),
+    }
+
+    post = {
+        "protein": len(a["post"]["protein"]),
+        "peptide": len(a["post"]["peptide"]),
+    }
+
+    urls = { 
+        "protein": a["post"]["protein_url"],
+        "peptide": a["post"]["peptide_url"],
+    }
+
+    box_plot = a["box_plot"] if "box_plot" in a else []
+    ''' 
 
     # GROUP ANALYSIS TEST ON STAGING
     '''

@@ -444,7 +444,7 @@ Creates a new project with a given `project_name` and a list containing `project
 ```{python}
 project_name = "test_project" 
 plate_ids = ["9872e3f0-544e-11ea-ad9e-1991e0725494", "5b05d440-6610-11ea-96e3-d5a4dab4ebf6"]
-print(sdk.add_project(project_name, plate_ids))
+log(sdk.add_project(project_name, plate_ids))
 ```
 
 <hr>
@@ -461,7 +461,7 @@ Returns the status of the analysis with the given `analysis_id`.
 ###### <u>Example</u>
 ```{python}
 analysis_id = "ddff8c40-0493-11ee-bd19-a77197cd1a6b" 
-print(sdk.analysis_complete(analysis_id))
+log(sdk.analysis_complete(analysis_id))
 ```
 <hr>
 
@@ -487,7 +487,7 @@ plate_map_location = "testing/AgamSDKPlateMapATest.csv"
 sample_plate_id= "unique223id"
 sample_plate_name = "some_plate_name" 
 
-print(sdk.add_plate(data_file_locations, plate_map_location, sample_plate_id, sample_plate_name))
+log(sdk.add_plate(data_file_locations, plate_map_location, sample_plate_id, sample_plate_name))
 ```
 
 Alternatively, instead of the `plate_map_location`, we could use the `PlateMap` object:
@@ -510,7 +510,7 @@ generated_plate_map_file = PlateMap(
     plate_name = ["A11", "A11"] 
 )
 
-print(sdk.add_plate(data_file_locations, generated_plate_map_file, sample_plate_id, sample_plate_name))
+log(sdk.add_plate(data_file_locations, generated_plate_map_file, sample_plate_id, sample_plate_name))
 ```
 
 Similarly, you could specify a `sample_description_file` that would specify more parameters for all samples uploaded.
@@ -522,7 +522,7 @@ sample_description_file = "testing/AgamSDKSampleDesc.csv"
 sample_plate_id= "unique2123id"
 sample_plate_name = "some_plate_name" 
 
-print(sdk.add_plate(data_file_locations, plate_map_location, sample_plate_id, sample_plate_name, sample_description_file))
+log(sdk.add_plate(data_file_locations, plate_map_location, sample_plate_id, sample_plate_name, sample_description_file))
 ```
 <hr>
 
@@ -549,7 +549,7 @@ Since no `sample_ids` are specified, the analysis is run on all samples.
 name = "testAnalysis"
 project_id = "1e324300-0496-11ee-bd19-a77197cd1a6b"
 analysis_protocol_name = "testMSFraggerUpload26" # you can also specify `analysis_protocol_id` instead
-print(sdk.start_analysis(name, project_id, analysis_protocol_name=analysis_protocol_name))
+log(sdk.start_analysis(name, project_id, analysis_protocol_name=analysis_protocol_name))
 ```
 
 You can also specify select samples using the following:
@@ -558,7 +558,7 @@ name = "testAnalysis"
 project_id = "1e324300-0496-11ee-bd19-a77197cd1a6b"
 sample_ids = ["1b1ff390-048e-11ee-bd19-a77197cd1a6b"] # this sample id is contained in the project
 analysis_protocol_name = "testMSFraggerUpload26"
-print(sdk.start_analysis(name, project_id, sample_ids=sample_ids, analysis_protocol_name=analysis_protocol_name))
+log(sdk.start_analysis(name, project_id, sample_ids=sample_ids, analysis_protocol_name=analysis_protocol_name))
 ```
 <hr>
 
@@ -568,11 +568,11 @@ name = "testAnalysis"
 project_id = "1e324300-0496-11ee-bd19-a77197cd1a6b"
 sample_ids = ["ABC1234"] # sample not contained in the project
 analysis_protocol_name = "testMSFraggerUpload26"
-print(sdk.start_analysis(name, project_id, sample_ids=sample_ids, analysis_protocol_name=analysis_protocol_name))
+log(sdk.start_analysis(name, project_id, sample_ids=sample_ids, analysis_protocol_name=analysis_protocol_name))
 ```
 
-### Upload MS Data
-Upload just MS data files to the PAS backend.
+### Upload MS Data Files
+Upload MS data files to the PAS backend.
 
 ###### <u>Params</u>
 * `ms_data_files`: (`list[str]`) List of MS Data files.
@@ -587,7 +587,7 @@ Upload just MS data files to the PAS backend.
 ```{python}
 data_file_locations = ["testing/AgamSDKTest1.raw", "testing/AgamSDKTest2.raw"]
 
-print(sdk.upload_ms_data_files(data_file_locations))
+log(sdk.upload_ms_data_files(data_file_locations))
 ```
 
 <hr>
@@ -659,6 +659,62 @@ If no `download_path` is specified or the `download_path` is invalid, the file w
 download_paths = ["2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest1.raw", "2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest2.raw"]
 
 log(sdk.download_ms_data_files(paths=download_paths, download_path="testing/"))
+```
+
+<hr>
+
+### Link Plate
+Links existing MS data files to user uploaded files to create a new plate. Functionally, this acts the same way as `add_plate`, except this takes in files that already exist on the backend.
+
+###### <u>Params</u>
+* `ms_data_files`: (`list[str]`) Path to MS data files on the PAS backend or the S3 bucket.
+* `plate_map_file`: (`str` or `PlateMap` object) Path to the plate map file, or `PlateMap` object to be linked.
+* `plate_id`: (`str`) The plate ID. Must be unique.
+* `plate_name`: (`str`) The plate name.
+* `sample_description_file`: (`str`, optional) Path to the sample description file which adds more detail to samples.
+* `space`: (`str`, optional) Space where the plate is contained. Defaults to the space of the user who is creating the project (or `None`).
+<br>
+
+###### <u>Returns</u>
+(`dict`) Contains the message whether the plate was linked or not.
+
+###### <u>Example</u>
+```{python}
+ms_data_file_locations = ["147a7740-87d8-11ee-b03f-27a54e8c1798/20231120190742420/AgamSDKTest1.raw", "147a7740-87d8-11ee-b03f-27a54e8c1798/20231120190742420/AgamSDKTest2.raw"]
+plate_map_location = "testing/AgamSDKPlateMapATest.csv"
+sample_plate_id= "some_unique_id23"
+sample_plate_name = "linked_plate_name" 
+
+log(sdk.link_plate(ms_data_file_locations, plate_map_location, sample_plate_id, sample_plate_name))
+```
+
+<hr>
+
+### Group Analysis Results
+Returns the group analysis data for given `analysis_id` (provided it is valid and the group analysis has been successful) and `box_plot` config info.
+
+###### <u>Params</u>
+* `analysis_id`: (`str`) The analysis ID.
+* `box_plot`: (`dict`) The box plot configuration needed for the analysis, defaulted to `None`. Contains `feature_type` ("protein" or "peptide") and `feature_ids` (comma separated list of feature IDs) keys.
+
+###### <u>Returns</u>
+* res: (`dict`) A dictionary containing the group analysis data.
+
+###### <u>Example</u>
+
+When no `box_plot`config info is specified, the results are as follows. Notice that there is no box plot key in the result dictionary.
+```{python}
+group_analysis_id = "c4089c00-16ab-11ec-b589-634014ca2005"
+log(sdk.group_analysis_results(group_analysis_id))
+```
+
+However when valid box plot information is declared as below, the result will contain a `box_plot` key.
+```{python}
+box_plot_info = { 
+    "feature_type": "protein",
+    "feature_ids": ["Q96RL7-2"]
+}
+log(sdk.group_analysis_results(group_analysis_id, box_plot_info))
 ```
 
 <hr>

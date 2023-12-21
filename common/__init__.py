@@ -126,6 +126,8 @@ def get_sample_info(plate_id, ms_data_files, plate_map_file, space, sample_descr
         The plate map file.
     space : str
         The space.
+    sample_description_file : str
+        Path to the sample description file.
 
     Returns
     -------
@@ -161,15 +163,16 @@ def get_sample_info(plate_id, ms_data_files, plate_map_file, space, sample_descr
     if sample_description_file:
         sdf = pd.read_csv(sample_description_file, on_bad_lines="skip")
         sdf_data = sdf.iloc[:, :]
-        sdf_files = sdf_data["Sample ID"]
-
-        if len(sdf_files) != len(files):
-            raise ValueError("Sample description file is invalid.")
         
-        sdf.rename(columns={"Sample Name":"Sample name"}, inplace=True)
+        sdf.rename(
+            columns = {
+                "Sample Name": "Sample name"
+            }, 
+            inplace=True
+        )
 
     # Step 3: CSV manipulation.
-    number_of_rows = df.shape[0]
+    number_of_rows = df.shape[0] # for platemap csv
 
     for i in range(number_of_rows):
         row = df.iloc[i]
@@ -186,7 +189,7 @@ def get_sample_info(plate_id, ms_data_files, plate_map_file, space, sample_descr
             sdf_row = dict(sdf.iloc[i])   
             row_names = list(sdf_row.keys())
 
-            if sdf_row["Sample ID"] == sample_id and sdf_row["Sample name"] == sample_name:
+            if sdf_row["Sample name"] == sample_name:
                 for row_name in row_names:
                     sdf_data = sdf_row[row_name]
                     sample_info[camel_case(row_name)] = sdf_data if pd.notna(sdf_data) else ""
