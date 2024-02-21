@@ -1,6 +1,3 @@
-from common import *
-from auth import Auth
-from objects import PlateMap
 from tqdm import tqdm
 
 import os

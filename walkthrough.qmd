@@ -10,16 +10,8 @@ format:
 The package can be installed and imported using the official SeerSDK package on pip. This can be installed using: 
 
 ```{python}
-installation = !pip install SeerSDK
+installation = !pip install seer-pas-sdk
 print(installation)
-```
-
-<hr>
-
-The SDK uses a `requirements.txt` file to manage dependencies. All dependencies for the SDK can be installed using the following command.
-```{python}
-requirements = !pip install -r requirements.txt
-print(requirements)
 ```
 
 ## Usage
@@ -39,7 +31,7 @@ INSTANCE = "dev"
 ### Instantiation
 By default, if you don't specify an instance, the PAS SDK will be instantiated with the US instance. After importing the SeerSDK module, you can instantiate an object in the following way:
 ```{python}
-from core import SeerSDK
+from seer_pas_sdk import SeerSDK
 
 # You could alternatively pass your credentials and/or the instance directly into the instantiated object.
 sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
@@ -71,7 +63,7 @@ Based on the length of the `ms_file_name` list passed, if the number of paramete
 
 This is how a plate map file could be made: 
 ```{python}
-from objects import PlateMap
+from seer_pas_sdk import PlateMap
 
 sample_plate_map_file = PlateMap(
     ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],

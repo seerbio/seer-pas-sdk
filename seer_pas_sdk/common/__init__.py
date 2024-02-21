@@ -1,5 +1,4 @@
 from dotenv import load_dotenv
-from auth import Auth
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from re import sub
@@ -10,6 +9,8 @@ import io
 import requests
 import boto3
 import json
+
+from ..auth import Auth
 
 load_dotenv()
 
