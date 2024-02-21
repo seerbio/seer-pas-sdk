@@ -7,6 +7,8 @@ import urllib.request
 import ssl
 import shutil
 
+from typing import List as _List
+
 from ..common import *
 from ..auth import Auth
 from ..objects import PlateMap
@@ -939,7 +941,7 @@ class SeerSDK:
             return files.json()["filesList"]
 
     def download_ms_data_files(
-        self, paths: list[str], download_path: str, space: str = None
+        self, paths: _List[str], download_path: str, space: str = None
     ):
         """
         Downloads all MS data files for paths passed in the params to the specified download path.
