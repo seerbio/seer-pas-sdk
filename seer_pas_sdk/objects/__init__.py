@@ -2,6 +2,10 @@ import pandas as pd
 
 
 class PlateMap:
+    """
+    Plate map object containing information about samples and corresponding MS data files.
+    """
+
     def __init__(
         self,
         ms_file_name=[],

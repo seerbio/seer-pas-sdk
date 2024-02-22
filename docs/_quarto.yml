@@ -1,0 +1,30 @@
+project:
+  type: site
+
+# tell quarto to read the quartodoc-generated sidebar
+metadata-files:
+  - _sidebar.yml
+
+quartodoc:
+  package: seer_pas_sdk
+
+  style: pkgdown
+  parser: numpy
+
+  # write sidebar data to this file
+  sidebar: _sidebar.yml
+
+  options:
+    include_imports: true
+    include_attributes: true
+    include_classes: true
+    include_functions: true
+    include_empty: true
+
+    include_private: false
+
+  sections:
+    - title: seer_pas_sdk
+      contents:
+        - name: SeerSDK
+        - name: PlateMap

@@ -15,23 +15,23 @@ from ..objects import PlateMap
 
 
 class SeerSDK:
+    """
+    Object exposing SDK methods. Requires a username and password; the optional `instance` param denotes the instance of PAS (defaults to "US").
+
+    Examples
+    -------
+    >>> from core import SeerSDK
+    >>> USERNAME = "test"
+    >>> PASSWORD = "test-password"
+    >>> INSTANCE = "EU"
+    >>> seer_sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
+    """
+
     def __init__(self, username, password, instance="US"):
-        """
-        Constructor for SeerSDK class. Creates an instance of the Auth class and authenticates a user. Takes in the optional `instance` param denoting the production instance of PAS; defaults to "US".
-
-        Example
-        -------
-
-        >>> from core import SeerSDK
-        >>> USERNAME = "test"
-        >>> PASSWORD = "test-password"
-        >>> INSTANCE = "EU"
-        >>> seer_sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
-        """
         try:
-            self.auth = Auth(username, password, instance)
+            self._auth = Auth(username, password, instance)
 
-            self.auth.get_token()
+            self._auth.get_token()
 
             print(f"User '{username}' logged in.\n")
 
@@ -49,7 +49,7 @@ class SeerSDK:
         spaces: list
             List of space objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -61,12 +61,12 @@ class SeerSDK:
             ]
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
-        URL = f"{self.auth.url}api/v1/usergroups"
+        URL = f"{self._auth.url}api/v1/usergroups"
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -95,7 +95,7 @@ class SeerSDK:
         plates: list or DataFrame
             List/DataFrame of plate objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -121,15 +121,14 @@ class SeerSDK:
 
         >>> seer_sdk.get_plate_metadata(id="YOUR_PLATE_ID_HERE")
         >>> [{ "id": ... }]
-
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
-        URL = f"{self.auth.url}api/v1/plates"
+        URL = f"{self._auth.url}api/v1/plates"
         res = []
 
         with requests.Session() as s:
@@ -169,7 +168,7 @@ class SeerSDK:
         projects: list or DataFrame
             DataFrame or list of project objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -196,18 +195,17 @@ class SeerSDK:
 
         >>> seer_sdk.get_project_metadata(id="YOUR_PROJECT_ID_HERE")
         >>> [{ "project_name": ... }]
-
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
         URL = (
-            f"{self.auth.url}api/v1/projects"
+            f"{self._auth.url}api/v1/projects"
             if not project_id
-            else f"{self.auth.url}api/v1/projects/{project_id}"
+            else f"{self._auth.url}api/v1/projects/{project_id}"
         )
         res = []
 
@@ -237,7 +235,7 @@ class SeerSDK:
                 ]
         return res if not df else dict_to_df(res)
 
-    def get_samples_metadata(
+    def _get_samples_metadata(
         self, plate_id: str = None, project_id: str = None, df: bool = False
     ):
         """
@@ -263,7 +261,7 @@ class SeerSDK:
         samples: list or DataFrame
             List/DataFrame of samples for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -294,12 +292,12 @@ class SeerSDK:
             raise ValueError("You must pass in plate ID or project ID.")
 
         res = []
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
-        URL = f"{self.auth.url}api/v1/samples"
+        URL = f"{self._auth.url}api/v1/samples"
         sample_params = {"all": "true"}
 
         with requests.Session() as s:
@@ -354,7 +352,7 @@ class SeerSDK:
         res: list or DataFrame
             List/DataFrame of plate objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -375,12 +373,12 @@ class SeerSDK:
         """
         res = []
         for sample_id in sample_ids:
-            ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+            ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
             HEADERS = {
                 "Authorization": f"{ID_TOKEN}",
                 "access-token": f"{ACCESS_TOKEN}",
             }
-            URL = f"{self.auth.url}api/v1/msdatas/items"
+            URL = f"{self._auth.url}api/v1/msdatas/items"
 
             with requests.Session() as s:
                 s.headers.update(HEADERS)
@@ -425,7 +423,7 @@ class SeerSDK:
         res: list or DataFrame
             List/DataFrame of MS data file objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -470,7 +468,7 @@ class SeerSDK:
         res: list or DataFrame
             List/DataFrame of plate objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -516,7 +514,6 @@ class SeerSDK:
                         }
                     ]
                 },
-
                 {
                     "id": "SAMPLE_ID_2_HERE",
                     "sample_type": "Plasma",
@@ -611,7 +608,7 @@ class SeerSDK:
         protocols: list
             List of analysis protocol objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -633,15 +630,15 @@ class SeerSDK:
         >>> [{ "id": ..., "analysis_protocol_name": ... }] # in this case the id would supersede the inputted name.
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
         URL = (
-            f"{self.auth.url}api/v1/analysisProtocols"
+            f"{self._auth.url}api/v1/analysisProtocols"
             if not analysis_protocol_id
-            else f"{self.auth.url}api/v1/analysisProtocols/{analysis_protocol_id}"
+            else f"{self._auth.url}api/v1/analysisProtocols/{analysis_protocol_id}"
         )
         res = []
 
@@ -695,7 +692,7 @@ class SeerSDK:
         analyses: dict
             Contains a list of analyses objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -710,12 +707,12 @@ class SeerSDK:
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
-        URL = f"{self.auth.url}api/v1/analyses"
+        URL = f"{self._auth.url}api/v1/analyses"
         res = []
 
         with requests.Session() as s:
@@ -765,7 +762,7 @@ class SeerSDK:
         links: dict
             Contains dataframe objects for the `analysis_id`, given that the analysis has been complete.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -793,12 +790,12 @@ class SeerSDK:
                 "Cannot generate links for failed or null analyses."
             )
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
-        URL = f"{self.auth.url}api/v1/data"
+        URL = f"{self._auth.url}api/v1/data"
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -863,7 +860,7 @@ class SeerSDK:
         res : dict
             A dictionary containing the status of the analysis.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -899,7 +896,7 @@ class SeerSDK:
         list
             Contains the list of files in the folder.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> sdk = SeerSDK()
@@ -919,15 +916,15 @@ class SeerSDK:
         ]
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
         URL = (
-            f"{self.auth.url}api/v1/msdataindex/filesinfolder?folder={folder}"
+            f"{self._auth.url}api/v1/msdataindex/filesinfolder?folder={folder}"
             if not space
-            else f"{self.auth.url}api/v1/msdataindex/filesinfolder?folder={folder}&userGroupId={space}"
+            else f"{self._auth.url}api/v1/msdataindex/filesinfolder?folder={folder}&userGroupId={space}"
         )
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -982,12 +979,12 @@ class SeerSDK:
 
         print(f'Downloading files to "{name}"\n')
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
-        URL = f"{self.auth.url}api/v1/msdataindex/download/getUrl"
+        URL = f"{self._auth.url}api/v1/msdataindex/download/getUrl"
         tenant_id = jwt.decode(ID_TOKEN, options={"verify_signature": False})[
             "custom:tenantId"
         ]
@@ -1070,7 +1067,7 @@ class SeerSDK:
         res : dict
             A dictionary containing the group analysis data.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -1086,7 +1083,6 @@ class SeerSDK:
                         "protein_processed_file_url": "",
                         "protein_processed_long_form_file_url": "",
                     },
-
                     "peptide": {},
                     "peptide_url": {
                         "peptide_processed_file_url": "",
@@ -1100,12 +1096,12 @@ class SeerSDK:
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
-        URL = f"{self.auth.url}"
+        URL = f"{self._auth.url}"
 
         res = {
             "pre": {
