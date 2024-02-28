@@ -70,7 +70,8 @@ if __name__ == "__main__":
 
     # GROUP ANALYSIS TEST ON DEV
     '''
-    a = sdk.group_analysis_results("c4089c00-16ab-11ec-b589-634014ca2005",     { 
+    a = sdk.group_analysis_results("c4089c00-16ab-11ec-b589-634014ca2005",
+        { 
             "feature_type": "protein",
             "feature_ids": ["Q96RL7-2"]
         })

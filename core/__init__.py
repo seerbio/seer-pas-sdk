@@ -58,8 +58,8 @@ class SeerSDK:
             ]
         """
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/usergroups"
         
         with requests.Session() as s:
@@ -117,8 +117,8 @@ class SeerSDK:
 
         """
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/plates"
         res = []
         
@@ -188,8 +188,8 @@ class SeerSDK:
 
         """
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/projects" if not project_id else f"{self.auth.url}api/v1/projects/{project_id}"
         res = []
         
@@ -277,8 +277,8 @@ class SeerSDK:
             raise ValueError("You must pass in plate ID or project ID.")
 
         res = []
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/samples"
         sample_params = { 
             "all": "true"
@@ -356,8 +356,8 @@ class SeerSDK:
         """
         res = []
         for sample_id in sample_ids:
-            TOKEN = self.auth.get_token()
-            HEADERS = {"Authorization": f"{TOKEN}"}
+            ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+            HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
             URL = f"{self.auth.url}api/v1/msdatas/items"
 
             with requests.Session() as s:
@@ -594,8 +594,8 @@ class SeerSDK:
         >>> [{ "id": ..., "analysis_protocol_name": ... }] # in this case the id would supersede the inputted name.
         """
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/analysisProtocols" if not analysis_protocol_id else f"{self.auth.url}api/v1/analysisProtocols/{analysis_protocol_id}"
         res = []
         
@@ -660,8 +660,8 @@ class SeerSDK:
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
         """
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/analyses"
         res = []
         
@@ -737,8 +737,8 @@ class SeerSDK:
         if self.get_analysis(analysis_id)[0]["status"] in ["FAILED", None]:
                 raise ValueError("Cannot generate links for failed or null analyses.")
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/data"
 
         with requests.Session() as s:
@@ -761,7 +761,7 @@ class SeerSDK:
                 raise ValueError("Invalid request. Could not fetch peptide data. Please check your parameters.")
 
             peptide_data = peptide_data.json()
-            
+
             links = {
                 "peptide_np": url_to_df(peptide_data["npLink"]["url"]),
                 "peptide_panel": url_to_df(peptide_data["panelLink"]["url"]),
@@ -821,8 +821,8 @@ class SeerSDK:
             if key not in sample_entry:
                 raise ValueError(f"{key} is missing. Please check your parameters again.")
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/samples"
 
         with requests.Session() as s:
@@ -880,8 +880,8 @@ class SeerSDK:
             if plate_id not in all_plate_ids:
                 raise ValueError(f"Plate ID '{plate_id}' is not valid. Please check your parameters again.")
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/projects"
 
         with requests.Session() as s:
@@ -939,8 +939,8 @@ class SeerSDK:
             }
         """
     
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
 
         plate_ids = set() # contains all the plate_ids fetched from self.get_plate_metadata()
         files = [] # to be uploaded to sync frontend
@@ -1276,8 +1276,8 @@ class SeerSDK:
                 if sample_id not in valid_ids:
                     raise ValueError(f"Sample ID '{sample_id}' is either not valid or not associated with the project. Please check your parameters again.")
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/analyze"
 
         with requests.Session() as s:
@@ -1341,9 +1341,9 @@ class SeerSDK:
                 raise ValueError("Invalid file or file format. Please check your file.")
 
         # Step 2: Fetch the tenant id by decoding the JWT token.
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
-        tenant_id = jwt.decode(TOKEN, options={'verify_signature': False})["custom:tenantId"]
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
+        tenant_id = jwt.decode(ID_TOKEN, options={'verify_signature': False})["custom:tenantId"]
 
         # Step 3: Fetch the S3 bucket name by making a call to `/api/v1/auth/getawscredential`
         with requests.Session() as s:
@@ -1437,8 +1437,8 @@ class SeerSDK:
         >>> { "message": "File downloaded successfully." }
         """
         def get_url(analysis_id, file_name, project_id):
-            TOKEN = self.auth.get_token()
-            HEADERS = {"Authorization": f"{TOKEN}"}
+            ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+            HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
             URL = f"{self.auth.url}api/v1/analysisResultFiles/getUrl" 
 
             with requests.Session() as s:
@@ -1480,8 +1480,8 @@ class SeerSDK:
         if not os.path.exists(name):
             os.makedirs(name)
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/analysisResultFiles"
 
         with requests.Session() as s:
@@ -1566,8 +1566,8 @@ class SeerSDK:
         ]
         """
         
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/msdataindex/filesinfolder?folder={folder}" if not space else f"{self.auth.url}api/v1/msdataindex/filesinfolder?folder={folder}&userGroupId={space}"
         
         with requests.Session() as s:
@@ -1616,10 +1616,10 @@ class SeerSDK:
         
         print(f'Downloading files to "{name}"\n')
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/msdataindex/download/getUrl" 
-        tenant_id = jwt.decode(TOKEN, options={'verify_signature': False})["custom:tenantId"]
+        tenant_id = jwt.decode(ID_TOKEN, options={'verify_signature': False})["custom:tenantId"]
 
         for path in paths:
             with requests.Session() as s:
@@ -1695,8 +1695,8 @@ class SeerSDK:
         >>> { "message": "Plate generated with id: 'plate_id'" }
         """
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
 
         plate_ids = set() # contains all the plate_ids fetched from self.get_plate_metadata()
         files = [] # to be uploaded to sync frontend
@@ -1923,8 +1923,8 @@ class SeerSDK:
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
 
-        TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{TOKEN}"}
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}"
 
         res = { 

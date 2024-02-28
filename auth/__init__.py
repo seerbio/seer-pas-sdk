@@ -1,5 +1,6 @@
 import os
 import requests 
+import ssl
 
 class Auth:
     def __init__(self, username, password, instance="US"):
@@ -41,7 +42,7 @@ class Auth:
         dict
             A dictionary containing the login response from the PAS instance.
         """
-
+        # ssl._create_default_https_context = ssl._create_unverified_context
         response = requests.post(
             f"{self.url}auth/login", 
             json={ 
@@ -67,7 +68,7 @@ class Auth:
 
         res = self.login()
 
-        if "id_token" not in res:
+        if "id_token" not in res or "access_token" not in res:
             raise ValueError("Check if the credentials are correct or if the backend is running or not.") 
-    
-        return res['id_token']
+
+        return res['id_token'], res['access_token']
