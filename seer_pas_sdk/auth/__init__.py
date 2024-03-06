@@ -2,6 +2,11 @@ import requests
 
 
 class Auth:
+    _instances = {
+        "US": "https://api.pas.seer.software/",
+        "EU": "https://api.pas-eu.seer.bio/",
+    }
+
     def __init__(self, username, password, instance="US"):
         """
         Constructor for the Auth class. Uses the username, password and instance name to instantiate the class.
@@ -15,22 +20,18 @@ class Auth:
         instance: str
             The instance name of the PAS instance (`US | EU`). Defaults to `US`.
         """
-        self.instances = {
-            "US": "https://api.pas.seer.software/",
-            "EU": "https://api.pas-eu.seer.bio/",
-        }
 
         self.username = username
         self.__password = password
 
-        if instance not in self.instances:
+        if instance not in Auth._instances:
             if instance.startswith("https://"):
                 # Support arbitrary endpoint for testing
                 self.url = instance
             else:
                 raise ValueError("Invalid PAS instance.")
         else:
-            self.url = self.instances[instance]
+            self.url = Auth._instances[instance]
 
         self.instance = instance
 
