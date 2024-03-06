@@ -78,3 +78,14 @@ def test_platemap_to_csv_file(platemap, tmpdir):
     assert len(df) == platemap.length
     for k in df.columns:
         assert len(df[k]) == platemap.length
+
+
+def test_mutate_defaults():
+    """Test that default values in the construtor aren't shared mutable instances"""
+
+    # Force extension of default (empty) values by creating a platemap with 2 samples
+    platemap_0 = PlateMap(["test_0.msfile", "test_1.msfile"])
+
+    # Now create a platemap with fewer samples; this will trigger an error if the default
+    # values were mutated by the first call.
+    platemap_1 = PlateMap(["test_0.msfile"])

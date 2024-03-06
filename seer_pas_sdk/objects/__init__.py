@@ -8,23 +8,23 @@ class PlateMap:
 
     def __init__(
         self,
-        ms_file_name=[],
-        sample_name=[],
-        sample_id=[],
-        well_location=[],
-        nanoparticle=[],
-        nanoparticle_id=[],
-        control=[],
-        control_id=[],
-        instrument_name=[],
-        date_sample_preparation=[],
-        sample_volume=[],
-        peptide_concentration=[],
-        peptide_mass_sample=[],
-        dilution_factor=[],
-        kit_id=[],
-        plate_id=[],
-        plate_name=[],
+        ms_file_name=None,
+        sample_name=None,
+        sample_id=None,
+        well_location=None,
+        nanoparticle=None,
+        nanoparticle_id=None,
+        control=None,
+        control_id=None,
+        instrument_name=None,
+        date_sample_preparation=None,
+        sample_volume=None,
+        peptide_concentration=None,
+        peptide_mass_sample=None,
+        dilution_factor=None,
+        kit_id=None,
+        plate_id=None,
+        plate_name=None,
     ):
 
         if not ms_file_name:
@@ -91,6 +91,10 @@ class PlateMap:
         ]
 
         for attr in self.__attrs:
+            if not getattr(self, attr):
+                # Replace falsey values with empty lists
+                setattr(self, attr, [])
+
             attr_len = len(getattr(self, attr))
 
             if attr_len > self.length:
