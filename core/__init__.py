@@ -373,20 +373,21 @@ class SeerSDK:
                 if msdatas.status_code != 200 or not msdatas.json()["data"]:
                     raise ValueError("Failed to fetch MS data for your plate ID.")
 
-                res.append(msdatas.json()["data"][0])
+                res.append(msdatas.json()["data"])
 
         for entry in res:
-            if "tenant_id" in entry:
-                del entry["tenant_id"]
+            for d in entry:
+                if "tenant_id" in d:
+                    del d["tenant_id"]
 
-            if "raw_file_path" in entry:
-                # Simple lambda function to find the third occurrence of '/' in the raw file path
-                location = lambda s: len(s) - len(s.split('/', 3)[-1])
-                
-                # Slicing the string from the location
-                entry["raw_file_path"] = entry["raw_file_path"][location(entry["raw_file_path"]):]
+                if "raw_file_path" in d:
+                    # Simple lambda function to find the third occurrence of '/' in the raw file path
+                    location = lambda s: len(s) - len(s.split('/', 3)[-1])
+                    
+                    # Slicing the string from the location
+                    d["raw_file_path"] = d["raw_file_path"][location(d["raw_file_path"]):]
            
-        return res if not df else dict_to_df(res)
+        return res if not df else pd.DataFrame([d for entry in res for d in entry])
         
     def get_plate(self, plate_id: str, df: bool=False):
         """
