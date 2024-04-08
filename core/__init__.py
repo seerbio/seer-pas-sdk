@@ -540,18 +540,14 @@ class SeerSDK:
 
             for ms_data_file in ms_data_files:
                 for sample_index in range(len(project_samples)):
-                    if project_samples[sample_index]["id"] == ms_data_file["sample_id"]:
+                    if project_samples[sample_index]["id"] == ms_data_file[0]["sample_id"]:
                         if "ms_data_file" not in project_samples[sample_index]:
-                            project_samples[sample_index]["ms_data_files"] = [ms_data_file]
+                            project_samples[sample_index]["ms_data_files"] = ms_data_file
                         else:
                             project_samples[sample_index]["ms_data_files"].append(ms_data_file)
 
 
         if df:
-            for sample_index in range(len(project_samples)):
-                if "ms_data_files" in project_samples[sample_index]:
-                    project_samples[sample_index]["ms_data_files"] = dict_to_df(project_samples[sample_index]["ms_data_files"])
-
             project_samples = dict_to_df(project_samples)
         
         return project_samples
