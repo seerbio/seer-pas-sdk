@@ -1101,19 +1101,15 @@ class SeerSDK:
         # Step 7: Parse the plate map file and convert the data into a form that can be POSTed to `/api/v1/msdatas`.
         plate_map_data = parse_plate_map_file(plate_map_file, samples, raw_file_paths, space)
 
-        # Step 8: Make a request to `/api/v1/msdatas` with the processed samples data.
-        for file_index in range(len(ms_data_files)):
-            file = ms_data_files[file_index]
-            
-            with requests.Session() as s:
-                s.headers.update(HEADERS)
-                ms_data_response = s.post(
-                    f"{self.auth.url}api/v1/msdatas",
-                    json=plate_map_data[file_index]
-                )
-
-                if ms_data_response.status_code != 200:
-                    raise ValueError("Upload failed, please check if backend is still active and running.")
+        # Step 8: Make a request to `/api/v1/msdatas/batch` with the processed samples data.
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            ms_data_response = s.post(
+                f"{self.auth.url}api/v1/msdatas/batch",
+                json={"msdatas": plate_map_data}
+            )
+            if ms_data_response.status_code != 200:
+                raise ValueError("Upload failed, please check if backend is still active and running.")
 
         # Step 9: Upload each msdata file to the S3 bucket.
         with requests.Session() as s:
