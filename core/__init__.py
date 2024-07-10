@@ -835,6 +835,47 @@ class SeerSDK:
 
             return response.json()
 
+    # RS-5131: Add samples in batch
+    def add_samples(self, sample_info: list):
+        """
+        ****************
+        [UNEXPOSED METHOD CALL]
+        ****************
+        Add samples in batch given a list of sample entries.
+
+        Parameters:
+        -----------
+        sample_info: list
+            A list of dictionaries containing all keys and values for the sample entries. These may or may not have been inferred from the sample description file.
+            Required keys: ["plateID", "sampleID", "sampleName"]
+        
+        Returns:
+        --------
+        dict
+            The response from the backend.
+        """
+        # Validate keys in samples
+        for sample in sample_info:
+            if not all(key in sample for key in ["plateID", "sampleID", "sampleName"]):
+                raise ValueError(f"Invalid sample entry for sample {sample}. Please check your parameters again.")
+        
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
+        URL = f"{self.auth.url}api/v1/samples/batch"
+        
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            response = s.post(
+                URL,
+                json={"samples" : sample_info}
+            )
+
+            if response.status_code != 200:
+                raise ValueError("Invalid request. Please check your parameters.")
+
+            return response.json()
+
+
     def add_project(self, project_name: str, plate_ids: list[str], description: str=None, notes: str=None, space: str=None):
 
         """
@@ -1094,9 +1135,7 @@ class SeerSDK:
         else:
             sample_info = get_sample_info(id_uuid, ms_data_files, plate_map_file, space)
 
-        for entry in sample_info:
-            sample = self.add_sample(entry)
-            samples.append(sample)
+        samples = self.add_samples(sample_info)
 
         # Step 7: Parse the plate map file and convert the data into a form that can be POSTed to `/api/v1/msdatas`.
         plate_map_data = parse_plate_map_file(plate_map_file, samples, raw_file_paths, space)
