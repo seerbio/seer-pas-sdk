@@ -12,7 +12,7 @@ try:
     from importlib.metadata import version, PackageNotFoundError
 
     try:
-        __version__ = version("seer-pas-sdk")
+        __version__ = version("pas-python-sdk")
     except PackageNotFoundError:
         pass
 
@@ -20,7 +20,7 @@ except ImportError:
     from pkg_resources import get_distribution, DistributionNotFound
 
     try:
-        __version__ = get_distribution("seer-pas-sdk").version
+        __version__ = get_distribution("pas-python-sdk").version
     except DistributionNotFound:
         pass
 
