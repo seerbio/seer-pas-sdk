@@ -7,11 +7,8 @@ on:
 
 jobs:
   deploy-pkg:
-    name: Upload release to PyPI
-    runs-on: ubuntu-latest
-    permissions:
-      # IMPORTANT: this permission is mandatory for trusted publishing
-      id-token: write
+    name: Upload release to internal CodeArtifact
+    runs-on: [self-hosted, X64]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
@@ -22,10 +19,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install setuptools wheel twine build
-      - name: Build package for seer-pas-sdk
+          aws codeartifact login --tool twine --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
+      - name: Build package for pas-python-sdk
         run: python -m build --sdist --wheel .
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish package to CodeArtifact
+        run: |
+          twine upload --repository codeartifact dist/*
 
   build-docs:
     runs-on: ubuntu-latest
