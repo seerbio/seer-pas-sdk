@@ -884,9 +884,9 @@ class SeerSDK:
             if key not in sample_entry:
                 raise ValueError(f"{key} is missing. Please check your parameters again.")
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/samples"
+        URL = f"{self._auth.url}api/v1/samples"
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -925,9 +925,9 @@ class SeerSDK:
             if not all(key in sample for key in ["plateID", "sampleID", "sampleName"]):
                 raise ValueError(f"Invalid sample entry for sample {sample}. Please check your parameters again.")
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/samples/batch"
+        URL = f"{self._auth.url}api/v1/samples/batch"
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -984,9 +984,9 @@ class SeerSDK:
             if plate_id not in all_plate_ids:
                 raise ValueError(f"Plate ID '{plate_id}' is not valid. Please check your parameters again.")
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/projects"
+        URL = f"{self._auth.url}api/v1/projects"
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -1043,7 +1043,7 @@ class SeerSDK:
             }
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
 
         plate_ids = set() # contains all the plate_ids fetched from self.get_plate_metadata()
@@ -1069,7 +1069,7 @@ class SeerSDK:
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
         with requests.Session() as s:
             s.headers.update(HEADERS)
-            plate_response = s.get(f"{self.auth.url}api/v1/plateids")
+            plate_response = s.get(f"{self._auth.url}api/v1/plateids")
 
             if plate_response.status_code != 200:
                 raise ValueError("Cannot connect to the server.")
@@ -1084,7 +1084,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             plate_response = s.post(
-                f"{self.auth.url}api/v1/plates",
+                f"{self._auth.url}api/v1/plates",
                 json={
                     "plateId": plate_id,
                     "plateName": plate_name,
@@ -1103,7 +1103,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             config_response = s.post(
-                f"{self.auth.url}api/v1/msdatas/getuploadconfig",
+                f"{self._auth.url}api/v1/msdatas/getuploadconfig",
                 json={
                     "plateId": id_uuid
                 })
@@ -1120,7 +1120,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             config_response = s.get(
-                f"{self.auth.url}auth/getawscredential",)
+                f"{self._auth.url}auth/getawscredential",)
 
             if config_response.status_code != 200 or not config_response.json():
                 raise ValueError("Could not fetch config for user.")
@@ -1156,7 +1156,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             plate_map_response = s.post(
-                f"{self.auth.url}api/v1/msdataindex/file",
+                f"{self._auth.url}api/v1/msdataindex/file",
                 json={
                     "files": [{
                         "filePath": f"{s3_upload_path}{plate_map_file_name}",
@@ -1186,7 +1186,7 @@ class SeerSDK:
             with requests.Session() as s:
                 s.headers.update(HEADERS)
                 sdf_response = s.post(
-                    f"{self.auth.url}api/v1/msdataindex/file",
+                    f"{self._auth.url}api/v1/msdataindex/file",
                     json={
                         "files": [{
                             "filePath": f"{s3_upload_path}{os.path.basename(sample_description_file)}",
@@ -1210,7 +1210,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             ms_data_response = s.post(
-                f"{self.auth.url}api/v1/msdatas/batch",
+                f"{self._auth.url}api/v1/msdatas/batch",
                 json={"msdatas": plate_map_data}
             )
             if ms_data_response.status_code != 200:
@@ -1220,7 +1220,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             config_response = s.get(
-                f"{self.auth.url}auth/getawscredential",)
+                f"{self._auth.url}auth/getawscredential",)
 
             if config_response.status_code != 200 or not config_response.json():
                 raise ValueError("Could not fetch config for user.")
@@ -1252,7 +1252,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             file_response = s.post(
-                f"{self.auth.url}api/v1/msdataindex/file",
+                f"{self._auth.url}api/v1/msdataindex/file",
                 json={
                     "files": files
                 })
@@ -1374,9 +1374,9 @@ class SeerSDK:
                 if sample_id not in valid_ids:
                     raise ValueError(f"Sample ID '{sample_id}' is either not valid or not associated with the project. Please check your parameters again.")
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/analyze"
+        URL = f"{self._auth.url}api/v1/analyze"
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -1439,7 +1439,7 @@ class SeerSDK:
                 raise ValueError("Invalid file or file format. Please check your file.")
 
         # Step 2: Fetch the tenant id by decoding the JWT token.
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         tenant_id = jwt.decode(ID_TOKEN, options={'verify_signature': False})["custom:tenantId"]
 
@@ -1447,7 +1447,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             config_response = s.get(
-                f"{self.auth.url}auth/getawscredential",)
+                f"{self._auth.url}auth/getawscredential",)
 
             if config_response.status_code != 200 or not config_response.json():
                 raise ValueError("Could not fetch config for user.")
@@ -1484,7 +1484,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             file_response = s.post(
-                f"{self.auth.url}api/v1/msdataindex/file", 
+                f"{self._auth.url}api/v1/msdataindex/file",
                 json={ 
                     "files": files
                 })
@@ -1535,9 +1535,9 @@ class SeerSDK:
         >>> { "message": "File downloaded successfully." }
         """
         def get_url(analysis_id, file_name, project_id):
-            ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+            ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
             HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-            URL = f"{self.auth.url}api/v1/analysisResultFiles/getUrl" 
+            URL = f"{self._auth.url}api/v1/analysisResultFiles/getUrl"
 
             with requests.Session() as s:
                 s.headers.update(HEADERS)
@@ -1578,9 +1578,9 @@ class SeerSDK:
         if not os.path.exists(name):
             os.makedirs(name)
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/analysisResultFiles"
+        URL = f"{self._auth.url}api/v1/analysisResultFiles"
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -1830,7 +1830,7 @@ class SeerSDK:
         >>> { "message": "Plate generated with id: 'plate_id'" }
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
 
         plate_ids = set() # contains all the plate_ids fetched from self.get_plate_metadata()
@@ -1854,7 +1854,7 @@ class SeerSDK:
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
         with requests.Session() as s:
             s.headers.update(HEADERS)
-            plate_response = s.get(f"{self.auth.url}api/v1/plateids")
+            plate_response = s.get(f"{self._auth.url}api/v1/plateids")
 
             if plate_response.status_code != 200:
                 raise ValueError("Cannot connect to the server.")
@@ -1869,7 +1869,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             plate_response = s.post(
-                f"{self.auth.url}api/v1/plates",
+                f"{self._auth.url}api/v1/plates",
                 json={
                     "plateId": plate_id,
                     "plateName": plate_name,
@@ -1888,7 +1888,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             config_response = s.post(
-                f"{self.auth.url}api/v1/msdatas/getuploadconfig",
+                f"{self._auth.url}api/v1/msdatas/getuploadconfig",
                 json={
                     "plateId": id_uuid
                 })
@@ -1905,7 +1905,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             config_response = s.get(
-                f"{self.auth.url}auth/getawscredential",)
+                f"{self._auth.url}auth/getawscredential",)
 
             if config_response.status_code != 200 or not config_response.json():
                 raise ValueError("Could not fetch config for user.")
@@ -1941,7 +1941,7 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
             plate_map_response = s.post(
-                f"{self.auth.url}api/v1/msdataindex/file",
+                f"{self._auth.url}api/v1/msdataindex/file",
                 json={
                     "files": [{
                         "filePath": f"{s3_upload_path}{plate_map_file_name}",
@@ -1971,7 +1971,7 @@ class SeerSDK:
             with requests.Session() as s:
                 s.headers.update(HEADERS)
                 sdf_response = s.post(
-                    f"{self.auth.url}api/v1/msdataindex/file",
+                    f"{self._auth.url}api/v1/msdataindex/file",
                     json={
                         "files": [{
                             "filePath": f"{s3_upload_path}{os.path.basename(sample_description_file)}",
@@ -2000,7 +2000,7 @@ class SeerSDK:
             with requests.Session() as s:
                 s.headers.update(HEADERS)
                 ms_data_response = s.post(
-                    f"{self.auth.url}api/v1/msdatas",
+                    f"{self._auth.url}api/v1/msdatas",
                     json=plate_map_data[file_index]
                 )
 
