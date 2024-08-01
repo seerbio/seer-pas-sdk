@@ -1,5 +1,4 @@
 from dotenv import load_dotenv
-from auth import Auth
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from re import sub
@@ -11,7 +10,10 @@ import requests
 import boto3
 import json
 
+from ..auth import Auth
+
 load_dotenv()
+
 
 def upload_file(file_name, bucket, object_name=None):
     """
@@ -25,7 +27,7 @@ def upload_file(file_name, bucket, object_name=None):
         The name of the bucket to upload to.
     object_name : str
         The name of the object in the bucket. Defaults to `file_name`.
-    
+
     Returns
     -------
     bool
@@ -41,12 +43,13 @@ def upload_file(file_name, bucket, object_name=None):
         object_name = os.path.basename(file_name)
 
     # Upload the file
-    s3_client = boto3.client('s3')
+    s3_client = boto3.client("s3")
     try:
         response = s3_client.upload_file(file_name, bucket, object_name)
     except ClientError as e:
         return False
     return True
+
 
 def dict_to_df(data):
     """
@@ -81,6 +84,7 @@ def dict_to_df(data):
     df = pd.DataFrame.from_dict(data)
     return df
 
+
 def url_to_df(url):
     """
     Returns a Pandas DataFrame from a URL.
@@ -89,7 +93,7 @@ def url_to_df(url):
     ----------
     url : str
         The URL of the CSV file.
-    
+
     Returns
     -------
     pandas.core.frame.DataFrame
@@ -112,7 +116,14 @@ def url_to_df(url):
     csv = pd.read_csv(url_content, sep="\t")
     return csv
 
-def get_sample_info(plate_id, ms_data_files, plate_map_file, space, sample_description_file=None):
+
+def get_sample_info(
+    plate_id,
+    ms_data_files,
+    plate_map_file,
+    space,
+    sample_description_file=None,
+):
     """
     Returns all `sample_id` and `sample_name` values for a plate_map_file and checks if ms_data_files are contained within the plate_map_file.
 
@@ -133,7 +144,7 @@ def get_sample_info(plate_id, ms_data_files, plate_map_file, space, sample_descr
     -------
     list
         A list of dictionaries containing the `plateID`, `sampleID`, `sampleName`, and `sampleUserGroup` values.
-    
+
     >>> get_sample_info("plate_id", ["AgamSDKTest1.raw", "AgamSDKTest2.raw"], "AgamSDKPlateMapATest.csv", "sdkTestPlateId1", "SDKPlate", "Generated from SDK")
     >>> [
             {
@@ -146,57 +157,59 @@ def get_sample_info(plate_id, ms_data_files, plate_map_file, space, sample_descr
     """
 
     df = pd.read_csv(plate_map_file, on_bad_lines="skip")
-    data = df.iloc[:, :] # all the data in the platemap csv
-    files = data["MS file name"] # all filenames in the platemap csv
-    local_file_names = set([os.path.basename(file) for file in ms_data_files]) # all filenames in the local directory
+    data = df.iloc[:, :]  # all the data in the platemap csv
+    files = data["MS file name"]  # all filenames in the platemap csv
+    local_file_names = set(
+        [os.path.basename(file) for file in ms_data_files]
+    )  # all filenames in the local directory
     res = []
 
     # Step 1: Check if ms_data_files are contained within the plate_map_file.
     if len(files) != len(local_file_names):
         raise ValueError("Plate map file is invalid.")
-    
+
     for file in files:
         if file not in local_file_names:
-            raise ValueError("Plate map file does not contain the attached MS data files.")
+            raise ValueError(
+                "Plate map file does not contain the attached MS data files."
+            )
 
     # Step 2: Validating and mapping the contents of the sample description file.
     if sample_description_file:
         sdf = pd.read_csv(sample_description_file, on_bad_lines="skip")
         sdf_data = sdf.iloc[:, :]
-        
-        sdf.rename(
-            columns = {
-                "Sample Name": "Sample name"
-            }, 
-            inplace=True
-        )
+
+        sdf.rename(columns={"Sample Name": "Sample name"}, inplace=True)
 
     # Step 3: CSV manipulation.
-    number_of_rows = df.shape[0] # for platemap csv
+    number_of_rows = df.shape[0]  # for platemap csv
 
     for i in range(number_of_rows):
         row = df.iloc[i]
         sample_id = row["Sample ID"]
         sample_name = row["Sample name"]
-        sample_info = { 
+        sample_info = {
             "plateID": plate_id,
             "sampleID": sample_id,
             "sampleName": sample_name,
-            "sampleUserGroup": space
+            "sampleUserGroup": space,
         }
 
         if sample_description_file:
-            sdf_row = dict(sdf.iloc[i])   
+            sdf_row = dict(sdf.iloc[i])
             row_names = list(sdf_row.keys())
 
             if sdf_row["Sample name"] == sample_name:
                 for row_name in row_names:
                     sdf_data = sdf_row[row_name]
-                    sample_info[camel_case(row_name)] = sdf_data if pd.notna(sdf_data) else ""
+                    sample_info[camel_case(row_name)] = (
+                        sdf_data if pd.notna(sdf_data) else ""
+                    )
 
         res.append(sample_info)
 
     return res
+
 
 def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
     """
@@ -226,7 +239,7 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
                 "id": "SAMPLE_ID_HERE",
                 "tenant_id": "TENANT_ID_HERE",
                 "plate_id": "PLATE_ID_HERE",
-            }, 
+            },
             {
                 "id": "SAMPLE_ID_HERE",
                 "tenant_id": "TENANT_ID_HERE",
@@ -248,7 +261,7 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
                 ...
             }
         ]
-    """ 
+    """
 
     df = pd.read_csv(plate_map_file, on_bad_lines="skip")
     number_of_rows = df.shape[0]
@@ -259,7 +272,10 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
         path = None
         sample_id = None
 
-        if samples[rowIndex]["sample_id"] == row["Sample ID"] and samples[rowIndex]["sample_name"] == row["Sample name"]:
+        if (
+            samples[rowIndex]["sample_id"] == row["Sample ID"]
+            and samples[rowIndex]["sample_name"] == row["Sample name"]
+        ):
             sample_id = samples[rowIndex]["id"]
 
         for filename in raw_file_paths:
@@ -269,25 +285,70 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
         if not path or not sample_id:
             raise ValueError("Plate map file is invalid.")
 
-        res.append({
-            "sampleId": str(sample_id), 
-            "sample_id_tracking": str(row["Sample ID"]), 
-            "wellLocation": str(row["Well location"]) if pd.notna(row["Well location"]) else "", 
-            "nanoparticle": str(row["Nanoparticle"]) if pd.notna(row["Nanoparticle"]) else "",
-            "nanoparticleID": str(row["Nanoparticle ID"]) if pd.notna(row["Nanoparticle ID"]) else "",
-            "control": str(row["Control"]) if pd.notna(row["Control"]) else "", 
-            "controlID": str(row["Control ID"]) if pd.notna(row["Control ID"]) else "",
-            "instrumentName": str(row["Instrument name"]) if pd.notna(row["Instrument name"]) else "",
-            "dateSamplePrep": str(row["Date sample preparation"]) if pd.notna(row["Date sample preparation"]) else "",
-            "sampleVolume": str(row["Sample volume"]) if pd.notna(row["Sample volume"]) else "",
-            "peptideConcentration": str(row["Peptide concentration"]) if pd.notna(row["Peptide concentration"]) else "",
-            "peptideMassSample": str(row["Peptide mass sample"]) if pd.notna(row["Peptide mass sample"]) else "",
-            "dilutionFactor": str(row["Dilution factor"]) if pd.notna(row["Dilution factor"]) else "",
-            "msdataUserGroup": space,
-            "rawFilePath": path
-        })
-    
+        res.append(
+            {
+                "sampleId": str(sample_id),
+                "sample_id_tracking": str(row["Sample ID"]),
+                "wellLocation": (
+                    str(row["Well location"])
+                    if pd.notna(row["Well location"])
+                    else ""
+                ),
+                "nanoparticle": (
+                    str(row["Nanoparticle"])
+                    if pd.notna(row["Nanoparticle"])
+                    else ""
+                ),
+                "nanoparticleID": (
+                    str(row["Nanoparticle ID"])
+                    if pd.notna(row["Nanoparticle ID"])
+                    else ""
+                ),
+                "control": (
+                    str(row["Control"]) if pd.notna(row["Control"]) else ""
+                ),
+                "controlID": (
+                    str(row["Control ID"])
+                    if pd.notna(row["Control ID"])
+                    else ""
+                ),
+                "instrumentName": (
+                    str(row["Instrument name"])
+                    if pd.notna(row["Instrument name"])
+                    else ""
+                ),
+                "dateSamplePrep": (
+                    str(row["Date sample preparation"])
+                    if pd.notna(row["Date sample preparation"])
+                    else ""
+                ),
+                "sampleVolume": (
+                    str(row["Sample volume"])
+                    if pd.notna(row["Sample volume"])
+                    else ""
+                ),
+                "peptideConcentration": (
+                    str(row["Peptide concentration"])
+                    if pd.notna(row["Peptide concentration"])
+                    else ""
+                ),
+                "peptideMassSample": (
+                    str(row["Peptide mass sample"])
+                    if pd.notna(row["Peptide mass sample"])
+                    else ""
+                ),
+                "dilutionFactor": (
+                    str(row["Dilution factor"])
+                    if pd.notna(row["Dilution factor"])
+                    else ""
+                ),
+                "msdataUserGroup": space,
+                "rawFilePath": path,
+            }
+        )
+
     return res
+
 
 def valid_ms_data_file(path):
     """
@@ -308,13 +369,22 @@ def valid_ms_data_file(path):
         return False
 
     full_filename = path.split("/")[-1].split(".")
-    
+
     if len(full_filename) >= 3:
         extension = f'.{".".join(full_filename[-2:])}'
     else:
         extension = f".{full_filename[-1]}"
 
-    return extension.lower() in [".d", ".d.zip", ".mzml", ".raw", ".mzml", ".wiff", ".wiff.scan"]
+    return extension.lower() in [
+        ".d",
+        ".d.zip",
+        ".mzml",
+        ".raw",
+        ".mzml",
+        ".wiff",
+        ".wiff.scan",
+    ]
+
 
 def download_hook(t):
     """
@@ -344,10 +414,11 @@ def download_hook(t):
 
     return update_to
 
+
 def camel_case(s):
     # Use regular expression substitution to replace underscores and hyphens with spaces,
     # then title case the string (capitalize the first letter of each word), and remove spaces
     s = sub(r"(_|-)+", " ", s).title().replace(" ", "")
-    
+
     # Join the string, ensuring the first letter is lowercase
-    return ''.join([s[0].lower(), s[1:]])
+    return "".join([s[0].lower(), s[1:]])

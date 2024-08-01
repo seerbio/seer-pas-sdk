@@ -1,8 +1,12 @@
-import os
-import requests 
-import ssl
+import requests
+
 
 class Auth:
+    _instances = {
+        "US": "https://api.pas.seer.software/",
+        "EU": "https://api.pas-eu.seer.bio/",
+    }
+
     def __init__(self, username, password, instance="US"):
         """
         Constructor for the Auth class. Uses the username, password and instance name to instantiate the class.
@@ -14,24 +18,22 @@ class Auth:
         password: str
             The password of the account associated with the PAS instance.
         instance: str
-            The instance name of the PAS instance. Defaults to "US".
+            The instance name of the PAS instance (`US | EU`). Defaults to `US`.
         """
-        self.instances = { 
-            "US": "https://api.pas.seer.software/",
-            "EU": "https://api.pas-eu.seer.bio/",
-            # remove below before release
-            "staging": "https://api.pas.seer-staging.com/",
-            "dev": "http://localhost:3006/"
-        }
 
         self.username = username
         self.__password = password
 
-        if instance not in self.instances:
-            raise ValueError("Invalid PAS instance.")
+        if instance not in Auth._instances:
+            if instance.startswith("https://"):
+                # Support arbitrary endpoint for testing
+                self.url = instance
+            else:
+                raise ValueError("Invalid PAS instance.")
+        else:
+            self.url = Auth._instances[instance]
 
         self.instance = instance
-        self.url = self.instances[instance]
 
     def login(self):
         """
@@ -42,20 +44,19 @@ class Auth:
         dict
             A dictionary containing the login response from the PAS instance.
         """
-        # ssl._create_default_https_context = ssl._create_unverified_context
         response = requests.post(
-            f"{self.url}auth/login", 
-            json={ 
-                "username": self.username, 
-                "password": self.__password 
-                })
+            f"{self.url}auth/login",
+            json={"username": self.username, "password": self.__password},
+        )
 
         if not response:
-            raise ValueError("Check if the credentials are correct or if the backend is running or not.")
+            raise ValueError(
+                "Check if the credentials are correct or if the backend is running or not."
+            )
 
         if response.status_code == 200:
             return response.json()
-    
+
     def get_token(self):
         """
         Gets the token from the login response.
@@ -69,6 +70,8 @@ class Auth:
         res = self.login()
 
         if "id_token" not in res or "access_token" not in res:
-            raise ValueError("Check if the credentials are correct or if the backend is running or not.") 
+            raise ValueError(
+                "Check if the credentials are correct or if the backend is running or not."
+            )
 
-        return res['id_token'], res['access_token']
+        return res["id_token"], res["access_token"]

@@ -1,6 +1,3 @@
-from common import *
-from auth import Auth
-from objects import PlateMap
 from tqdm import tqdm
 
 import os
@@ -10,32 +7,38 @@ import urllib.request
 import ssl
 import shutil
 
+from typing import List as _List
+
+from ..common import *
+from ..auth import Auth
+from ..objects import PlateMap
+
+
 class SeerSDK:
+    """
+    Object exposing SDK methods. Requires a username and password; the optional `instance` param denotes the instance of PAS (defaults to "US").
+
+    Examples
+    -------
+    >>> from core import SeerSDK
+    >>> USERNAME = "test"
+    >>> PASSWORD = "test-password"
+    >>> INSTANCE = "EU"
+    >>> seer_sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
+    """
+
     def __init__(self, username, password, instance="US"):
-        """
-        Constructor for SeerSDK class. Creates an instance of the Auth class and authenticates a user. Takes in the optional `instance` param denoting the production instance of PAS; defaults to "US".
-
-        Example
-        -------
-
-        >>> from core import SeerSDK
-        >>> USERNAME = "test"
-        >>> PASSWORD = "test-password"
-        >>> INSTANCE = "EU"
-        >>> seer_sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
-        """
         try:
-            self.auth = Auth(
-                username, 
-                password, 
-                instance)
+            self._auth = Auth(username, password, instance)
 
-            self.auth.get_token()
+            self._auth.get_token()
 
             print(f"User '{username}' logged in.\n")
-        
+
         except:
-            raise ValueError("Could not log in.\nPlease check your credentials and/or instance.")
+            raise ValueError(
+                "Could not log in.\nPlease check your credentials and/or instance."
+            )
 
     def get_spaces(self):
         """
@@ -46,7 +49,7 @@ class SeerSDK:
         spaces: list
             List of space objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -58,21 +61,25 @@ class SeerSDK:
             ]
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/usergroups"
-        
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = f"{self._auth.url}api/v1/usergroups"
+
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
             spaces = s.get(URL)
-            
+
             if spaces.status_code != 200:
-                raise ValueError("Invalid request. Please check your parameters.")
-            
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
             return spaces.json()
 
-    def get_plate_metadata(self, plate_id: str=None, df: bool=False):
+    def get_plate_metadata(self, plate_id: str = None, df: bool = False):
         """
         Fetches a list of plates for the authenticated user. If no `plate_id` is provided, returns all plates for the authenticated user. If `plate_id` is provided, returns the plate with the given `plate_id`, provided it exists.
 
@@ -88,7 +95,7 @@ class SeerSDK:
         plates: list or DataFrame
             List/DataFrame of plate objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -114,35 +121,38 @@ class SeerSDK:
 
         >>> seer_sdk.get_plate_metadata(id="YOUR_PLATE_ID_HERE")
         >>> [{ "id": ... }]
-
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/plates"
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = f"{self._auth.url}api/v1/plates"
         res = []
-        
+
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
             plates = s.get(
-                f"{URL}/{plate_id}" if plate_id else URL, 
-                params={'all': 'true'})
-            
+                f"{URL}/{plate_id}" if plate_id else URL,
+                params={"all": "true"},
+            )
             if plates.status_code != 200:
-                raise ValueError("Invalid request. Please check your parameters.")
-            
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
             if not plate_id:
                 res = plates.json()["data"]
             else:
                 res = [plates.json()]
-            
+
             for entry in res:
                 del entry["tenant_id"]
 
         return res if not df else dict_to_df(res)
-   
-    def get_project_metadata(self, project_id: str=None, df: bool=False):
+
+    def get_project_metadata(self, project_id: str = None, df: bool = False):
         """
         Fetches a list of projects for the authenticated user. If no `project_id` is provided, returns all projects for the authenticated user. If `project_id` is provided, returns the project with the given `project_id`, provided it exists.
 
@@ -152,13 +162,13 @@ class SeerSDK:
             Project ID of the project to be fetched, defaulted to None.
         df: bool
             Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
-             
+
         Returns
         -------
         projects: list or DataFrame
             DataFrame or list of project objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -185,24 +195,28 @@ class SeerSDK:
 
         >>> seer_sdk.get_project_metadata(id="YOUR_PROJECT_ID_HERE")
         >>> [{ "project_name": ... }]
-
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/projects" if not project_id else f"{self.auth.url}api/v1/projects/{project_id}"
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = (
+            f"{self._auth.url}api/v1/projects"
+            if not project_id
+            else f"{self._auth.url}api/v1/projects/{project_id}"
+        )
         res = []
-        
+
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
-            projects = s.get(
-                URL, 
-                params={'all': 'true'})
-            
+            projects = s.get(URL, params={"all": "true"})
             if projects.status_code != 200:
-                raise ValueError("Invalid request. Please check your parameters.")
-            
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
             if not project_id:
                 res = projects.json()["data"]
             else:
@@ -214,14 +228,16 @@ class SeerSDK:
 
             if "raw_file_path" in entry:
                 # Simple lambda function to find the third occurrence of '/' in the raw file path
-                location = lambda s: len(s) - len(s.split('/', 3)[-1])
-                
+                location = lambda s: len(s) - len(s.split("/", 3)[-1])
                 # Slicing the string from the location
-                entry["raw_file_path"] = entry["raw_file_path"][location(entry["raw_file_path"]):]
-            
+                entry["raw_file_path"] = entry["raw_file_path"][
+                    location(entry["raw_file_path"]) :
+                ]
         return res if not df else dict_to_df(res)
-    
-    def get_samples_metadata(self, plate_id: str=None, project_id: str=None, df: bool=False):
+
+    def _get_samples_metadata(
+        self, plate_id: str = None, project_id: str = None, df: bool = False
+    ):
         """
         ****************
         [UNEXPOSED METHOD CALL]
@@ -245,7 +261,7 @@ class SeerSDK:
         samples: list or DataFrame
             List/DataFrame of samples for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -272,44 +288,45 @@ class SeerSDK:
         3628  dd607ef0-654c-11ea-8eb2-25a1cfd1163c  ...         C132
         """
 
-        
         if not plate_id and not project_id:
             raise ValueError("You must pass in plate ID or project ID.")
 
         res = []
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/samples"
-        sample_params = { 
-            "all": "true"
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
         }
+        URL = f"{self._auth.url}api/v1/samples"
+        sample_params = {"all": "true"}
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
             if plate_id:
                 try:
-                    self.get_plate_metadata(plate_id) 
+                    self.get_plate_metadata(plate_id)
                 except:
-                    raise ValueError("Plate ID is invalid. Please check your parameters and see if the backend is running.")
-                
+                    raise ValueError(
+                        "Plate ID is invalid. Please check your parameters and see if the backend is running."
+                    )
                 sample_params["plateId"] = plate_id
-            
+
             elif project_id:
-                try: 
+                try:
                     self.get_project_metadata(project_id)
                 except:
-                    raise ValueError("Project ID is invalid. Please check your parameters and see if the backend is running.")
+                    raise ValueError(
+                        "Project ID is invalid. Please check your parameters and see if the backend is running."
+                    )
 
                 sample_params["projectId"] = project_id
 
-            samples = s.get(
-                URL, 
-                params=sample_params)
-            
+            samples = s.get(URL, params=sample_params)
             if samples.status_code != 200:
-                raise ValueError("Invalid request. Please check if your plate ID has any samples associated with it.")
-            
+                raise ValueError(
+                    "Invalid request. Please check if your plate ID has any samples associated with it."
+                )
             res = samples.json()["data"]
 
             for entry in res:
@@ -317,9 +334,9 @@ class SeerSDK:
 
         return res if not df else dict_to_df(res)
 
-    def get_msdata(self, sample_ids: list, df: bool=False):
+    def get_msdata(self, sample_ids: list, df: bool = False):
         """
-        Fetches MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user. 
+        Fetches MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user.
 
         The function returns a dict containing DataFrame objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
 
@@ -335,15 +352,15 @@ class SeerSDK:
         res: list or DataFrame
             List/DataFrame of plate objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
 
         >>> seer_sdk.get_msdata(sample_ids)
-        >>> [ 
-            {"id": "SAMPLE_ID_1_HERE" ... }, 
+        >>> [
+            {"id": "SAMPLE_ID_1_HERE" ... },
             {"id": "SAMPLE_ID_2_HERE" ... }
         ]
 
@@ -356,42 +373,41 @@ class SeerSDK:
         """
         res = []
         for sample_id in sample_ids:
-            ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-            HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-            URL = f"{self.auth.url}api/v1/msdatas/items"
+            ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+            HEADERS = {
+                "Authorization": f"{ID_TOKEN}",
+                "access-token": f"{ACCESS_TOKEN}",
+            }
+            URL = f"{self._auth.url}api/v1/msdatas/items"
 
             with requests.Session() as s:
                 s.headers.update(HEADERS)
 
-                msdatas = s.post(
-                    URL,
-                    json={
-                        "sampleId": sample_id
-                    }
-                )
+                msdatas = s.post(URL, json={"sampleId": sample_id})
 
                 if msdatas.status_code != 200 or not msdatas.json()["data"]:
-                    raise ValueError("Failed to fetch MS data for your plate ID.")
+                    raise ValueError(
+                        "Failed to fetch MS data for your plate ID."
+                    )
 
-                res.append(msdatas.json()["data"])
+                res.append(msdatas.json()["data"][0])
 
         for entry in res:
-            for d in entry:
-                if "tenant_id" in d:
-                    del d["tenant_id"]
+            if "tenant_id" in entry:
+                del entry["tenant_id"]
 
-                if "raw_file_path" in d:
-                    # Simple lambda function to find the third occurrence of '/' in the raw file path
-                    location = lambda s: len(s) - len(s.split('/', 3)[-1])
-                    
-                    # Slicing the string from the location
-                    d["raw_file_path"] = d["raw_file_path"][location(d["raw_file_path"]):]
-           
-        return res if not df else pd.DataFrame([d for entry in res for d in entry])
-        
-    def get_plate(self, plate_id: str, df: bool=False):
+            if "raw_file_path" in entry:
+                # Simple lambda function to find the third occurrence of '/' in the raw file path
+                location = lambda s: len(s) - len(s.split("/", 3)[-1])
+                # Slicing the string from the location
+                entry["raw_file_path"] = entry["raw_file_path"][
+                    location(entry["raw_file_path"]) :
+                ]
+        return res if not df else dict_to_df(res)
+
+    def get_plate(self, plate_id: str, df: bool = False):
         """
-        Fetches MS data files for a `plate_id` (provided that the `plate_id` is valid and has samples associated with it) for an authenticated user. 
+        Fetches MS data files for a `plate_id` (provided that the `plate_id` is valid and has samples associated with it) for an authenticated user.
 
         The function returns a dict containing DataFrame objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
 
@@ -407,15 +423,15 @@ class SeerSDK:
         res: list or DataFrame
             List/DataFrame of MS data file objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> plate_id = "7ec8cad0-15e0-11ee-bdf1-bbaa73585acf"
 
         >>> seer_sdk.get_plate(plate_id)
-        >>> [ 
-            {"id": "PLATE_ID_1_HERE" ... }, 
+        >>> [
+            {"id": "PLATE_ID_1_HERE" ... },
             {"id": "PLATE_ID_2_HERE" ... }
         ]
 
@@ -430,9 +446,11 @@ class SeerSDK:
         sample_ids = [sample["id"] for sample in plate_samples]
         return self.get_msdata(sample_ids, df)
 
-    def get_project(self, project_id: str, msdata: bool=False, df: bool=False):
+    def get_project(
+        self, project_id: str, msdata: bool = False, df: bool = False
+    ):
         """
-        Fetches samples (and MS data files) for a `project_id` (provided that the `project_id` is valid and has samples associated with it) for an authenticated user. 
+        Fetches samples (and MS data files) for a `project_id` (provided that the `project_id` is valid and has samples associated with it) for an authenticated user.
 
         The function returns a DataFrame object if the `df` flag is passed in as True, otherwise a nested dict object is returned instead. If the both the `df` and `msdata` flags are passed in as True, then a nested DataFrame object is returned instead.
 
@@ -450,7 +468,7 @@ class SeerSDK:
         res: list or DataFrame
             List/DataFrame of plate objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -458,14 +476,14 @@ class SeerSDK:
 
         >>> seer_sdk.get_project(project_id=project_id, msdata=False, df=False)
         >>> {
-            "project_samples": [ 
+            "project_samples": [
                 {
                     "id": "SAMPLE_ID_1_HERE",
                     "sample_type": "Plasma",
                     ...
                     ...
-                }, 
-                { 
+                },
+                {
                     "id": "SAMPLE_ID_2_HERE",
                     "sample_type": "Plasma",
                     ...
@@ -481,35 +499,34 @@ class SeerSDK:
                     "sample_type": "Plasma",
                     ...
                     ...
-                    "ms_data_files": [ 
-                        { 
+                    "ms_data_files": [
+                        {
                             "id": MS_DATA_FILE_ID_1_HERE,
                             "tenant_id": "TENANT_ID_HERE",
                             ...
                             ...
-                        }, 
-                        { 
+                        },
+                        {
                             "id": MS_DATA_FILE_ID_1_HERE,
                             "tenant_id": "TENANT_ID_HERE",
                             ...
                             ...
                         }
                     ]
-                }, 
-
+                },
                 {
                     "id": "SAMPLE_ID_2_HERE",
                     "sample_type": "Plasma",
                     ...
                     ...
-                    "ms_data_files": [ 
-                        { 
+                    "ms_data_files": [
+                        {
                             "id": MS_DATA_FILE_ID_2_HERE,
                             "tenant_id": "TENANT_ID_HERE",
                             ...
                             ...
-                        }, 
-                        { 
+                        },
+                        {
                             "id": MS_DATA_FILE_ID_2_HERE,
                             "tenant_id": "TENANT_ID_HERE",
                             ...
@@ -518,7 +535,7 @@ class SeerSDK:
                     ]
                 }
             ]
-        
+
         >>> seer_sdk.get_project(project_id=project_id, msdata=True, df=True)
         >>> id  ...                                                                           ms_data_files
             0  829509f0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
@@ -532,29 +549,51 @@ class SeerSDK:
             return ValueError("No project ID specified.")
 
         sample_ids = []
-        project_samples = self.get_samples_metadata(project_id=project_id, df=False)
+        project_samples = self.get_samples_metadata(
+            project_id=project_id, df=False
+        )
 
         if msdata:
-            sample_ids = [sample["id"] for sample in project_samples] # will always contain unique values
+            sample_ids = [
+                sample["id"] for sample in project_samples
+            ]  # will always contain unique values
             ms_data_files = self.get_msdata(sample_ids=sample_ids, df=False)
 
             for ms_data_file in ms_data_files:
                 for sample_index in range(len(project_samples)):
-                    if project_samples[sample_index]["id"] == ms_data_file[0]["sample_id"]:
+                    if (
+                        project_samples[sample_index]["id"]
+                        == ms_data_file["sample_id"]
+                    ):
                         if "ms_data_file" not in project_samples[sample_index]:
-                            project_samples[sample_index]["ms_data_files"] = ms_data_file
+                            project_samples[sample_index]["ms_data_files"] = [
+                                ms_data_file
+                            ]
                         else:
-                            project_samples[sample_index]["ms_data_files"].append(ms_data_file)
-
+                            project_samples[sample_index][
+                                "ms_data_files"
+                            ].append(ms_data_file)
 
         if df:
+            for sample_index in range(len(project_samples)):
+                if "ms_data_files" in project_samples[sample_index]:
+                    project_samples[sample_index]["ms_data_files"] = (
+                        dict_to_df(
+                            project_samples[sample_index]["ms_data_files"]
+                        )
+                    )
+
             project_samples = dict_to_df(project_samples)
-        
+
         return project_samples
 
-    def get_analysis_protocols(self, analysis_protocol_name: str=None, analysis_protocol_id: str=None):
+    def get_analysis_protocols(
+        self,
+        analysis_protocol_name: str = None,
+        analysis_protocol_id: str = None,
+    ):
         """
-        Fetches a list of analysis protocols for the authenticated user. If no `analysis_protocol_id` is provided, returns all analysis protocols for the authenticated user. If `analysis_protocol_name` (and no `analysis_protocol_id`) is provided, returns the analysis protocol with the given name, provided it exists. 
+        Fetches a list of analysis protocols for the authenticated user. If no `analysis_protocol_id` is provided, returns all analysis protocols for the authenticated user. If `analysis_protocol_name` (and no `analysis_protocol_id`) is provided, returns the analysis protocol with the given name, provided it exists.
 
         Parameters
         ----------
@@ -563,20 +602,20 @@ class SeerSDK:
 
         analysis_protocol_name : str, optional
             Name of the analysis protocol to be fetched, defaulted to None.
-        
+
         Returns
         -------
         protocols: list
             List of analysis protocol objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_analysis_protocols()
         >>> [
-                { "id": ..., "analysis_protocol_name": ... }, 
-                { "id": ..., "analysis_protocol_name": ... }, 
+                { "id": ..., "analysis_protocol_name": ... },
+                { "id": ..., "analysis_protocol_name": ... },
                 ...
             ]
 
@@ -591,21 +630,26 @@ class SeerSDK:
         >>> [{ "id": ..., "analysis_protocol_name": ... }] # in this case the id would supersede the inputted name.
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/analysisProtocols" if not analysis_protocol_id else f"{self.auth.url}api/v1/analysisProtocols/{analysis_protocol_id}"
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = (
+            f"{self._auth.url}api/v1/analysisProtocols"
+            if not analysis_protocol_id
+            else f"{self._auth.url}api/v1/analysisProtocols/{analysis_protocol_id}"
+        )
         res = []
-        
+
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
-            protocols = s.get(
-                URL, 
-                params={'all': 'true'})
-            
+            protocols = s.get(URL, params={"all": "true"})
             if protocols.status_code != 200:
-                raise ValueError("Invalid request. Please check your parameters.")
-            
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
             if not analysis_protocol_id and not analysis_protocol_name:
                 res = protocols.json()["data"]
 
@@ -613,7 +657,12 @@ class SeerSDK:
                 res = [protocols.json()]
 
             if not analysis_protocol_id and analysis_protocol_name:
-                res = [protocol for protocol in protocols.json()["data"] if protocol["analysis_protocol_name"] == analysis_protocol_name]
+                res = [
+                    protocol
+                    for protocol in protocols.json()["data"]
+                    if protocol["analysis_protocol_name"]
+                    == analysis_protocol_name
+                ]
 
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
@@ -621,14 +670,15 @@ class SeerSDK:
 
                 if "parameter_file_path" in res[entry]:
                     # Simple lambda function to find the third occurrence of '/' in the raw file path
-                    location = lambda s: len(s) - len(s.split('/', 3)[-1])
-                    
+                    location = lambda s: len(s) - len(s.split("/", 3)[-1])
                     # Slicing the string from the location
-                    res[entry]["parameter_file_path"] = res[entry]["parameter_file_path"][location(res[entry]["parameter_file_path"]):]
-            
-            return res 
+                    res[entry]["parameter_file_path"] = res[entry][
+                        "parameter_file_path"
+                    ][location(res[entry]["parameter_file_path"]) :]
 
-    def get_analysis(self, analysis_id: str=None):
+            return res
+
+    def get_analysis(self, analysis_id: str = None):
         """
         Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
 
@@ -636,19 +686,19 @@ class SeerSDK:
         ----------
         analysis_id : str, optional
             ID of the analysis to be fetched, defaulted to None.
-        
+
         Returns
         -------
         analyses: dict
             Contains a list of analyses objects for the authenticated user.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_analysis()
-        >>> [ 
-                {id: "YOUR_ANALYSIS_ID_HERE", ...}, 
+        >>> [
+                {id: "YOUR_ANALYSIS_ID_HERE", ...},
                 {id: "YOUR_ANALYSIS_ID_HERE", ...},
                 {id: "YOUR_ANALYSIS_ID_HERE", ...}
             ]
@@ -657,41 +707,45 @@ class SeerSDK:
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/analyses"
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = f"{self._auth.url}api/v1/analyses"
         res = []
-        
+
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
             analyses = s.get(
-                f"{URL}/{analysis_id}" if analysis_id else URL, 
-                params={'all': 'true'})
-            
+                f"{URL}/{analysis_id}" if analysis_id else URL,
+                params={"all": "true"},
+            )
             if analyses.status_code != 200:
-                raise ValueError("Invalid request. Please check your parameters.")
-            
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
             if not analysis_id:
                 res = analyses.json()["data"]
 
             else:
                 res = [analyses.json()["analysis"]]
-            
+
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
 
                 if "parameter_file_path" in res[entry]:
                     # Simple lambda function to find the third occurrence of '/' in the raw file path
-                    location = lambda s: len(s) - len(s.split('/', 3)[-1])
-                    
+                    location = lambda s: len(s) - len(s.split("/", 3)[-1])
                     # Slicing the string from the location
-                    res[entry]["parameter_file_path"] = res[entry]["parameter_file_path"][location(res[entry]["parameter_file_path"]):]
-            
+                    res[entry]["parameter_file_path"] = res[entry][
+                        "parameter_file_path"
+                    ][location(res[entry]["parameter_file_path"]) :]
             return res
-    
-    def get_analysis_result(self, analysis_id: str, download_path: str=""):
+
+    def get_analysis_result(self, analysis_id: str, download_path: str = ""):
         """
         Given an `analysis_id`, this function returns all relevant analysis data files in form of downloadable content, if applicable.
 
@@ -707,8 +761,8 @@ class SeerSDK:
         -------
         links: dict
             Contains dataframe objects for the `analysis_id`, given that the analysis has been complete.
-        
-        Example
+
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -720,23 +774,28 @@ class SeerSDK:
                 "protein_np": <protein_np dataframe object>,
                 "protein_panel": <protein_panel dataframe object>
             }
-        
+
         >>> seer_sdk.get_analysis_result("YOUR_ANALYSIS_ID_HERE", download_path="/Users/Downloads")
         >>> { "status": "Download complete." }
         """
 
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
-        
+
         if download_path and not os.path.exists(download_path):
             raise ValueError("The download path you entered is invalid.")
 
         if self.get_analysis(analysis_id)[0]["status"] in ["FAILED", None]:
-                raise ValueError("Cannot generate links for failed or null analyses.")
+            raise ValueError(
+                "Cannot generate links for failed or null analyses."
+            )
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/data"
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = f"{self._auth.url}api/v1/data"
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -746,8 +805,9 @@ class SeerSDK:
             )
 
             if protein_data.status_code != 200:
-                raise ValueError("Invalid request. Could not fetch protein data. Please check your parameters.")
-            
+                raise ValueError(
+                    "Invalid request. Could not fetch protein data. Please check your parameters."
+                )
             protein_data = protein_data.json()
 
             peptide_data = s.get(
@@ -755,7 +815,9 @@ class SeerSDK:
             )
 
             if peptide_data.status_code != 200:
-                raise ValueError("Invalid request. Could not fetch peptide data. Please check your parameters.")
+                raise ValueError(
+                    "Invalid request. Could not fetch peptide data. Please check your parameters."
+                )
 
             peptide_data = peptide_data.json()
 
@@ -772,11 +834,15 @@ class SeerSDK:
                     os.makedirs(name)
 
                 links["peptide_np"].to_csv(f"{name}/peptide_np.csv", sep="\t")
-                links["peptide_panel"].to_csv(f"{name}/peptide_panel.csv", sep="\t")
+                links["peptide_panel"].to_csv(
+                    f"{name}/peptide_panel.csv", sep="\t"
+                )
                 links["protein_np"].to_csv(f"{name}/protein_np.csv", sep="\t")
-                links["protein_panel"].to_csv(f"{name}/protein_panel.csv", sep="\t")
+                links["protein_panel"].to_csv(
+                    f"{name}/protein_panel.csv", sep="\t"
+                )
 
-                return { "status": "Download complete." }
+                return {"status": "Download complete."}
 
             return links
 
@@ -796,7 +862,7 @@ class SeerSDK:
         -------
         dict
             The response from the backend.
-        
+
         Example
         -------
         >>> from core import SeerSDK
@@ -848,7 +914,7 @@ class SeerSDK:
         sample_info: list
             A list of dictionaries containing all keys and values for the sample entries. These may or may not have been inferred from the sample description file.
             Required keys: ["plateID", "sampleID", "sampleName"]
-        
+
         Returns:
         --------
         dict
@@ -858,11 +924,11 @@ class SeerSDK:
         for sample in sample_info:
             if not all(key in sample for key in ["plateID", "sampleID", "sampleName"]):
                 raise ValueError(f"Invalid sample entry for sample {sample}. Please check your parameters again.")
-        
+
         ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
         HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
         URL = f"{self.auth.url}api/v1/samples/batch"
-        
+
         with requests.Session() as s:
             s.headers.update(HEADERS)
             response = s.post(
@@ -891,7 +957,7 @@ class SeerSDK:
             Description of the project.
         notes : str, optional
             Notes for the project.
-        space : str, optional  
+        space : str, optional
             User group id of the project. Defaults to the user group id of the user who is creating the project (i.e null).
 
         Returns
@@ -938,7 +1004,7 @@ class SeerSDK:
 
             if project.status_code != 200:
                 raise ValueError("Invalid request. Please check your parameters.")
-            
+
             res = { "status": f"Project started with id = {project.json()['id']}" }
 
             return res
@@ -976,7 +1042,7 @@ class SeerSDK:
                 "status": "Plate with id = PLATE_ID started."
             }
         """
-    
+
         ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
         HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
 
@@ -993,13 +1059,13 @@ class SeerSDK:
         for file in ms_data_files:
             if not os.path.exists(file):
                 raise ValueError(f"File path '{file}' is invalid. Please check your parameters again.")
-        
+
         if type(plate_map_file) == str and not os.path.exists(plate_map_file):
             raise ValueError(f"File path '{plate_map_file}' is invalid. Please check your parameters again.")
 
         if sample_description_file and not os.path.exists(sample_description_file):
             raise ValueError(f"File path '{sample_description_file}' is invalid. Please check your parameters again.")
-        
+
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -1008,18 +1074,18 @@ class SeerSDK:
             if plate_response.status_code != 200:
                 raise ValueError("Cannot connect to the server.")
 
-            plate_ids = set(plate_response.json()["data"])            
+            plate_ids = set(plate_response.json()["data"])
 
             if not plate_ids:
                 raise ValueError("Cannot connect to the server.")
-        
+
         # Step 2: Fetch the UUID that needs to be passed into the backend from `/api/v1/plates` to fetch the AWS upload config and raw file path. This will sync the plates backend with samples when the user uploads later. This UUID will also be void of duplicates since duplication is handled by the backend.
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
             plate_response = s.post(
                 f"{self.auth.url}api/v1/plates",
-                json={ 
+                json={
                     "plateId": plate_id,
                     "plateName": plate_name,
                     "plateUserGroup": space
@@ -1027,18 +1093,18 @@ class SeerSDK:
 
             if plate_response.status_code != 200:
                 raise ValueError("Cannot connect to the server while fetching plates.")
-            
+
             id_uuid = plate_response.json()["id"]
-        
+
             if not id_uuid:
                 raise ValueError("Cannot connect to the server while fetching plates.")
-        
+
         # Step 3: Fetch AWS upload config from the backend with the plateId we just generated. Populates `s3_upload_path` and `s3_bucket` global variables.
         with requests.Session() as s:
             s.headers.update(HEADERS)
             config_response = s.post(
-                f"{self.auth.url}api/v1/msdatas/getuploadconfig", 
-                json={ 
+                f"{self.auth.url}api/v1/msdatas/getuploadconfig",
+                json={
                     "plateId": id_uuid
                 })
 
@@ -1046,7 +1112,7 @@ class SeerSDK:
                 raise ValueError("Upload failed, please check if backend is still running.")
 
             if "s3Bucket" not in config_response.json() or "s3UploadPath" not in config_response.json():
-                raise ValueError("Upload failed. Please check if the backend is still running.") 
+                raise ValueError("Upload failed. Please check if the backend is still running.")
 
             s3_bucket = config_response.json()["s3Bucket"]
             s3_upload_path = config_response.json()["s3UploadPath"]
@@ -1060,8 +1126,8 @@ class SeerSDK:
                 raise ValueError("Could not fetch config for user.")
 
             if "S3Bucket" not in config_response.json()["credentials"]:
-                raise ValueError("Upload failed. Please check if the backend is still running.") 
-            
+                raise ValueError("Upload failed. Please check if the backend is still running.")
+
             credentials = config_response.json()["credentials"]
 
             os.environ["AWS_ACCESS_KEY_ID"] = credentials["AccessKeyId"]
@@ -1078,7 +1144,7 @@ class SeerSDK:
 
             plate_map_file.to_csv(f"generated_files/{plate_map_file_name}")
             plate_map_file = f"generated_files/{plate_map_file_name}"
-            
+
         else:
             plate_map_file_name = os.path.basename(plate_map_file)
 
@@ -1086,16 +1152,16 @@ class SeerSDK:
 
         if not res:
             raise ValueError("Platemap upload failed.")
-        
+
         with requests.Session() as s:
             s.headers.update(HEADERS)
             plate_map_response = s.post(
-                f"{self.auth.url}api/v1/msdataindex/file", 
-                json={ 
-                    "files": [{ 
+                f"{self.auth.url}api/v1/msdataindex/file",
+                json={
+                    "files": [{
                         "filePath": f"{s3_upload_path}{plate_map_file_name}",
                         "fileSize": os.stat(plate_map_file).st_size,
-                        "userGroupId": space 
+                        "userGroupId": space
                     }]
                 })
 
@@ -1107,7 +1173,7 @@ class SeerSDK:
             filename = os.path.basename(file)
             filesize = os.stat(file).st_size
             raw_file_paths[f"{filename}"] = f"/{s3_bucket}/{s3_upload_path}{filename}"
-        
+
         # Step 6: Get sample info from the plate map file and make a call to `/api/v1/samples` with the sample_info. This returns the plateId, sampleId and sampleName for each sample in the plate map file. Also validate and upload the sample_description_file if it exists.
         if sample_description_file:
             sample_info = get_sample_info(id_uuid, ms_data_files, plate_map_file, space, sample_description_file)
@@ -1116,16 +1182,16 @@ class SeerSDK:
 
             if not sdf_upload:
                 raise ValueError("Sample description file upload failed.")
-            
+
             with requests.Session() as s:
                 s.headers.update(HEADERS)
                 sdf_response = s.post(
-                    f"{self.auth.url}api/v1/msdataindex/file", 
-                    json={ 
-                        "files": [{ 
+                    f"{self.auth.url}api/v1/msdataindex/file",
+                    json={
+                        "files": [{
                             "filePath": f"{s3_upload_path}{os.path.basename(sample_description_file)}",
                             "fileSize": os.stat(sample_description_file).st_size,
-                            "userGroupId": space 
+                            "userGroupId": space
                         }]
                     })
 
@@ -1160,8 +1226,8 @@ class SeerSDK:
                 raise ValueError("Could not fetch config for user.")
 
             if "S3Bucket" not in config_response.json()["credentials"]:
-                raise ValueError("Upload failed. Please check if the backend is still running.") 
-            
+                raise ValueError("Upload failed. Please check if the backend is still running.")
+
             credentials = config_response.json()["credentials"]
 
             os.environ["AWS_ACCESS_KEY_ID"] = credentials["AccessKeyId"]
@@ -1180,14 +1246,14 @@ class SeerSDK:
                 "filePath": f"{s3_upload_path}{filename}",
                 "fileSize": filesize,
                 "userGroupId": space
-            })     
+            })
 
         # Step 10: Make a call to `api/v1/msdataindex/file` to sync with frontend. This should only be done after all files have finished uploading, simulating an async "promise"-like scenario in JavaScript.
         with requests.Session() as s:
             s.headers.update(HEADERS)
             file_response = s.post(
-                f"{self.auth.url}api/v1/msdataindex/file", 
-                json={ 
+                f"{self.auth.url}api/v1/msdataindex/file",
+                json={
                     "files": files
                 })
 
@@ -1200,7 +1266,7 @@ class SeerSDK:
         return {
             "message": f"Plate generated with id: '{id_uuid}'"
         }
-    
+
     def analysis_complete(self, analysis_id: str):
         """
         Returns the status of the analysis with the given id.
@@ -1215,7 +1281,7 @@ class SeerSDK:
         res : dict
             A dictionary containing the status of the analysis.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -1226,14 +1292,14 @@ class SeerSDK:
         """
 
         if not analysis_id:
-            raise ValueError("Analysis id cannot be empty.") 
-        
+            raise ValueError("Analysis id cannot be empty.")
+
         try:
             res = self.get_analysis(analysis_id)
         except ValueError:
             return ValueError("Analysis not found. Your ID could be incorrect")
-        
-        return { "status": res[0]["status"] }
+
+        return {"status": res[0]["status"]}
 
     def start_analysis(self, name: str, project_id: str, sample_ids: list=None, analysis_protocol_name: str=None, analysis_protocol_id: str=None, notes: str="", description: str="", space: str=None):
         """
@@ -1578,7 +1644,7 @@ class SeerSDK:
         list
             Contains the list of files in the folder.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> sdk = SeerSDK()
@@ -1597,22 +1663,31 @@ class SeerSDK:
             "test-may-2/DIA/EXP20002_2020ms0142X18_A.wiff.scan"
         ]
         """
-        
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/msdataindex/filesinfolder?folder={folder}" if not space else f"{self.auth.url}api/v1/msdataindex/filesinfolder?folder={folder}&userGroupId={space}"
-        
+
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = (
+            f"{self._auth.url}api/v1/msdataindex/filesinfolder?folder={folder}"
+            if not space
+            else f"{self._auth.url}api/v1/msdataindex/filesinfolder?folder={folder}&userGroupId={space}"
+        )
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
             files = s.get(URL)
-            
+
             if files.status_code != 200:
-                raise ValueError("Invalid request. Please check your parameters.")
-            
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
             return files.json()["filesList"]
-    
-    def download_ms_data_files(self, paths: list[str], download_path: str, space: str=None):
+
+    def download_ms_data_files(
+        self, paths: _List[str], download_path: str, space: str = None
+    ):
         """
         Downloads all MS data files for paths passed in the params to the specified download path.
 
@@ -1638,20 +1713,29 @@ class SeerSDK:
             print(f"\nDownload path not specified.\n")
 
         if not os.path.isdir(download_path):
-            print(f'\nThe path "{download_path}" you specified does not exist, was either invalid or not absolute.\n')
+            print(
+                f'\nThe path "{download_path}" you specified does not exist, was either invalid or not absolute.\n'
+            )
             download_path = f"{os.getcwd()}/downloads"
 
-        name = download_path if download_path[-1] != "/" else download_path[:-1]
+        name = (
+            download_path if download_path[-1] != "/" else download_path[:-1]
+        )
 
         if not os.path.exists(name):
             os.makedirs(name)
-        
+
         print(f'Downloading files to "{name}"\n')
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}api/v1/msdataindex/download/getUrl" 
-        tenant_id = jwt.decode(ID_TOKEN, options={'verify_signature': False})["custom:tenantId"]
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = f"{self._auth.url}api/v1/msdataindex/download/getUrl"
+        tenant_id = jwt.decode(ID_TOKEN, options={"verify_signature": False})[
+            "custom:tenantId"
+        ]
 
         for path in paths:
             with requests.Session() as s:
@@ -1661,39 +1745,58 @@ class SeerSDK:
                     URL,
                     json={
                         "filepath": f"{tenant_id}/{path}",
-                        "userGroupId": space
-                    })
+                        "userGroupId": space,
+                    },
+                )
 
                 if download_url.status_code != 200:
-                    raise ValueError("Could not download file. Please check if the backend is running.")
-                
+                    raise ValueError(
+                        "Could not download file. Please check if the backend is running."
+                    )
                 urls.append(download_url.text)
 
         for i in range(len(urls)):
             filename = paths[i].split("/")[-1]
             url = urls[i]
 
-            print(f"Downloading {filename}") 
+            print(f"Downloading {filename}")
 
             for _ in range(2):
                 try:
-                    with tqdm(unit = 'B', unit_scale = True, unit_divisor = 1024, miniters = 1, desc = f"Progress") as t:
-                        ssl._create_default_https_context = ssl._create_unverified_context
-                        urllib.request.urlretrieve(url, f"{name}/{filename}", reporthook=download_hook(t), data=None)
+                    with tqdm(
+                            unit="B",
+                            unit_scale=True,
+                            unit_divisor=1024,
+                            miniters=1,
+                            desc=f"Progress",
+                    ) as t:
+                        ssl._create_default_https_context = (
+                            ssl._create_unverified_context
+                        )
+                        urllib.request.urlretrieve(
+                            url,
+                            f"{name}/{filename}",
+                            reporthook=download_hook(t),
+                            data=None,
+                        )
                         break
                 except:
                     filename = filename.split("/")
-                    name += "/" + "/".join([filename[i] for i in range(len(filename) - 1)])
+                    name += "/" + "/".join(
+                        [filename[i] for i in range(len(filename) - 1)]
+                    )
                     filename = filename[-1]
                     if not os.path.isdir(f"{name}/{filename}"):
                         os.makedirs(f"{name}/")
-            
+
             else:
-                raise ValueError("Your download failed. Please check if the backend is still running.")
+                raise ValueError(
+                    "Your download failed. Please check if the backend is still running."
+                )
 
             print(f"Finished downloading {filename}\n")
-        
-        return { "message": f"Files downloaded successfully to '{name}'" }
+
+        return {"message": f"Files downloaded successfully to '{name}'"}
 
     def link_plate(self, ms_data_files: list[str], plate_map_file: str, plate_id: str, plate_name: str, sample_description_file: str=None, space: str=None):
         """
@@ -1744,7 +1847,7 @@ class SeerSDK:
         for file in ms_data_files:
             if not self.list_ms_data_files(file):
                 raise ValueError(f"File '{file}' does not exist. Please check your parameters again.")
-        
+
         if sample_description_file and not os.path.exists(sample_description_file):
             raise ValueError(f"File path '{sample_description_file}' is invalid. Please check your parameters again.")
 
@@ -1756,18 +1859,18 @@ class SeerSDK:
             if plate_response.status_code != 200:
                 raise ValueError("Cannot connect to the server.")
 
-            plate_ids = set(plate_response.json()["data"])            
+            plate_ids = set(plate_response.json()["data"])
 
             if not plate_ids:
                 raise ValueError("Cannot connect to the server.")
-        
+
         # Step 2: Fetch the UUID that needs to be passed into the backend from `/api/v1/plates` to fetch the AWS upload config and raw file path. This will sync the plates backend with samples when the user uploads later. This UUID will also be void of duplicates since duplication is handled by the backend.
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
             plate_response = s.post(
                 f"{self.auth.url}api/v1/plates",
-                json={ 
+                json={
                     "plateId": plate_id,
                     "plateName": plate_name,
                     "plateUserGroup": space
@@ -1775,18 +1878,18 @@ class SeerSDK:
 
             if plate_response.status_code != 200:
                 raise ValueError("Cannot connect to the server while fetching plates.")
-            
+
             id_uuid = plate_response.json()["id"]
-        
+
             if not id_uuid:
                 raise ValueError("Cannot connect to the server while fetching plates.")
-        
+
         # Step 3: Fetch AWS upload config from the backend with the plateId we just generated. Populates `s3_upload_path` and `s3_bucket` global variables.
         with requests.Session() as s:
             s.headers.update(HEADERS)
             config_response = s.post(
-                f"{self.auth.url}api/v1/msdatas/getuploadconfig", 
-                json={ 
+                f"{self.auth.url}api/v1/msdatas/getuploadconfig",
+                json={
                     "plateId": id_uuid
                 })
 
@@ -1794,7 +1897,7 @@ class SeerSDK:
                 raise ValueError("Upload failed, please check if backend is still running.")
 
             if "s3Bucket" not in config_response.json() or "s3UploadPath" not in config_response.json():
-                raise ValueError("Upload failed. Please check if the backend is still running.") 
+                raise ValueError("Upload failed. Please check if the backend is still running.")
 
             s3_bucket = config_response.json()["s3Bucket"]
             s3_upload_path = config_response.json()["s3UploadPath"]
@@ -1808,8 +1911,8 @@ class SeerSDK:
                 raise ValueError("Could not fetch config for user.")
 
             if "S3Bucket" not in config_response.json()["credentials"]:
-                raise ValueError("Upload failed. Please check if the backend is still running.") 
-            
+                raise ValueError("Upload failed. Please check if the backend is still running.")
+
             credentials = config_response.json()["credentials"]
 
             os.environ["AWS_ACCESS_KEY_ID"] = credentials["AccessKeyId"]
@@ -1826,7 +1929,7 @@ class SeerSDK:
 
             plate_map_file.to_csv(f"generated_files/{plate_map_file_name}")
             plate_map_file = f"generated_files/{plate_map_file_name}"
-            
+
         else:
             plate_map_file_name = os.path.basename(plate_map_file)
 
@@ -1834,22 +1937,22 @@ class SeerSDK:
 
         if not res:
             raise ValueError("Platemap upload failed.")
-        
+
         with requests.Session() as s:
             s.headers.update(HEADERS)
             plate_map_response = s.post(
-                f"{self.auth.url}api/v1/msdataindex/file", 
-                json={ 
-                    "files": [{ 
+                f"{self.auth.url}api/v1/msdataindex/file",
+                json={
+                    "files": [{
                         "filePath": f"{s3_upload_path}{plate_map_file_name}",
                         "fileSize": os.stat(plate_map_file).st_size,
-                        "userGroupId": space 
+                        "userGroupId": space
                     }]
                 })
 
             if plate_map_response.status_code != 200 or not plate_map_response.json() or "created" not in plate_map_response.json():
                 raise ValueError("Upload failed, please check if backend is still active and running.")
-        
+
         # Step 5: Populate `raw_file_paths` for sample upload.
         for file in ms_data_files:
             filename = file.split("/")[-1]
@@ -1864,16 +1967,16 @@ class SeerSDK:
 
             if not sdf_upload:
                 raise ValueError("Sample description file upload failed.")
-            
+
             with requests.Session() as s:
                 s.headers.update(HEADERS)
                 sdf_response = s.post(
-                    f"{self.auth.url}api/v1/msdataindex/file", 
-                    json={ 
-                        "files": [{ 
+                    f"{self.auth.url}api/v1/msdataindex/file",
+                    json={
+                        "files": [{
                             "filePath": f"{s3_upload_path}{os.path.basename(sample_description_file)}",
                             "fileSize": os.stat(sample_description_file).st_size,
-                            "userGroupId": space 
+                            "userGroupId": space
                         }]
                     })
 
@@ -1893,7 +1996,7 @@ class SeerSDK:
         # Step 8: Make a request to `/api/v1/msdatas` with the processed samples data.
         for file_index in range(len(ms_data_file_names)):
             file = ms_data_file_names[file_index]
-            
+
             with requests.Session() as s:
                 s.headers.update(HEADERS)
                 ms_data_response = s.post(
@@ -1907,8 +2010,8 @@ class SeerSDK:
         return {
             "message": f"Plate generated with id: '{id_uuid}'"
         }
-    
-    def group_analysis_results(self, analysis_id: str, box_plot: dict=None):
+
+    def group_analysis_results(self, analysis_id: str, box_plot: dict = None):
         """
         Returns the group analysis data for the given analysis id, provided it exists.
 
@@ -1916,7 +2019,7 @@ class SeerSDK:
         ----------
         analysis_id : str
             The analysis id.
-        
+
         box_plot : dict, optional
             The box plot configuration needed for the analysis, defaulted to None. Contains `feature_type` ("protein" or "peptide") and `feature_ids` (comma separated list of feature IDs) keys.
 
@@ -1925,7 +2028,7 @@ class SeerSDK:
         res : dict
             A dictionary containing the group analysis data.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -1935,18 +2038,17 @@ class SeerSDK:
                     "protein": [],
                     "peptide": [],
                 },
-                "post": { 
+                "post": {
                     "protein": {},
-                    "protein_url": { 
-                        "protein_processed_file_url": "", 
+                    "protein_url": {
+                        "protein_processed_file_url": "",
                         "protein_processed_long_form_file_url": "",
-                    }, 
-
+                    },
                     "peptide": {},
-                    "peptide_url": { 
-                        "peptide_processed_file_url": "", 
+                    "peptide_url": {
+                        "peptide_processed_file_url": "",
                         "peptide_processed_long_form_file_url": "",
-                    }, 
+                    },
                 },
                 "box_plot": []
             }
@@ -1955,29 +2057,31 @@ class SeerSDK:
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
 
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
-        URL = f"{self.auth.url}"
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = f"{self._auth.url}"
 
-        res = { 
+        res = {
             "pre": {
                 "protein": [],
                 "peptide": [],
             },
-            "post": { 
+            "post": {
                 "protein": {},
-                "protein_url": { 
-                    "protein_processed_file_url": "", 
+                "protein_url": {
+                    "protein_processed_file_url": "",
                     "protein_processed_long_form_file_url": "",
-                }, 
-
+                },
                 "peptide": {},
-                "peptide_url": { 
-                    "peptide_processed_file_url": "", 
+                "peptide_url": {
+                    "peptide_processed_file_url": "",
                     "peptide_processed_long_form_file_url": "",
-                }, 
+                },
             },
-            "box_plot": []
+            "box_plot": [],
         }
 
         # Pre-GA data call
@@ -1986,30 +2090,28 @@ class SeerSDK:
 
             protein_pre_data = s.post(
                 url=f"{URL}api/v2/groupanalysis/protein",
-                json={ 
-                    "analysisId": analysis_id,
-                    "grouping": "condition"
-                }) 
-            
+                json={"analysisId": analysis_id, "grouping": "condition"},
+            )
             if protein_pre_data.status_code != 200:
-                raise ValueError("Invalid request. Could not fetch group analysis protein pre data. Please check your parameters.")
+                raise ValueError(
+                    "Invalid request. Could not fetch group analysis protein pre data. Please check your parameters."
+                )
 
             protein_pre_data = protein_pre_data.json()
-            
+
             res["pre"]["protein"] = protein_pre_data
-        
+
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
             peptide_pre_data = s.post(
                 url=f"{URL}api/v2/groupanalysis/peptide",
-                json={ 
-                    "analysisId": analysis_id,
-                    "grouping": "condition"
-                }) 
-            
+                json={"analysisId": analysis_id, "grouping": "condition"},
+            )
             if peptide_pre_data.status_code != 200:
-                raise ValueError("Invalid request. Could not fetch group analysis peptide pre data. Please check your parameters.")
+                raise ValueError(
+                    "Invalid request. Could not fetch group analysis peptide pre data. Please check your parameters."
+                )
 
             peptide_pre_data = peptide_pre_data.json()
             res["pre"]["peptide"] = peptide_pre_data
@@ -2018,37 +2120,47 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
-            get_saved_result = s.get(f"{URL}api/v1/groupanalysis/getSavedResults?analysisid={analysis_id}")
+            get_saved_result = s.get(
+                f"{URL}api/v1/groupanalysis/getSavedResults?analysisid={analysis_id}"
+            )
 
             if get_saved_result.status_code != 200:
-                raise ValueError("Invalid request. Could not fetch group analysis post data. Please check your parameters.")
-            
+                raise ValueError(
+                    "Invalid request. Could not fetch group analysis post data. Please check your parameters."
+                )
             get_saved_result = get_saved_result.json()
 
             # Protein data
             if "pgResult" in get_saved_result:
                 res["post"]["protein"] = get_saved_result["pgResult"]
-            
+
             # Peptide data
             if "peptideResult" in get_saved_result:
                 res["post"]["peptide"] = get_saved_result["peptideResult"]
 
             # Protein URLs
             if "pgProcessedFileUrl" in get_saved_result:
-                res["post"]["protein_url"]["protein_processed_file_url"] = get_saved_result["pgProcessedFileUrl"]
-            
+                res["post"]["protein_url"]["protein_processed_file_url"] = (
+                    get_saved_result["pgProcessedFileUrl"]
+                )
             if "pgProcessedLongFormFileUrl" in get_saved_result:
-                res["post"]["protein_url"]["protein_processed_long_form_file_url"] = get_saved_result["pgProcessedLongFormFileUrl"]
+                res["post"]["protein_url"][
+                    "protein_processed_long_form_file_url"
+                ] = get_saved_result["pgProcessedLongFormFileUrl"]
 
             # Peptide URLs
             if "peptideProcessedFileUrl" in get_saved_result:
-                res["post"]["peptide_url"]["peptide_processed_file_url"] = get_saved_result["peptideProcessedFileUrl"]
+                res["post"]["peptide_url"]["peptide_processed_file_url"] = (
+                    get_saved_result["peptideProcessedFileUrl"]
+                )
 
             if "peptideProcessedLongFormFileUrl" in get_saved_result:
-                res["post"]["peptide_url"]["peptide_processed_long_form_file_url"] = get_saved_result["peptideProcessedLongFormFileUrl"]
+                res["post"]["peptide_url"][
+                    "peptide_processed_long_form_file_url"
+                ] = get_saved_result["peptideProcessedLongFormFileUrl"]
 
         # Box plot data call
-        if not box_plot: 
+        if not box_plot:
             del res["box_plot"]
             return res
 
@@ -2057,14 +2169,20 @@ class SeerSDK:
             box_plot["feature_type"] = box_plot["feature_type"].lower()
             box_plot_data = s.post(
                 url=f"{URL}api/v1/groupanalysis/rawdata",
-                json={ 
+                json={
                     "analysisId": analysis_id,
-                    "featureIds": ",".join(box_plot["feature_ids"]) if len(box_plot["feature_ids"]) > 1 else box_plot["feature_ids"][0],
-                    "featureType": f"{box_plot['feature_type']}group"
-                }) 
-            
+                    "featureIds": (
+                        ",".join(box_plot["feature_ids"])
+                        if len(box_plot["feature_ids"]) > 1
+                        else box_plot["feature_ids"][0]
+                    ),
+                    "featureType": f"{box_plot['feature_type']}group",
+                },
+            )
             if box_plot_data.status_code != 200:
-                raise ValueError("Invalid request, could not fetch box plot data. Please verify your 'box_plot' parameters, including 'feature_ids' (comma-separated list of feature IDs) and 'feature_type' (needs to be a either 'protein' or 'peptide').")
+                raise ValueError(
+                    "Invalid request, could not fetch box plot data. Please verify your 'box_plot' parameters, including 'feature_ids' (comma-separated list of feature IDs) and 'feature_type' (needs to be a either 'protein' or 'peptide')."
+                )
 
             box_plot_data = box_plot_data.json()
             res["box_plot"] = box_plot_data
