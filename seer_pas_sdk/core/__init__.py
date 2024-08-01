@@ -954,7 +954,7 @@ class SeerSDK:
     def add_project(
         self,
         project_name: str,
-        plate_ids: list[str],
+        plate_ids: _List[str],
         description: str = None,
         notes: str = None,
         space: str = None,
@@ -1037,7 +1037,7 @@ class SeerSDK:
 
     def add_plate(
         self,
-        ms_data_files: list[str],
+        ms_data_files: _List[str],
         plate_map_file: str,
         plate_id: str,
         plate_name: str,
@@ -2016,7 +2016,7 @@ class SeerSDK:
 
     def link_plate(
         self,
-        ms_data_files: list[str],
+        ms_data_files: _List[str],
         plate_map_file: str,
         plate_id: str,
         plate_name: str,
