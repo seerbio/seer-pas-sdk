@@ -5,6 +5,9 @@ class Auth:
     _instances = {
         "US": "https://api.pas.seer.software/",
         "EU": "https://api.pas-eu.seer.bio/",
+        # Additional built-in options for internal use
+        "staging": "https://api.pas.seer-staging.com/",
+        "dev": "http://localhost:3006/",
     }
 
     def __init__(self, username, password, instance="US"):
