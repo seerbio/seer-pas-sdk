@@ -18,7 +18,7 @@ class Auth:
         ----------
         username: str
             The username of the account associated with the PAS instance.
-        password: str
+        password: strFor internal ust
             The password of the account associated with the PAS instance.
         instance: str
             The instance name of the PAS instance (`US | EU`). Defaults to `US`.
