@@ -28,7 +28,9 @@ class Auth:
         self.__password = password
 
         if instance not in Auth._instances:
-            if instance.startswith("https://"):
+            if instance.startswith("https://") or instance.startswith(
+                "http://"
+            ):
                 # Support arbitrary endpoint for testing
                 self.url = instance
             else:
