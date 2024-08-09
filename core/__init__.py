@@ -316,7 +316,7 @@ class SeerSDK:
                 del entry["tenant_id"]
 
         return res if not df else dict_to_df(res)
-
+    
     def get_msdata(self, sample_ids: list, df: bool=False):
         """
         Fetches MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user. 
@@ -1740,6 +1740,8 @@ class SeerSDK:
         ms_data_file_names = []
         dir_exists = True # flag to check if the generated_files directory exists
 
+        tenant_id = jwt.decode(ID_TOKEN, options={'verify_signature': False})["custom:tenantId"]
+
         # Step 0: Check if the file paths exist in the S3 bucket.
         for file in ms_data_files:
             if not self.list_ms_data_files(file):
@@ -1854,7 +1856,7 @@ class SeerSDK:
         for file in ms_data_files:
             filename = file.split("/")[-1]
             ms_data_file_names.append(filename)
-            raw_file_paths[f"{filename}"] = file
+            raw_file_paths[f"{filename}"] = f'/{s3_bucket}/{tenant_id}/{file}'
 
         # Step 6: Get sample info from the plate map file and make a call to `/api/v1/samples` with the sample_info. This returns the plateId, sampleId and sampleName for each sample in the plate map file. Also validate and upload the sample_description_file if it exists.
         if sample_description_file:
