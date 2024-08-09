@@ -196,6 +196,9 @@ def get_sample_info(plate_id, ms_data_files, plate_map_file, space, sample_descr
 
         res.append(sample_info)
 
+    # Step 4: drop duplicates on sampleID
+    df = pd.DataFrame(res).drop_duplicates(subset=["sampleID"])
+    res = df.to_dict(orient="records")
     return res
 
 def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
@@ -254,13 +257,19 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
     number_of_rows = df.shape[0]
     res = []
 
+    # reformat samples to be a dictionary with sample_id as the key
+    samples = { sample["sample_id"]: sample for sample in samples }
+
     for rowIndex in range(number_of_rows):
         row = df.iloc[rowIndex]
         path = None
         sample_id = None
 
-        if samples[rowIndex]["sample_id"] == row["Sample ID"] and samples[rowIndex]["sample_name"] == row["Sample name"]:
-            sample_id = samples[rowIndex]["id"]
+        # Validate that the sample ID exists in the samples list
+        if samples.get(row["Sample ID"], None):
+            sample_id = samples[row["Sample ID"]]["id"]
+        else:
+            raise ValueError(f'Error fetching id for sample ID {row["Sample ID"]}')
 
         for filename in raw_file_paths:
             if filename == row["MS file name"]:
