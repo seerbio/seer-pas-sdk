@@ -678,7 +678,13 @@ class SeerSDK:
 
             return res
 
-    def get_analysis(self, analysis_id: str = None):
+    def get_analysis(
+        self,
+        analysis_id: str = None,
+        folder_id: str = None,
+        show_folders=True,
+        analysis_only=True,
+    ):
         """
         Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
 
@@ -686,6 +692,17 @@ class SeerSDK:
         ----------
         analysis_id : str, optional
             ID of the analysis to be fetched, defaulted to None.
+
+        folder_id : str, optional
+            ID of the folder to be fetched, defaulted to None.
+
+        show_folders : bool, optional
+            Mark True if folder contents are to be returned in the response, defaulted to True.
+            Will be disabled if an analysis id is provided.
+
+        analysis_only : bool, optional
+            Mark True if only analyses objects are to be returned in the response, defaulted to True.
+            If marked false, folder objects will also be included in the response.
 
         Returns
         -------
@@ -718,10 +735,14 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
+            params = {"all": "true"}
+            if folder_id:
+                params["folder"] = folder_id
+
             analyses = s.get(
-                f"{URL}/{analysis_id}" if analysis_id else URL,
-                params={"all": "true"},
+                f"{URL}/{analysis_id}" if analysis_id else URL, params=params
             )
+
             if analyses.status_code != 200:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
@@ -732,6 +753,7 @@ class SeerSDK:
             else:
                 res = [analyses.json()["analysis"]]
 
+            folders = []
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -739,10 +761,27 @@ class SeerSDK:
                 if "parameter_file_path" in res[entry]:
                     # Simple lambda function to find the third occurrence of '/' in the raw file path
                     location = lambda s: len(s) - len(s.split("/", 3)[-1])
+
                     # Slicing the string from the location
                     res[entry]["parameter_file_path"] = res[entry][
                         "parameter_file_path"
                     ][location(res[entry]["parameter_file_path"]) :]
+
+                if (
+                    show_folders
+                    and not analysis_id
+                    and res[entry]["is_folder"]
+                ):
+                    folders.append(res[entry]["id"])
+
+            # recursive solution to get analyses in folders
+            for folder in folders:
+                res += self.get_analysis(folder_id=folder)
+
+            if analysis_only:
+                res = [
+                    analysis for analysis in res if not analysis["is_folder"]
+                ]
             return res
 
     def get_analysis_result(self, analysis_id: str, download_path: str = ""):
