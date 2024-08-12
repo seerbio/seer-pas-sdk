@@ -1,21 +1,18 @@
-# PAS Python SDK
-This is the Python SDK for Proteograph Analysis Suite (PAS) by Seer Inc. It is currently in development and is not ready for production use.
+# Seer PAS Python SDK
 
-## Guide
-The `walkthrough.html` file is the one-stop-shop for this package and contains all the instructions for using the SDK. You can open it in your browser to view the instructions. Simply dragging the file into your browser should work.
+[![Test](https://github.com/seerbio/pas-python-sdk/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/seerbio/pas-python-sdk/actions/workflows/test.yml)
+[![Lint](https://github.com/seerbio/pas-python-sdk/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/seerbio/pas-python-sdk/actions/workflows/lint.yml)
 
-## Prerequisites
-* Currently the SDK is built against `pas-dev` which is the development version of the backend. All examples in `walkthrough.html` are built against this version.
+This SDK permits interaction with the Seer Proteograph Analysis Suite using Python.
+**It is currently in development and is not ready for production use.**
 
-* However, presently the SDK points to the `staging` backend instance on the cloud, so a user should be able to log in with their `staging` credentials (please email <a href="mailto:ajolly@seer.bio">ajolly@seer.bio</a> for access to these credentials). 
-
-* Alternatively, if you want to work with the development version of the SDK, you'll need to have an instance of the `pas-dev` backend running. You can find instructions for setting up `pas-dev` <a href="http://gitlab.seerbio-dev/ylou/backend">here</a>. You might need to enable OpenVPN to open this link.
+**IMPORTANT:** This SDK is for **INTERNAL USE**!
+The publicly-available version can be found at [https://github.com/seerbio/seer-pas-sdk/]().
+Note that changes made to this repository will NOT automatically be made available to users and will have to be **manually ported** for public release.
 
 ## Installation
-Here's a multi-step guide to use the Seer Python SDK. It's recommended that you follow the steps in order.
 
-* Run `pip3 install -r requirements.txt` to install all dependencies for this project.
-
-* The `demo.py` file contains a demo of the SDK with an instance created with the `staging` username and password. It is intended to be run in Python's native interactive mode after all dependencies are installed. You can run it by typing `python3 -i demo.py` in the terminal. 
-
-
+```shell
+aws codeartifact login --tool pip --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
+pip install pas-python-sdk
+```
