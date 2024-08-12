@@ -332,7 +332,46 @@ class SeerSDK:
             for entry in res:
                 del entry["tenant_id"]
 
-        return res if not df else dict_to_df(res)
+        # Exclude custom fields that don't belong to the tenant
+        res_df = dict_to_df(res)
+        custom_columns = [
+            x["field_name"] for x in self.get_sample_custom_fields()
+        ]
+        res_df = res_df[
+            [
+                x
+                for x in res_df.columns
+                if not x.startswith("custom_") or x in custom_columns
+            ]
+        ]
+
+        return res_df.to_dict(orient="records") if not df else res_df
+
+    def get_sample_custom_fields(self):
+        """
+        Fetches a list of custom fields defined for the authenticated user.
+        """
+        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = f"{self.auth.url}api/v1/samplefields"
+
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+
+            fields = s.get(URL)
+
+            if fields.status_code != 200:
+                raise ValueError(
+                    "Failed to fetch custom columns. Please check your connection."
+                )
+
+            res = fields.json()
+            for entry in res:
+                del entry["tenant_id"]
+            return res
 
     def get_msdata(self, sample_ids: list, df: bool = False):
         """
@@ -678,33 +717,49 @@ class SeerSDK:
 
             return res
 
-    def get_analysis(self, analysis_id: str = None):
+    def get_analysis(
+        self,
+        analysis_id: str = None,
+        folder_id: str = None,
+        show_folders=True,
+        analysis_only=True,
+    ):
         """
-        Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
+                Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
 
-        Parameters
-        ----------
-        analysis_id : str, optional
-            ID of the analysis to be fetched, defaulted to None.
+                Parameters
+                ----------
+                analysis_id : str, optional
+                    ID of the analysis to be fetched, defaulted to None.
+        folder_id : str, optional
+                    ID of the folder to be fetched, defaulted to None.
 
-        Returns
-        -------
-        analyses: dict
-            Contains a list of analyses objects for the authenticated user.
+                show_folders : bool, optional
+                    Mark True if folder contents are to be returned in the response, defaulted to True.
+                    Will be disabled if an analysis id is provided.
 
-        Examples
-        -------
-        >>> from core import SeerSDK
-        >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.get_analysis()
-        >>> [
-                {id: "YOUR_ANALYSIS_ID_HERE", ...},
-                {id: "YOUR_ANALYSIS_ID_HERE", ...},
-                {id: "YOUR_ANALYSIS_ID_HERE", ...}
-            ]
+                analysis_only : bool, optional
+                    Mark True if only analyses objects are to be returned in the response, defaulted to True.
+                    If marked false, folder objects will also be included in the response.
 
-        >>> seer_sdk.get_analyses("YOUR_ANALYSIS_ID_HERE")
-        >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
+                Returns
+                -------
+                analyses: dict
+                    Contains a list of analyses objects for the authenticated user.
+
+                Examples
+                -------
+                >>> from core import SeerSDK
+                >>> seer_sdk = SeerSDK()
+                >>> seer_sdk.get_analysis()
+                >>> [
+                        {id: "YOUR_ANALYSIS_ID_HERE", ...},
+                        {id: "YOUR_ANALYSIS_ID_HERE", ...},
+                        {id: "YOUR_ANALYSIS_ID_HERE", ...}
+                    ]
+
+                >>> seer_sdk.get_analyses("YOUR_ANALYSIS_ID_HERE")
+                >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
         """
 
         ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
@@ -718,10 +773,14 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
+            params = {"all": "true"}
+            if folder_id:
+                params["folder"] = folder_id
+
             analyses = s.get(
-                f"{URL}/{analysis_id}" if analysis_id else URL,
-                params={"all": "true"},
+                f"{URL}/{analysis_id}" if analysis_id else URL, params=params
             )
+
             if analyses.status_code != 200:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
@@ -732,6 +791,7 @@ class SeerSDK:
             else:
                 res = [analyses.json()["analysis"]]
 
+            folders = []
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -739,10 +799,27 @@ class SeerSDK:
                 if "parameter_file_path" in res[entry]:
                     # Simple lambda function to find the third occurrence of '/' in the raw file path
                     location = lambda s: len(s) - len(s.split("/", 3)[-1])
+
                     # Slicing the string from the location
                     res[entry]["parameter_file_path"] = res[entry][
                         "parameter_file_path"
-                    ][location(res[entry]["parameter_file_path"]) :]
+                    ][location(res[entry]["parameter_file_path"])]
+
+                if (
+                    show_folders
+                    and not analysis_id
+                    and res[entry]["is_folder"]
+                ):
+                    folders.append(res[entry]["id"])
+
+            # recursive solution to get analyses in folders
+            for folder in folders:
+                res += self.get_analysis(folder_id=folder)
+
+            if analysis_only:
+                res = [
+                    analysis for analysis in res if not analysis["is_folder"]
+                ]
             return res
 
     def get_analysis_result(self, analysis_id: str, download_path: str = ""):
@@ -2074,6 +2151,10 @@ class SeerSDK:
             True  # flag to check if the generated_files directory exists
         )
 
+        tenant_id = jwt.decode(ID_TOKEN, options={"verify_signature": False})[
+            "custom:tenantId"
+        ]
+
         # Step 0: Check if the file paths exist in the S3 bucket.
         for file in ms_data_files:
             if not self.list_ms_data_files(file):
@@ -2227,7 +2308,7 @@ class SeerSDK:
         for file in ms_data_files:
             filename = file.split("/")[-1]
             ms_data_file_names.append(filename)
-            raw_file_paths[f"{filename}"] = file
+            raw_file_paths[f"{filename}"] = f"/{s3_bucket}/{tenant_id}/{file}"
 
         # Step 6: Get sample info from the plate map file and make a call to `/api/v1/samples` with the sample_info. This returns the plateId, sampleId and sampleName for each sample in the plate map file. Also validate and upload the sample_description_file if it exists.
         if sample_description_file:
