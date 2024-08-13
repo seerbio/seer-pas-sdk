@@ -725,41 +725,41 @@ class SeerSDK:
         analysis_only=True,
     ):
         """
-                Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
+        Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
 
-                Parameters
-                ----------
-                analysis_id : str, optional
-                    ID of the analysis to be fetched, defaulted to None.
+        Parameters
+        ----------
+        analysis_id : str, optional
+            ID of the analysis to be fetched, defaulted to None.
         folder_id : str, optional
-                    ID of the folder to be fetched, defaulted to None.
+            ID of the folder to be fetched, defaulted to None.
 
-                show_folders : bool, optional
-                    Mark True if folder contents are to be returned in the response, defaulted to True.
-                    Will be disabled if an analysis id is provided.
+        show_folders : bool, optional
+            Mark True if folder contents are to be returned in the response, defaulted to True.
+            Will be disabled if an analysis id is provided.
 
-                analysis_only : bool, optional
-                    Mark True if only analyses objects are to be returned in the response, defaulted to True.
-                    If marked false, folder objects will also be included in the response.
+        analysis_only : bool, optional
+            Mark True if only analyses objects are to be returned in the response, defaulted to True.
+            If marked false, folder objects will also be included in the response.
 
-                Returns
-                -------
-                analyses: dict
-                    Contains a list of analyses objects for the authenticated user.
+        Returns
+        -------
+        analyses: dict
+            Contains a list of analyses objects for the authenticated user.
 
-                Examples
-                -------
-                >>> from core import SeerSDK
-                >>> seer_sdk = SeerSDK()
-                >>> seer_sdk.get_analysis()
-                >>> [
-                        {id: "YOUR_ANALYSIS_ID_HERE", ...},
-                        {id: "YOUR_ANALYSIS_ID_HERE", ...},
-                        {id: "YOUR_ANALYSIS_ID_HERE", ...}
-                    ]
+        Examples
+        -------
+        >>> from core import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk.get_analysis()
+        >>> [
+                {id: "YOUR_ANALYSIS_ID_HERE", ...},
+                {id: "YOUR_ANALYSIS_ID_HERE", ...},
+                {id: "YOUR_ANALYSIS_ID_HERE", ...}
+            ]
 
-                >>> seer_sdk.get_analyses("YOUR_ANALYSIS_ID_HERE")
-                >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
+        >>> seer_sdk.get_analyses("YOUR_ANALYSIS_ID_HERE")
+        >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
         """
 
         ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
@@ -940,7 +940,7 @@ class SeerSDK:
         dict
             The response from the backend.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -1057,7 +1057,7 @@ class SeerSDK:
         res: dict
             A dictionary containing the status of the request if succeeded.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -1144,7 +1144,7 @@ class SeerSDK:
         res : dict
             A dictionary containing the status of the request if succeeded.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -1547,7 +1547,7 @@ class SeerSDK:
         dict
             Contains message whether the analysis was started or not.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -1651,7 +1651,7 @@ class SeerSDK:
         dict
             Contains message whether the files were uploaded or not.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -1772,7 +1772,7 @@ class SeerSDK:
         dict
             Message containing whether the file was downloaded or not.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> sdk = SeerSDK()
@@ -2123,7 +2123,7 @@ class SeerSDK:
         dict
             Contains the message whether the plate was created or not.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> sdk = SeerSDK()
