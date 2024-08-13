@@ -16,3 +16,18 @@ Note that changes made to this repository will NOT automatically be made availab
 aws codeartifact login --tool pip --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
 pip install pas-python-sdk
 ```
+
+## Usage
+
+To import and set up the SDK:
+
+```python
+from seer_pas_sdk import SeerSDK
+
+# Instantiate an SDK object with your credentials:
+sdk = SeerSDK(USERNAME, PASSWORD)
+```
+
+You can then use the SDK's functions to create, query, or retrieve projects, plates, samples, and analyses.
+
+For complete documentation of this SDK, visit this repository's GitHub Pages, linked in the sidebar, under "About" ↗️.

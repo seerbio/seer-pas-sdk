@@ -266,14 +266,14 @@ class SeerSDK:
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
 
-        >>> seer_sdk.get_samples_metadata(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
+        >>> seer_sdk._get_samples_metadata(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
         >>> [
                 { "id": ... },
                 { "id": ... },
                 ...
             ]
 
-        >>> seer_sdk.get_samples_metadata(df=True)
+        >>> seer_sdk._get_samples_metadata(df=True)
         >>>                                     id  ...      control
         0     812139c0-15e0-11ee-bdf1-bbaa73585acf  ...
         1     803e05b0-15e0-11ee-bdf1-bbaa73585acf  ...  MPE Control
@@ -351,12 +351,12 @@ class SeerSDK:
         """
         Fetches a list of custom fields defined for the authenticated user.
         """
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
-        URL = f"{self.auth.url}api/v1/samplefields"
+        URL = f"{self._auth.url}api/v1/samplefields"
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
@@ -481,7 +481,7 @@ class SeerSDK:
 
             [2 rows x 26 columns]
         """
-        plate_samples = self.get_samples_metadata(plate_id=plate_id)
+        plate_samples = self._get_samples_metadata(plate_id=plate_id)
         sample_ids = [sample["id"] for sample in plate_samples]
         return self.get_msdata(sample_ids, df)
 
@@ -588,7 +588,7 @@ class SeerSDK:
             return ValueError("No project ID specified.")
 
         sample_ids = []
-        project_samples = self.get_samples_metadata(
+        project_samples = self._get_samples_metadata(
             project_id=project_id, df=False
         )
 
@@ -1591,7 +1591,7 @@ class SeerSDK:
         if sample_ids:
             valid_ids = [
                 entry["id"]
-                for entry in self.get_samples_metadata(project_id=project_id)
+                for entry in self._get_samples_metadata(project_id=project_id)
             ]
 
             for sample_id in sample_ids:
