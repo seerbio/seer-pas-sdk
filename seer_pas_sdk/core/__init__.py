@@ -1112,6 +1112,96 @@ class SeerSDK:
 
             return res
 
+    def add_samples_to_project(self, samples: _List[str], project_id: str):
+        """
+        Add samples to a project given a list of sample ids and a project id.
+
+        Parameters
+        ----------
+        samples : list[str]
+            List of sample ids to be added to the project.
+        project_id : str
+            ID of the project to which the samples are to be added.
+
+        Returns
+        -------
+        res : dict
+            A dictionary containing the status of the request if succeeded.
+
+        Example
+        -------
+        >>> from core import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk.add_samples_to_project(["SAMPLE_ID_1", "SAMPLE_ID_2"], "PROJECT_ID")
+        >>> {
+                "status": "Samples added to PROJECT_ID"
+            }
+        """
+        if not project_id:
+            raise ValueError("Project ID cannot be empty.")
+
+        if not samples:
+            raise ValueError("Samples cannot be empty.")
+
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = f"{self._auth.url}api/v1/addSamplesToProject/{project_id}"
+
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+
+            response = s.put(
+                URL,
+                json={
+                    "sampleIDs": samples,
+                },
+            )
+
+            if response.status_code != 200:
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
+
+            res = {"status": f"Samples added to {project_id}"}
+            return res
+
+    def add_plates_to_project(self, plates: _List[str], project_id: str):
+        """
+        Add plates to a project given a list of plate ids and a project id.
+
+        Parameters
+        ----------
+        plates : list[str]
+            List of plate ids to be added to the project.
+        project_id : str
+            ID of the project to which the plates are to be added.
+
+        Returns
+        -------
+        res : dict
+            A dictionary containing the status of the request if succeeded.
+        """
+
+        if not project_id:
+            raise ValueError("Project ID cannot be empty.")
+
+        if not plates:
+            raise ValueError("Plates cannot be empty.")
+
+        # get samples
+        samples = (
+            x["id"]
+            for plate_id in plates
+            for x in self._get_samples_metadata(plate_id=plate_id)
+        )
+
+        return self.add_samples_to_project(
+            project_id=project_id, samples=list(samples)
+        )
+
     def add_plate(
         self,
         ms_data_files: _List[str],
