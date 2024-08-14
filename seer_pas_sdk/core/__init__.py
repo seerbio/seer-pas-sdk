@@ -923,7 +923,7 @@ class SeerSDK:
 
             return links
 
-    def add_sample(self, sample_entry: dict):
+    def _add_sample(self, sample_entry: dict):
         """
         ****************
         [UNEXPOSED METHOD CALL]
@@ -944,7 +944,7 @@ class SeerSDK:
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.add_sample("YOUR_PLATE_ID_HERE", "YOUR_SAMPLE_ID_HERE", "YOUR_SAMPLE_NAME_HERE")
+        >>> seer_sdk._add_sample("YOUR_PLATE_ID_HERE", "YOUR_SAMPLE_ID_HERE", "YOUR_SAMPLE_NAME_HERE")
         >>> {
                 "id": "SAMPLE_ID_HERE",
                 "tenant_id": "TENANT_ID_HERE",
@@ -983,7 +983,7 @@ class SeerSDK:
             return response.json()
 
     # RS-5131: Add samples in batch
-    def add_samples(self, sample_info: list):
+    def _add_samples(self, sample_info: list):
         """
         ****************
         [UNEXPOSED METHOD CALL]
@@ -1128,7 +1128,7 @@ class SeerSDK:
         res : dict
             A dictionary containing the status of the request if succeeded.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
@@ -1475,7 +1475,7 @@ class SeerSDK:
                 id_uuid, ms_data_files, plate_map_file, space
             )
 
-        samples = self.add_samples(sample_info)
+        samples = self._add_samples(sample_info)
 
         # Step 7: Parse the plate map file and convert the data into a form that can be POSTed to `/api/v1/msdatas`.
         plate_map_data = parse_plate_map_file(
@@ -2451,7 +2451,7 @@ class SeerSDK:
             )
 
         for entry in sample_info:
-            sample = self.add_sample(entry)
+            sample = self._add_sample(entry)
             samples.append(sample)
 
         # Step 7: Parse the plate map file and convert the data into a form that can be POSTed to `/api/v1/msdatas`.
