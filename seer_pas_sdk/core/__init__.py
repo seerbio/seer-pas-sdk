@@ -1128,7 +1128,7 @@ class SeerSDK:
         res : dict
             A dictionary containing the status of the request if succeeded.
 
-        Example
+        Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
