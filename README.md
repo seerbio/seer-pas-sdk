@@ -24,4 +24,4 @@ sdk = SeerSDK(USERNAME, PASSWORD)
 
 You can then use the SDK's functions to create, query, or retrieve projects, plates, samples, and analyses.
 
-For complete documentation of this SDK, visit [https://seerbio.github.io/seer-pas-sdk/]().
+For complete documentation of this SDK, visit [https://seerbio.github.io/seer-pas-sdk/](https://seerbio.github.io/seer-pas-sdk/ "Documentation").
