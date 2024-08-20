@@ -266,14 +266,14 @@ class SeerSDK:
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
 
-        >>> seer_sdk.get_samples_metadata(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
+        >>> seer_sdk._get_samples_metadata(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
         >>> [
                 { "id": ... },
                 { "id": ... },
                 ...
             ]
 
-        >>> seer_sdk.get_samples_metadata(df=True)
+        >>> seer_sdk._get_samples_metadata(df=True)
         >>>                                     id  ...      control
         0     812139c0-15e0-11ee-bdf1-bbaa73585acf  ...
         1     803e05b0-15e0-11ee-bdf1-bbaa73585acf  ...  MPE Control
@@ -442,7 +442,7 @@ class SeerSDK:
 
             [2 rows x 26 columns]
         """
-        plate_samples = self.get_samples_metadata(plate_id=plate_id)
+        plate_samples = self._get_samples_metadata(plate_id=plate_id)
         sample_ids = [sample["id"] for sample in plate_samples]
         return self.get_msdata(sample_ids, df)
 
@@ -549,7 +549,7 @@ class SeerSDK:
             return ValueError("No project ID specified.")
 
         sample_ids = []
-        project_samples = self.get_samples_metadata(
+        project_samples = self._get_samples_metadata(
             project_id=project_id, df=False
         )
 
