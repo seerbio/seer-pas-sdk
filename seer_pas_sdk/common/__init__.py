@@ -10,7 +10,7 @@ import requests
 import boto3
 import json
 
-from ..auth import Auth
+from ..auth.auth import Auth
 
 load_dotenv()
 
