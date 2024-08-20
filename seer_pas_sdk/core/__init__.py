@@ -334,18 +334,28 @@ class SeerSDK:
 
         # Exclude custom fields that don't belong to the tenant
         res_df = dict_to_df(res)
-        custom_columns = [x['field_name'] for x in self.get_sample_custom_fields()]
-        res_df = res_df[[x for x in res_df.columns if not x.startswith('custom_') or x in custom_columns]]
+        custom_columns = [
+            x["field_name"] for x in self.get_sample_custom_fields()
+        ]
+        res_df = res_df[
+            [
+                x
+                for x in res_df.columns
+                if not x.startswith("custom_") or x in custom_columns
+            ]
+        ]
 
-        return res_df.to_dict(orient='records') if not df else res_df
-
+        return res_df.to_dict(orient="records") if not df else res_df
 
     def get_sample_custom_fields(self):
         """
         Fetches a list of custom fields defined for the authenticated user.
         """
         ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
-        HEADERS = {"Authorization": f"{ID_TOKEN}", "access-token": f"{ACCESS_TOKEN}"}
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
         URL = f"{self.auth.url}api/v1/samplefields"
 
         with requests.Session() as s:
@@ -354,7 +364,9 @@ class SeerSDK:
             fields = s.get(URL)
 
             if fields.status_code != 200:
-                raise ValueError("Failed to fetch custom columns. Please check your connection.")
+                raise ValueError(
+                    "Failed to fetch custom columns. Please check your connection."
+                )
 
             res = fields.json()
             for entry in res:
