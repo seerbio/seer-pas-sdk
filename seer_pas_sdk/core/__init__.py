@@ -351,12 +351,12 @@ class SeerSDK:
         """
         Fetches a list of custom fields defined for the authenticated user.
         """
-        ID_TOKEN, ACCESS_TOKEN = self.auth.get_token()
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
         HEADERS = {
             "Authorization": f"{ID_TOKEN}",
             "access-token": f"{ACCESS_TOKEN}",
         }
-        URL = f"{self.auth.url}api/v1/samplefields"
+        URL = f"{self._auth.url}api/v1/samplefields"
 
         with requests.Session() as s:
             s.headers.update(HEADERS)
