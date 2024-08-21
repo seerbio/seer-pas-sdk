@@ -49,11 +49,13 @@ sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
 #| output: true
 print(f"User '{USERNAME}' logged in.")
 ```
-
+You can then use the SDK's methods to create, query, or retrieve projects, plates, samples, and analyses.
+Full documentation can be found [here](https://seerbio.github.io/seer-pas-sdk/reference/SeerSDK.html).
+Additional information and examples can also be found below.
 
 ### `PlateMap` Object
 
-The PAS Python SDK would allow users to make plate maps file from within the SDK using the `PlateMap` object located in the `objects` module. This module is imported by default within the SDK. The interface of the plate map file contains the following parameters, all of which need to be passed in as lists:
+The PAS Python SDK would allow users to make plate maps file from within the SDK using the `PlateMap` class. The interface of the plate map file contains the following parameters, all of which need to be passed in as lists:
 
 * MS file name as `ms_file_name` 
 * Sample name as `sample_name`
