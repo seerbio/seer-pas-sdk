@@ -20,7 +20,7 @@ class SeerSDK:
 
     Examples
     -------
-    >>> from core import SeerSDK
+    >>> from seer_pas_sdk import SeerSDK
     >>> USERNAME = "test"
     >>> PASSWORD = "test-password"
     >>> INSTANCE = "EU"
@@ -51,7 +51,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_spaces()
         >>> [
@@ -97,7 +97,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_plate_metadata()
         >>> [
@@ -170,7 +170,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_project_metadata()
         >>> [
@@ -263,7 +263,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
 
         >>> seer_sdk._get_samples_metadata(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
@@ -393,7 +393,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
 
@@ -464,7 +464,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> plate_id = "7ec8cad0-15e0-11ee-bdf1-bbaa73585acf"
 
@@ -509,7 +509,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> project_id = "7e48e150-8a47-11ed-b382-bf440acece26"
 
@@ -649,7 +649,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_analysis_protocols()
         >>> [
@@ -750,7 +750,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_analysis()
         >>> [
@@ -842,7 +842,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
 
         >>> seer_sdk.get_analysis_result("YOUR_ANALYSIS_ID_HERE")
@@ -940,7 +940,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.analysis_complete("YOUR_ANALYSIS_ID_HERE")
         >>> {
@@ -976,7 +976,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> sdk = SeerSDK()
         >>> folder_path = "test-may-2/"
         >>> sdk.list_ms_data_files(folder_path)
@@ -1147,7 +1147,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.group_analysis_results("YOUR_ANALYSIS_ID_HERE")
         >>> {
