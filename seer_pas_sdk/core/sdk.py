@@ -41,12 +41,18 @@ class SeerSDK:
             )
 
     def _get_auth_headers(self):
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
+        id_token, access_token = self._auth.get_token()
+        return {
+            "Authorization": id_token,
+            "access-token": access_token,
         }
-        return HEADERS
+
+    def _get_auth_session(self):
+        sess = requests.Session()
+
+        sess.headers.update(self._get_auth_headers())
+
+        return sess
 
     def get_spaces(self):
         """
@@ -69,12 +75,9 @@ class SeerSDK:
             ]
         """
 
-        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/usergroups"
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
-
+        with self._get_auth_session() as s:
             spaces = s.get(URL)
 
             if spaces.status_code != 200:
@@ -127,12 +130,10 @@ class SeerSDK:
         >>> [{ "id": ... }]
         """
 
-        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/plates"
         res = []
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             plates = s.get(
                 f"{URL}/{plate_id}" if plate_id else URL,
@@ -197,7 +198,6 @@ class SeerSDK:
         >>> [{ "project_name": ... }]
         """
 
-        HEADERS = self._get_auth_headers()
         URL = (
             f"{self._auth.url}api/v1/projects"
             if not project_id
@@ -205,8 +205,7 @@ class SeerSDK:
         )
         res = []
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             projects = s.get(URL, params={"all": "true"})
             if projects.status_code != 200:
@@ -288,12 +287,10 @@ class SeerSDK:
             raise ValueError("You must pass in plate ID or project ID.")
 
         res = []
-        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/samples"
         sample_params = {"all": "true"}
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             if plate_id:
                 try:
@@ -343,11 +340,9 @@ class SeerSDK:
         """
         Fetches a list of custom fields defined for the authenticated user.
         """
-        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/samplefields"
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             fields = s.get(URL)
 
@@ -398,13 +393,13 @@ class SeerSDK:
 
             [2 rows x 26 columns]
         """
+
+        URL = f"{self._auth.url}api/v1/msdatas/items"
+
         res = []
         for sample_id in sample_ids:
-            HEADERS = self._get_auth_headers()
-            URL = f"{self._auth.url}api/v1/msdatas/items"
 
-            with requests.Session() as s:
-                s.headers.update(HEADERS)
+            with self._get_auth_session() as s:
 
                 msdatas = s.post(URL, json={"sampleId": sample_id})
 
@@ -653,7 +648,6 @@ class SeerSDK:
         >>> [{ "id": ..., "analysis_protocol_name": ... }] # in this case the id would supersede the inputted name.
         """
 
-        HEADERS = self._get_auth_headers()
         URL = (
             f"{self._auth.url}api/v1/analysisProtocols"
             if not analysis_protocol_id
@@ -661,8 +655,7 @@ class SeerSDK:
         )
         res = []
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             protocols = s.get(URL, params={"all": "true"})
             if protocols.status_code != 200:
@@ -743,12 +736,10 @@ class SeerSDK:
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
         """
 
-        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/analyses"
         res = []
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             params = {"all": "true"}
             if folder_id:
@@ -844,11 +835,9 @@ class SeerSDK:
                 "Cannot generate links for failed or null analyses."
             )
 
-        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/data"
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             protein_data = s.get(
                 f"{URL}/protein?analysisId={analysis_id}&retry=false"
@@ -966,14 +955,12 @@ class SeerSDK:
         ]
         """
 
-        HEADERS = self._get_auth_headers()
         URL = (
             f"{self._auth.url}api/v1/msdataindex/filesinfolder?folder={folder}"
             if not space
             else f"{self._auth.url}api/v1/msdataindex/filesinfolder?folder={folder}&userGroupId={space}"
         )
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             files = s.get(URL)
 
@@ -1025,15 +1012,13 @@ class SeerSDK:
 
         print(f'Downloading files to "{name}"\n')
 
-        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/msdataindex/download/getUrl"
         tenant_id = jwt.decode(ID_TOKEN, options={"verify_signature": False})[
             "custom:tenantId"
         ]
 
         for path in paths:
-            with requests.Session() as s:
-                s.headers.update(HEADERS)
+            with self._get_auth_session() as s:
 
                 download_url = s.post(
                     URL,
@@ -1138,7 +1123,6 @@ class SeerSDK:
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
 
-        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}"
 
         res = {
@@ -1162,8 +1146,7 @@ class SeerSDK:
         }
 
         # Pre-GA data call
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             protein_pre_data = s.post(
                 url=f"{URL}api/v2/groupanalysis/protein",
