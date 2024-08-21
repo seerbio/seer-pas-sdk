@@ -20,7 +20,7 @@ class SeerSDK:
 
     Examples
     -------
-    >>> from core import SeerSDK
+    >>> from seer_pas_sdk import SeerSDK
     >>> USERNAME = "test"
     >>> PASSWORD = "test-password"
     >>> INSTANCE = "EU"
@@ -51,7 +51,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_spaces()
         >>> [
@@ -97,7 +97,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_plate_metadata()
         >>> [
@@ -170,7 +170,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_project_metadata()
         >>> [
@@ -263,17 +263,17 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
 
-        >>> seer_sdk.get_samples_metadata(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
+        >>> seer_sdk._get_samples_metadata(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
         >>> [
                 { "id": ... },
                 { "id": ... },
                 ...
             ]
 
-        >>> seer_sdk.get_samples_metadata(df=True)
+        >>> seer_sdk._get_samples_metadata(df=True)
         >>>                                     id  ...      control
         0     812139c0-15e0-11ee-bdf1-bbaa73585acf  ...
         1     803e05b0-15e0-11ee-bdf1-bbaa73585acf  ...  MPE Control
@@ -332,7 +332,46 @@ class SeerSDK:
             for entry in res:
                 del entry["tenant_id"]
 
-        return res if not df else dict_to_df(res)
+        # Exclude custom fields that don't belong to the tenant
+        res_df = dict_to_df(res)
+        custom_columns = [
+            x["field_name"] for x in self.get_sample_custom_fields()
+        ]
+        res_df = res_df[
+            [
+                x
+                for x in res_df.columns
+                if not x.startswith("custom_") or x in custom_columns
+            ]
+        ]
+
+        return res_df.to_dict(orient="records") if not df else res_df
+
+    def get_sample_custom_fields(self):
+        """
+        Fetches a list of custom fields defined for the authenticated user.
+        """
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = f"{self._auth.url}api/v1/samplefields"
+
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+
+            fields = s.get(URL)
+
+            if fields.status_code != 200:
+                raise ValueError(
+                    "Failed to fetch custom columns. Please check your connection."
+                )
+
+            res = fields.json()
+            for entry in res:
+                del entry["tenant_id"]
+            return res
 
     def get_msdata(self, sample_ids: list, df: bool = False):
         """
@@ -354,7 +393,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
 
@@ -425,7 +464,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> plate_id = "7ec8cad0-15e0-11ee-bdf1-bbaa73585acf"
 
@@ -442,7 +481,7 @@ class SeerSDK:
 
             [2 rows x 26 columns]
         """
-        plate_samples = self.get_samples_metadata(plate_id=plate_id)
+        plate_samples = self._get_samples_metadata(plate_id=plate_id)
         sample_ids = [sample["id"] for sample in plate_samples]
         return self.get_msdata(sample_ids, df)
 
@@ -470,7 +509,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> project_id = "7e48e150-8a47-11ed-b382-bf440acece26"
 
@@ -549,7 +588,7 @@ class SeerSDK:
             return ValueError("No project ID specified.")
 
         sample_ids = []
-        project_samples = self.get_samples_metadata(
+        project_samples = self._get_samples_metadata(
             project_id=project_id, df=False
         )
 
@@ -610,7 +649,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_analysis_protocols()
         >>> [
@@ -678,7 +717,13 @@ class SeerSDK:
 
             return res
 
-    def get_analysis(self, analysis_id: str = None):
+    def get_analysis(
+        self,
+        analysis_id: str = None,
+        folder_id: str = None,
+        show_folders=True,
+        analysis_only=True,
+    ):
         """
         Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
 
@@ -687,6 +732,17 @@ class SeerSDK:
         analysis_id : str, optional
             ID of the analysis to be fetched, defaulted to None.
 
+        folder_id : str, optional
+            ID of the folder to be fetched, defaulted to None.
+
+        show_folders : bool, optional
+            Mark True if folder contents are to be returned in the response, defaulted to True.
+            Will be disabled if an analysis id is provided.
+
+        analysis_only : bool, optional
+            Mark True if only analyses objects are to be returned in the response, defaulted to True.
+            If marked false, folder objects will also be included in the response.
+
         Returns
         -------
         analyses: dict
@@ -694,7 +750,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_analysis()
         >>> [
@@ -718,10 +774,14 @@ class SeerSDK:
         with requests.Session() as s:
             s.headers.update(HEADERS)
 
+            params = {"all": "true"}
+            if folder_id:
+                params["folder"] = folder_id
+
             analyses = s.get(
-                f"{URL}/{analysis_id}" if analysis_id else URL,
-                params={"all": "true"},
+                f"{URL}/{analysis_id}" if analysis_id else URL, params=params
             )
+
             if analyses.status_code != 200:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
@@ -732,6 +792,7 @@ class SeerSDK:
             else:
                 res = [analyses.json()["analysis"]]
 
+            folders = []
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -739,10 +800,27 @@ class SeerSDK:
                 if "parameter_file_path" in res[entry]:
                     # Simple lambda function to find the third occurrence of '/' in the raw file path
                     location = lambda s: len(s) - len(s.split("/", 3)[-1])
+
                     # Slicing the string from the location
                     res[entry]["parameter_file_path"] = res[entry][
                         "parameter_file_path"
                     ][location(res[entry]["parameter_file_path"]) :]
+
+                if (
+                    show_folders
+                    and not analysis_id
+                    and res[entry]["is_folder"]
+                ):
+                    folders.append(res[entry]["id"])
+
+            # recursive solution to get analyses in folders
+            for folder in folders:
+                res += self.get_analysis(folder_id=folder)
+
+            if analysis_only:
+                res = [
+                    analysis for analysis in res if not analysis["is_folder"]
+                ]
             return res
 
     def get_analysis_result(self, analysis_id: str, download_path: str = ""):
@@ -764,7 +842,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
 
         >>> seer_sdk.get_analysis_result("YOUR_ANALYSIS_ID_HERE")
@@ -862,7 +940,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.analysis_complete("YOUR_ANALYSIS_ID_HERE")
         >>> {
@@ -898,7 +976,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> sdk = SeerSDK()
         >>> folder_path = "test-may-2/"
         >>> sdk.list_ms_data_files(folder_path)
@@ -1069,7 +1147,7 @@ class SeerSDK:
 
         Examples
         -------
-        >>> from core import SeerSDK
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.group_analysis_results("YOUR_ANALYSIS_ID_HERE")
         >>> {
