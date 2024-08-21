@@ -66,15 +66,9 @@ class InternalSDK(_SeerSDK):
                     f"{key} is missing. Please check your parameters again."
                 )
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
         URL = f"{self._auth.url}api/v1/samples"
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             response = s.post(URL, json=sample_entry)
 
@@ -113,15 +107,9 @@ class InternalSDK(_SeerSDK):
                     f"Invalid sample entry for sample {sample}. Please check your parameters again."
                 )
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
         URL = f"{self._auth.url}api/v1/samples/batch"
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             response = s.post(URL, json={"samples": sample_info})
 
             if response.status_code != 200:
@@ -183,15 +171,9 @@ class InternalSDK(_SeerSDK):
                     f"Plate ID '{plate_id}' is not valid. Please check your parameters again."
                 )
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
         URL = f"{self._auth.url}api/v1/projects"
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             project = s.post(
                 URL,
@@ -246,15 +228,9 @@ class InternalSDK(_SeerSDK):
         if not samples:
             raise ValueError("Samples cannot be empty.")
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
         URL = f"{self._auth.url}api/v1/addSamplesToProject/{project_id}"
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             response = s.put(
                 URL,
@@ -347,12 +323,6 @@ class InternalSDK(_SeerSDK):
             }
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
-
         plate_ids = (
             set()
         )  # contains all the plate_ids fetched from self.get_plate_metadata()
@@ -386,8 +356,7 @@ class InternalSDK(_SeerSDK):
             )
 
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             plate_response = s.get(f"{self._auth.url}api/v1/plateids")
 
             if plate_response.status_code != 200:
@@ -400,8 +369,7 @@ class InternalSDK(_SeerSDK):
 
         # Step 2: Fetch the UUID that needs to be passed into the backend from `/api/v1/plates` to fetch the AWS upload config and raw file path. This will sync the plates backend with samples when the user uploads later. This UUID will also be void of duplicates since duplication is handled by the backend.
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             plate_response = s.post(
                 f"{self._auth.url}api/v1/plates",
                 json={
@@ -424,8 +392,7 @@ class InternalSDK(_SeerSDK):
                 )
 
         # Step 3: Fetch AWS upload config from the backend with the plateId we just generated. Populates `s3_upload_path` and `s3_bucket` global variables.
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             config_response = s.post(
                 f"{self._auth.url}api/v1/msdatas/getuploadconfig",
                 json={"plateId": id_uuid},
@@ -450,8 +417,7 @@ class InternalSDK(_SeerSDK):
             s3_bucket = config_response.json()["s3Bucket"]
             s3_upload_path = config_response.json()["s3UploadPath"]
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             config_response = s.get(
                 f"{self._auth.url}auth/getawscredential",
             )
@@ -496,8 +462,7 @@ class InternalSDK(_SeerSDK):
         if not res:
             raise ValueError("Platemap upload failed.")
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             plate_map_response = s.post(
                 f"{self._auth.url}api/v1/msdataindex/file",
                 json={
@@ -547,8 +512,7 @@ class InternalSDK(_SeerSDK):
             if not sdf_upload:
                 raise ValueError("Sample description file upload failed.")
 
-            with requests.Session() as s:
-                s.headers.update(HEADERS)
+            with self._get_auth_session() as s:
                 sdf_response = s.post(
                     f"{self._auth.url}api/v1/msdataindex/file",
                     json={
@@ -586,8 +550,7 @@ class InternalSDK(_SeerSDK):
         )
 
         # Step 8: Make a request to `/api/v1/msdatas/batch` with the processed samples data.
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             ms_data_response = s.post(
                 f"{self._auth.url}api/v1/msdatas/batch",
                 json={"msdatas": plate_map_data},
@@ -598,8 +561,7 @@ class InternalSDK(_SeerSDK):
                 )
 
         # Step 9: Upload each msdata file to the S3 bucket.
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             config_response = s.get(
                 f"{self._auth.url}auth/getawscredential",
             )
@@ -640,8 +602,7 @@ class InternalSDK(_SeerSDK):
             )
 
         # Step 10: Make a call to `api/v1/msdataindex/file` to sync with frontend. This should only be done after all files have finished uploading, simulating an async "promise"-like scenario in JavaScript.
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             file_response = s.post(
                 f"{self._auth.url}api/v1/msdataindex/file",
                 json={"files": files},
@@ -759,15 +720,9 @@ class InternalSDK(_SeerSDK):
                         f"Sample ID '{sample_id}' is either not valid or not associated with the project. Please check your parameters again."
                     )
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
         URL = f"{self._auth.url}api/v1/analyze"
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             req_payload = {
                 "analysisName": name,
                 "analysisProtocolId": analysis_protocol_id,
@@ -830,18 +785,13 @@ class InternalSDK(_SeerSDK):
                 )
 
         # Step 2: Fetch the tenant id by decoding the JWT token.
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        ID_TOKEN, _ = self._auth.get_token()
         tenant_id = jwt.decode(ID_TOKEN, options={"verify_signature": False})[
             "custom:tenantId"
         ]
 
         # Step 3: Fetch the S3 bucket name by making a call to `/api/v1/auth/getawscredential`
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             config_response = s.get(
                 f"{self._auth.url}auth/getawscredential",
             )
@@ -889,8 +839,7 @@ class InternalSDK(_SeerSDK):
             )
 
         # Step 5: Make a call to `/api/v1/msdataindex/file` to sync with frontend. This should only be done after all files have finished uploading, simulating an async "promise"-like scenario in JavaScript.
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             file_response = s.post(
                 f"{self._auth.url}api/v1/msdataindex/file",
                 json={"files": files},
@@ -951,15 +900,9 @@ class InternalSDK(_SeerSDK):
         """
 
         def get_url(analysis_id, file_name, project_id):
-            ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-            HEADERS = {
-                "Authorization": f"{ID_TOKEN}",
-                "access-token": f"{ACCESS_TOKEN}",
-            }
             URL = f"{self._auth.url}api/v1/analysisResultFiles/getUrl"
 
-            with requests.Session() as s:
-                s.headers.update(HEADERS)
+            with self._get_auth_session() as s:
 
                 download_url = s.post(
                     URL,
@@ -1004,15 +947,9 @@ class InternalSDK(_SeerSDK):
         if not os.path.exists(name):
             os.makedirs(name)
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
         URL = f"{self._auth.url}api/v1/analysisResultFiles"
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             analysis_files = s.get(f"{URL}/{analysis_id}")
 
@@ -1120,11 +1057,7 @@ class InternalSDK(_SeerSDK):
         >>> { "message": "Plate generated with id: 'plate_id'" }
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        ID_TOKEN, _ = self._auth.get_token()
 
         plate_ids = (
             set()
@@ -1159,8 +1092,7 @@ class InternalSDK(_SeerSDK):
             )
 
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             plate_response = s.get(f"{self._auth.url}api/v1/plateids")
 
             if plate_response.status_code != 200:
@@ -1173,8 +1105,7 @@ class InternalSDK(_SeerSDK):
 
         # Step 2: Fetch the UUID that needs to be passed into the backend from `/api/v1/plates` to fetch the AWS upload config and raw file path. This will sync the plates backend with samples when the user uploads later. This UUID will also be void of duplicates since duplication is handled by the backend.
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             plate_response = s.post(
                 f"{self._auth.url}api/v1/plates",
                 json={
@@ -1197,8 +1128,7 @@ class InternalSDK(_SeerSDK):
                 )
 
         # Step 3: Fetch AWS upload config from the backend with the plateId we just generated. Populates `s3_upload_path` and `s3_bucket` global variables.
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             config_response = s.post(
                 f"{self._auth.url}api/v1/msdatas/getuploadconfig",
                 json={"plateId": id_uuid},
@@ -1223,8 +1153,7 @@ class InternalSDK(_SeerSDK):
             s3_bucket = config_response.json()["s3Bucket"]
             s3_upload_path = config_response.json()["s3UploadPath"]
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             config_response = s.get(
                 f"{self._auth.url}auth/getawscredential",
             )
@@ -1269,8 +1198,7 @@ class InternalSDK(_SeerSDK):
         if not res:
             raise ValueError("Platemap upload failed.")
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             plate_map_response = s.post(
                 f"{self._auth.url}api/v1/msdataindex/file",
                 json={
@@ -1318,8 +1246,7 @@ class InternalSDK(_SeerSDK):
             if not sdf_upload:
                 raise ValueError("Sample description file upload failed.")
 
-            with requests.Session() as s:
-                s.headers.update(HEADERS)
+            with self._get_auth_session() as s:
                 sdf_response = s.post(
                     f"{self._auth.url}api/v1/msdataindex/file",
                     json={
@@ -1362,8 +1289,7 @@ class InternalSDK(_SeerSDK):
         for file_index in range(len(ms_data_file_names)):
             file = ms_data_file_names[file_index]
 
-            with requests.Session() as s:
-                s.headers.update(HEADERS)
+            with self._get_auth_session() as s:
                 ms_data_response = s.post(
                     f"{self._auth.url}api/v1/msdatas",
                     json=plate_map_data[file_index],
