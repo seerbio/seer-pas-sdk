@@ -26,4 +26,4 @@ except ImportError:
 
 # Export public functions and classes.
 from .core import SeerSDK
-from .objects import PlateMap
+from .objects.platemap import PlateMap

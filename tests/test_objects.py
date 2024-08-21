@@ -3,7 +3,7 @@ from io import StringIO
 import pandas as pd
 import pytest
 
-from seer_pas_sdk.objects import PlateMap
+from seer_pas_sdk import PlateMap
 
 
 def test_toofew_items():
