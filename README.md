@@ -22,6 +22,6 @@ from seer_pas_sdk import SeerSDK
 sdk = SeerSDK(USERNAME, PASSWORD)
 ```
 
-You can then use the SDK's functions to create, query, or retrieve projects, plates, samples, and analyses.
+You can then use the SDK's methods to create, query, or retrieve projects, plates, samples, and analyses.
 
 For complete documentation of this SDK, visit [https://seerbio.github.io/seer-pas-sdk/](https://seerbio.github.io/seer-pas-sdk/ "Documentation").
