@@ -40,6 +40,14 @@ class SeerSDK:
                 "Could not log in.\nPlease check your credentials and/or instance."
             )
 
+    def _get_auth_headers(self):
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        return HEADERS
+
     def get_spaces(self):
         """
         Fetches a list of spaces for the authenticated user.
@@ -61,11 +69,7 @@ class SeerSDK:
             ]
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/usergroups"
 
         with requests.Session() as s:
@@ -123,11 +127,7 @@ class SeerSDK:
         >>> [{ "id": ... }]
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/plates"
         res = []
 
@@ -197,11 +197,7 @@ class SeerSDK:
         >>> [{ "project_name": ... }]
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        HEADERS = self._get_auth_headers()
         URL = (
             f"{self._auth.url}api/v1/projects"
             if not project_id
@@ -292,11 +288,7 @@ class SeerSDK:
             raise ValueError("You must pass in plate ID or project ID.")
 
         res = []
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/samples"
         sample_params = {"all": "true"}
 
@@ -351,11 +343,7 @@ class SeerSDK:
         """
         Fetches a list of custom fields defined for the authenticated user.
         """
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/samplefields"
 
         with requests.Session() as s:
@@ -412,11 +400,7 @@ class SeerSDK:
         """
         res = []
         for sample_id in sample_ids:
-            ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-            HEADERS = {
-                "Authorization": f"{ID_TOKEN}",
-                "access-token": f"{ACCESS_TOKEN}",
-            }
+            HEADERS = self._get_auth_headers()
             URL = f"{self._auth.url}api/v1/msdatas/items"
 
             with requests.Session() as s:
@@ -669,11 +653,7 @@ class SeerSDK:
         >>> [{ "id": ..., "analysis_protocol_name": ... }] # in this case the id would supersede the inputted name.
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        HEADERS = self._get_auth_headers()
         URL = (
             f"{self._auth.url}api/v1/analysisProtocols"
             if not analysis_protocol_id
@@ -763,11 +743,7 @@ class SeerSDK:
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/analyses"
         res = []
 
@@ -868,11 +844,7 @@ class SeerSDK:
                 "Cannot generate links for failed or null analyses."
             )
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/data"
 
         with requests.Session() as s:
@@ -994,11 +966,7 @@ class SeerSDK:
         ]
         """
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        HEADERS = self._get_auth_headers()
         URL = (
             f"{self._auth.url}api/v1/msdataindex/filesinfolder?folder={folder}"
             if not space
@@ -1057,11 +1025,7 @@ class SeerSDK:
 
         print(f'Downloading files to "{name}"\n')
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}api/v1/msdataindex/download/getUrl"
         tenant_id = jwt.decode(ID_TOKEN, options={"verify_signature": False})[
             "custom:tenantId"
@@ -1174,11 +1138,7 @@ class SeerSDK:
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
+        HEADERS = self._get_auth_headers()
         URL = f"{self._auth.url}"
 
         res = {
