@@ -49,11 +49,13 @@ sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
 #| output: true
 print(f"User '{USERNAME}' logged in.")
 ```
-
+You can then use the SDK's methods to create, query, or retrieve projects, plates, samples, and analyses.
+Full documentation can be found [here](https://seerbio.github.io/seer-pas-sdk/reference/SeerSDK.html).
+Additional information and examples can also be found below.
 
 ### `PlateMap` Object
 
-The PAS Python SDK would allow users to make plate maps file from within the SDK using the `PlateMap` object located in the `objects` module. This module is imported by default within the SDK. The interface of the plate map file contains the following parameters, all of which need to be passed in as lists:
+The PAS Python SDK would allow users to make plate maps file from within the SDK using the `PlateMap` class. The interface of the plate map file contains the following parameters, all of which need to be passed in as lists:
 
 * MS file name as `ms_file_name` 
 * Sample name as `sample_name`
@@ -540,33 +542,6 @@ The file will be stored in `downloads/` in the user-specified path under the uni
 <hr>
 
 
-### Add Project
-Creates a new project with a given `project_name` and a list containing `project_id` strings.
-
-###### <u>Params</u>
-* `project_name`: (`str`) Name of the project.
-* `plate_ids`: (`list[str]`) List of the plate ids to be added to the project.
-* `description`: (`str`, optional) Description of the project.
-* `notes`: (`str`, optional) Notes for the project.
-* `space`: (`str`, optional) Space where the object is contained. Defaults to the space of the user who is creating the project (or `None`).
-<br>
-
-###### <u>Returns</u>
-`res`: (`dict`) A dictionary containing the status of the request if succeeded.
-
-###### <u>Example</u>
-```{python}
-#| eval: false
-project_name = "test_project"
-plate_ids = ["9872e3f0-544e-11ea-ad9e-1991e0725494", "5b05d440-6610-11ea-96e3-d5a4dab4ebf6"]
-log(sdk.add_project(project_name, plate_ids))
-```
-```
-{'status': 'Project started with id = 12a987d0-87d8-11ee-b03f-27a54e8c1798'}
-```
-
-<hr>
-
 ### Analysis Complete
 Returns the status of the analysis with the given `analysis_id`.
 
@@ -584,218 +559,6 @@ log(sdk.analysis_complete(analysis_id))
 ```
 ```
 {'status': 'SUCCEEDED'}
-```
-
-<hr>
-
-### Add Plate
-Add a plate given a list of `ms_data_files`, `plate_map_file`, `plate_id`, `plate_name`, `sample_description_file` and `space`.
-
-###### <u>Params</u>
-* `ms_data_files`: (`list[str]`) List of MS Data files.
-* `plate_map_file`: (`str` or `PlateMap` object) The plate map file path or `PlateMap` object. 
-* `plate_id`: (`str`) The plate ID. Must be unique.
-* `plate_name`: (`str`) The plate name.
-* `sample_description_file`: (`str`, optional) Path to the sample description file which adds more detail to samples.
-* `space`: (`str`, optional) Space where the plate is contained. Defaults to the space of the user who is creating the project (or `None`).
-<br>
-
-###### <u>Returns</u>
-`res`: (`dict`) A dictionary containing the status of the request if succeeded.
-
-###### <u>Example</u>
-```{python}
-#| eval: false
-data_file_locations = ["testing/AgamSDKTest1.raw", "testing/AgamSDKTest2.raw"]
-plate_map_location = "testing/AgamSDKPlateMapATest.csv"
-sample_plate_id= "unique223id"
-sample_plate_name = "some_plate_name" 
-
-log(sdk.add_plate(data_file_locations, plate_map_location, sample_plate_id, sample_plate_name))
-```
-```
-{'message': "Plate generated with id: '147a7740-87d8-11ee-b03f-27a54e8c1798'"}
-```
-
-Alternatively, instead of the `plate_map_location`, we could use the `PlateMap` object:
-
-```{python}
-#| eval: false
-generated_plate_map_file = PlateMap(
-    ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],
-    sample_name = ["A111", "A112"], 
-    sample_id = ["A111", "A112"], 
-    well_location = ["C11", "D11"], 
-    nanoparticle = ["NONE"], 
-    nanoparticle_id = ["NONE"], 
-    control = ["MPE Control"], 
-    control_id = ["MPE Control"], 
-    sample_volume = [20], 
-    peptide_concentration = [59.514], 
-    peptide_mass_sample = [8.57], 
-    dilution_factor = [1], 
-    plate_id = ["A11", "A11"], 
-    plate_name = ["A11", "A11"] 
-)
-
-log(sdk.add_plate(data_file_locations, generated_plate_map_file, sample_plate_id, sample_plate_name))
-```
-```
-{'message': "Plate generated with id: '1f40cc10-87d8-11ee-b03f-27a54e8c1798'"}
-```
-
-Similarly, you could specify a `sample_description_file` that would specify more parameters for all samples uploaded.
-
-```{python}
-#| eval: false
-data_file_locations = ["testing/AgamSDKTest1.raw", "testing/AgamSDKTest2.raw"]
-plate_map_location = "testing/AgamSDKPlateMapATest.csv"
-sample_description_file = "testing/AgamSDKSampleDesc.csv"
-sample_plate_id= "unique2123id"
-sample_plate_name = "some_plate_name" 
-
-log(sdk.add_plate(data_file_locations, plate_map_location, sample_plate_id, sample_plate_name, sample_description_file))
-```
-```
-{'message': "Plate generated with id: '147a7740-87d8-11ee-b03f-27a54e8c1798'"}
-```
-<hr>
-
-### Upload MS Data Files
-Upload MS data files to the PAS backend.
-
-###### <u>Params</u>
-* `ms_data_files`: (`list[str]`) List of MS Data files.
-* `path`: (`str`, optional) Path to upload the files to in the S3, defaulted to an empty string. Should <b>not</b> contain trailing slashes.
-* `space`: (`str`, optional) ID of the user group to which the files belongs, defaulted to None.
-<br>
-
-###### <u>Returns</u>
-`res`: (`dict`) Contains message whether the files were uploaded or not.
-
-###### <u>Example</u>
-```{python}
-#| eval: false
-data_file_locations = ["testing/AgamSDKTest1.raw", "testing/AgamSDKTest2.raw"]
-
-log(sdk.upload_ms_data_files(data_file_locations))
-```
-```
-{'message': 'Files uploaded successfully.'}
-```
-
-<hr>
-
-### Download Analysis Files
-Download a specific analysis file from the backend given an `analysis_id` to the specified `download_path`.
-
-If no `download_path` is specified or the `download_path` is invalid, the file will be downloaded to the current working directory. 
-
-If no `file_name` is specified, all files for the analysis will be downloaded.
-
-###### <u>Params</u>
-* `analysis_id` : (`str`) ID of the analysis to download.
-* `download_path` : (`str`, optional) Path to download the analysis file to, defaulted to current working directory.
-* file_name : (`str`, optional) Name of the analysis file to download, defaulted to None.
-
-###### <u>Returns</u>
-(`dict`) Message containing whether the file was downloaded or not.
-
-###### <u>Example</u>
-```{python}
-#| eval: false
-analysis_id = "dd4314d0-22b5-11ee-b604-61b98afbb084"
-download_path = "agamjolly/something"
-
-log(sdk.download_analysis_files(analysis_id, download_path=download_path))
-```
-```
-The path "agamjolly/something" you specified does not exist, was either invalid or not absolute.
-
-Downloading files to "/Users/ajolly/Desktop/seer-sdk/downloads/dd4314d0-22b5-11ee-b604-61b98afbb084"
-
-Downloading 0714-diann181-libfree-mbr.json
-Finished downloading 0714-diann181-libfree-mbr.json
-
-Downloading diann.log
-Finished downloading diann.log
-
-Downloading lib.tsv.predicted.speclib
-Finished downloading lib.tsv.predicted.speclib
-
-Downloading DIANN.unique_genes_matrix.tsv
-Finished downloading DIANN.unique_genes_matrix.tsv
-
-Downloading lib.tsv.20230714213654
-Finished downloading lib.tsv.20230714213654
-
-Downloading lib.tsv.20230714213654.speclib
-Finished downloading lib.tsv.20230714213654.speclib
-
-Downloading DIANN-first-pass.unique_genes_matrix.tsv
-Finished downloading DIANN-first-pass.unique_genes_matrix.tsv
-
-Downloading DIANN.gg_matrix.tsv
-Finished downloading DIANN.gg_matrix.tsv
-
-Downloading DIANN.log.txt
-Finished downloading DIANN.log.txt
-
-Downloading DIANN.pg_matrix.tsv
-Finished downloading DIANN.pg_matrix.tsv
-
-Downloading DIANN.pr_matrix.tsv
-Finished downloading DIANN.pr_matrix.tsv
-
-Downloading DIANN.stats.tsv
-Finished downloading DIANN.stats.tsv
-
-Downloading DIANN.tsv
-Finished downloading DIANN.tsv
-
-Downloading DIANN-first-pass.gg_matrix.tsv
-Finished downloading DIANN-first-pass.gg_matrix.tsv
-
-Downloading DIANN-first-pass.pg_matrix.tsv
-Finished downloading DIANN-first-pass.pg_matrix.tsv
-
-Downloading DIANN-first-pass.pr_matrix.tsv
-Finished downloading DIANN-first-pass.pr_matrix.tsv
-
-Downloading DIANN-first-pass.stats.tsv
-Finished downloading DIANN-first-pass.stats.tsv
-
-Downloading DIANN-first-pass.tsv
-Finished downloading DIANN-first-pass.tsv
-
-Downloading EXP22006_2022ms0031bX26_B_BB4_1_4772.d.quant
-Finished downloading EXP22006_2022ms0031bX26_B_BB4_1_4772.d.quant
-
-Downloading EXP22006_2022ms0031bX26_B_BB4_1_4772/0714-diann181-libfree-mbr.json
-Finished downloading 0714-diann181-libfree-mbr.json
-
-Downloading EXP22006_2022ms0031bX26_B_BB4_1_4772/diann.log
-Finished downloading diann.log
-
-Downloading EXP22006_2022ms0031bX25_B_BA4_1_4768.d.quant
-Finished downloading EXP22006_2022ms0031bX25_B_BA4_1_4768.d.quant
-
-Downloading EXP22006_2022ms0031bX25_B_BA4_1_4768/0714-diann181-libfree-mbr.json
-Finished downloading 0714-diann181-libfree-mbr.json
-
-Downloading EXP22006_2022ms0031bX25_B_BA4_1_4768/diann.log
-Finished downloading diann.log
-
-Downloading EXP20004_2020ms0007X11_A.mzML.quant
-Finished downloading EXP20004_2020ms0007X11_A.mzML.quant
-
-Downloading EXP20004_2020ms0007X11_A/0714-diann181-libfree-mbr.json
-Finished downloading 0714-diann181-libfree-mbr.json
-
-Downloading EXP20004_2020ms0007X11_A/diann.log
-Finished downloading diann.log
-
-{'message': 'Files downloaded successfully to /Users/ajolly/Desktop/seer-sdk/downloads/dd4314d0-22b5-11ee-b604-61b98afbb084'}
 ```
 
 <hr>
@@ -862,34 +625,6 @@ Downloading AgamSDKTest2.raw
 Finished downloading AgamSDKTest2.raw
 
 {'message': 'Files downloaded successfully to testing'}
-```
-
-<hr>
-
-### Link Plate
-Links existing MS data files to user uploaded files to create a new plate. Functionally, this acts the same way as `add_plate`, except this takes in files that already exist on the backend.
-
-###### <u>Params</u>
-* `ms_data_files`: (`list[str]`) Path to MS data files on the PAS backend or the S3 bucket.
-* `plate_map_file`: (`str` or `PlateMap` object) Path to the plate map file, or `PlateMap` object to be linked.
-* `plate_id`: (`str`) The plate ID. Must be unique.
-* `plate_name`: (`str`) The plate name.
-* `sample_description_file`: (`str`, optional) Path to the sample description file which adds more detail to samples.
-* `space`: (`str`, optional) Space where the plate is contained. Defaults to the space of the user who is creating the project (or `None`).
-<br>
-
-###### <u>Returns</u>
-(`dict`) Contains the message whether the plate was linked or not.
-
-###### <u>Example</u>
-```{python}
-#| eval: false
-ms_data_file_locations = ["147a7740-87d8-11ee-b03f-27a54e8c1798/20231120190742420/AgamSDKTest1.raw", "147a7740-87d8-11ee-b03f-27a54e8c1798/20231120190742420/AgamSDKTest2.raw"]
-plate_map_location = "testing/AgamSDKPlateMapATest.csv"
-sample_plate_id= "some_unique_id23"
-sample_plate_name = "linked_plate_name" 
-
-log(sdk.link_plate(ms_data_file_locations, plate_map_location, sample_plate_id, sample_plate_name))
 ```
 
 <hr>

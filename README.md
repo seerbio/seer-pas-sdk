@@ -28,6 +28,6 @@ from seer_pas_sdk import SeerSDK
 sdk = SeerSDK(USERNAME, PASSWORD)
 ```
 
-You can then use the SDK's functions to create, query, or retrieve projects, plates, samples, and analyses.
+You can then use the SDK's methods to create, query, or retrieve projects, plates, samples, and analyses.
 
 For complete documentation of this SDK, visit this repository's GitHub Pages, linked in the sidebar, under "About" ↗️.
