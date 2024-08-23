@@ -355,6 +355,22 @@ class InternalSDK(_SeerSDK):
                 f"File path '{sample_description_file}' is invalid. Please check your parameters again."
             )
 
+        # Validate plate id, plate name as entity names
+        # Enforcing this on the SDK level to prevent the creation of empty records before the backend validation
+        if not entity_name_ruler(plate_id):
+            raise ValueError("Plate ID contains unsupported characters.")
+
+        if not entity_name_ruler(plate_name):
+            raise ValueError("Plate Name contains unsupported characters.")
+
+        # Validate plate map
+        if isinstance(plate_map_file, PlateMap):
+            plate_map_data = plate_map_file.to_df()
+        else:
+            plate_map_data = pd.read_csv(plate_map_file)
+
+        validate_plate_map(plate_map_data)
+
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
         with self._get_auth_session() as s:
             plate_response = s.get(f"{self._auth.url}api/v1/plateids")
@@ -1090,6 +1106,22 @@ class InternalSDK(_SeerSDK):
             raise ValueError(
                 f"File path '{sample_description_file}' is invalid. Please check your parameters again."
             )
+
+        # Validate plate id, plate name as entity names
+        # Enforcing this on the SDK level to prevent the creation of empty records before the backend validation
+        if not entity_name_ruler(plate_id):
+            raise ValueError("Plate ID contains unsupported characters.")
+
+        if not entity_name_ruler(plate_name):
+            raise ValueError("Plate Name contains unsupported characters.")
+
+        # Validate plate map
+        if isinstance(plate_map_file, PlateMap):
+            plate_map_data = plate_map_file.to_df()
+        else:
+            plate_map_data = pd.read_csv(plate_map_file)
+
+        validate_plate_map(plate_map_data)
 
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
         with self._get_auth_session() as s:

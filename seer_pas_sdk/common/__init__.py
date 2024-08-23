@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 from botocore.config import Config
 from botocore.exceptions import ClientError
-from re import sub
+from re import match, sub, UNICODE
 
 import pandas as pd
 import os
@@ -214,6 +214,116 @@ def get_sample_info(
     return res
 
 
+def _validate_rawfile_extensions(rawfile):
+    valid_extensions = [".d", ".d.zip", ".mzml", ".raw", ".wiff", ".wiff.scan"]
+    if not rawfile.lower().endswith(tuple(valid_extensions)):
+        return False
+    return True
+
+
+def entity_name_ruler(entity_name):
+    pattern = r"^[\w ._+()!@-]+$"
+    if match(pattern, entity_name, UNICODE):
+        return True
+    else:
+        return False
+
+
+def validate_plate_map(df):
+    """
+    Validates the plate map contents
+
+    Parameters
+    ----------
+    plate_map: pd.Dataframe
+        The plate map data as a dataframe
+
+    Returns
+    -------
+    pd.DataFrame : the cleaned data as a dataframe
+
+    Examples
+    --------
+    >>> df = validate_plate_map_file("AgamSDKPlateMapATest.csv")
+    """
+
+    # Check required columns
+    required_cols = [
+        "MS file name",
+        "Sample name",
+        "Sample ID",
+        "Well location",
+        "Control",
+        "Plate ID",
+        "Plate Name",
+    ]
+
+    if not all(col in df.columns for col in required_cols):
+        raise ValueError(
+            "The following column headers are required: 'MS file name', 'Sample name', 'Sample ID', 'Well location', 'Control', 'Plate ID', 'Plate Name'"
+        )
+
+    # Check entity name requirement
+    invalid_plate_ids = df[~df["Plate ID"].apply(entity_name_ruler)]
+
+    invalid_plate_names = df[~df["Plate Name"].apply(entity_name_ruler)]
+
+    if not invalid_plate_ids.empty or not invalid_plate_names.empty:
+        error_msg = ""
+        if not invalid_plate_ids.empty:
+            error_msg += f"Invalid plate ID(s): {', '.join(invalid_plate_ids['Plate ID'].tolist())}"
+        if not invalid_plate_names.empty:
+            error_msg += f"Invalid plate name(s): {', '.join(invalid_plate_names['Plate Name'].tolist())}"
+        raise ValueError(error_msg)
+
+    # Check numeric columns
+    numeric_cols = [
+        "Sample volume",
+        "Peptide concentration",
+        "Peptide mass sample",
+        "Recon volume",
+    ]
+
+    invalid_cols = []
+    for col in numeric_cols:
+        if col in df.columns:
+            try:
+                df[col] = pd.to_numeric(df[col], errors="raise")
+            except Exception as e:
+                invalid_cols.append(col)
+
+    if invalid_cols:
+        raise ValueError(
+            f"The following column(s) must be numeric: {', '.join(invalid_cols)}"
+        )
+
+    # Check rawfiles end with valid extensions
+    invalid_rawfile_extensions = df[
+        ~df["MS file name"].apply(_validate_rawfile_extensions)
+    ]
+    if not invalid_rawfile_extensions.empty:
+        raise ValueError(
+            f"Invalid raw file extensions: {', '.join(invalid_rawfile_extensions['MS file name'].tolist())}"
+        )
+
+    # Check sample IDs are one to one with plate ID, plate name
+    sample_ids = df["Sample ID"].unique()
+    for sample in sample_ids:
+        queryset = df[df["Sample ID"] == sample]
+        plate_names = queryset["Plate ID"].unique()
+        plate_ids = queryset["Plate ID"].unique()
+        if len(plate_names) > 1:
+            raise ValueError(
+                f"Sample ID {sample} is associated with multiple plates: {', '.join(plate_names)}"
+            )
+        if len(plate_ids) > 1:
+            raise ValueError(
+                f"Sample ID {sample} is associated with multiple plates: {', '.join(plate_ids)}"
+            )
+
+    return df
+
+
 def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
     """
     Parses the plate map CSV file and returns a list of parameters for each sample.
@@ -376,22 +486,7 @@ def valid_ms_data_file(path):
     if not os.path.exists(path):
         return False
 
-    full_filename = path.split("/")[-1].split(".")
-
-    if len(full_filename) >= 3:
-        extension = f'.{".".join(full_filename[-2:])}'
-    else:
-        extension = f".{full_filename[-1]}"
-
-    return extension.lower() in [
-        ".d",
-        ".d.zip",
-        ".mzml",
-        ".raw",
-        ".mzml",
-        ".wiff",
-        ".wiff.scan",
-    ]
+    return _validate_rawfile_extensions(path)
 
 
 def download_hook(t):
