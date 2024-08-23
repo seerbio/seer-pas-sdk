@@ -1246,3 +1246,169 @@ class SeerSDK:
             res["box_plot"] = box_plot_data
 
         return res
+
+    def _get_analysis_pca(
+        self,
+        analysis_ids: _List[str],
+        sample_ids: _List[str],
+        type: str,
+        hide_control: bool = False,
+    ):
+        """
+        ****************
+        [UNEXPOSED METHOD CALL]
+        ****************
+        Get PCA data for given analyses and samples.
+        Args:
+            analysis_ids (_List[str]): IDs of the analyses of interest.
+            sample_ids (_List[str]): IDs of the samples of interest.
+            type (str): Type of data to be fetched. Must be either 'protein' or 'peptide'.
+            hide_control (bool, optional): Mark true if controls are to be excluded. Defaults to False.
+        Raises:
+            ValueError: No analysis IDs provided.
+            ValueError: No sample IDs provided.
+            ValueError: Invalid type provided.
+            ValueError: Response status code is not 200.
+        Returns:
+            dict
+                Response returned by the API.
+        """
+        if not analysis_ids:
+            raise ValueError("Analysis IDs cannot be empty.")
+        if not sample_ids:
+            raise ValueError("Sample IDs cannot be empty.")
+        if type not in ["protein", "peptide"]:
+            raise ValueError("Type must be either 'protein' or 'peptide'.")
+
+        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
+        HEADERS = {
+            "Authorization": f"{ID_TOKEN}",
+            "access-token": f"{ACCESS_TOKEN}",
+        }
+        URL = f"{self._auth.url}api/v1/analysisqcpca"
+
+        with requests.Session() as s:
+            s.headers.update(HEADERS)
+            json = {
+                "analysisIds": ",".join(analysis_ids),
+                "sampleIds": ",".join(sample_ids),
+                "type": type,
+            }
+
+            # specify hideControl as a string - unexpected behavior occurs if a boolean is passed
+            if hide_control:
+                json["hideControl"] = "true"
+            else:
+                json["hideControl"] = "false"
+
+            pca_data = s.post(URL, json=json)
+
+            if pca_data.status_code != 200:
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
+
+            return pca_data.json()
+
+    def get_analysis_pca_data(
+        self,
+        analysis_ids: _List[str],
+        sample_ids: _List[str],
+        type: str,
+        hide_control: bool = False,
+        as_df=False,
+    ):
+        """
+        Get PCA data for given analyses and samples formatted in a DataFrame or a dictionary.
+        Args:
+            analysis_ids (_List[str]): IDs of the analyses of interest.
+            sample_ids (_List[str]): IDs of the samples of interest.
+            type (str): Type of data to be fetched. Must be either 'protein' or 'peptide'.
+            hide_control (bool, optional): Mark true if controls are to be excluded. Defaults to False.
+            as_df (bool, optional): Mark true if the data should be returned as a pandas DataFrame. Defaults to False.
+        Raises:
+            ValueError: No analysis IDs provided.
+            ValueError: No sample IDs provided.
+            ValueError: Invalid type provided.
+            ValueError: Response status code is not 200.
+        Returns:
+            A dictionary with the following keys:
+                - x_contribution_ratio (float): Proportion of variance explained by the x-axis.
+                - y_contribution_ratio (float): Proportion of variance explained by the y-axis.
+                - data (_List[dict] | pd.DataFrame): A list of dictionaries or a dataframe with each row containing the following keys/columns:
+                    - sample_name (str): Name of the sample.
+                    - plate_name (str): Name of the plate.
+                    - sample_id (int): ID of the sample.
+                    - condition (str): Condition.
+                    - PC1 (float): X-value of the PCA point.
+                    - PC2 (float): Y-value of the PCA point.
+                    - custom_* (str): Custom fields. Included if meaningful, i.e., not null, in the data.
+        Examples
+        --------
+        >>> from seer_pas_sdk import *
+        >>> sdk = SeerSDK()
+        >>> sdk.get_analysis_pca_data(
+                analysis_ids=["analysis_id"],
+                sample_ids=["sample_id"],
+                type="protein",
+                hide_control=False
+            )
+        """
+        pca_data = self._get_analysis_pca(
+            analysis_ids, sample_ids, type, hide_control
+        )
+
+        # common columns returned by the API
+        generic_columns = [
+            "sample_name",
+            "plate_name",
+            "sample_id",
+            "condition",
+            "PC1",
+            "PC2",
+        ]
+
+        # edge case where yContributionRatio is NaN when zero points are returned.
+        if not "yContributionRatio" in pca_data:
+            y_contribution_ratio = None
+        else:
+            y_contribution_ratio = pca_data["yContributionRatio"]
+
+        x_contribution_ratio = pca_data["xContributionRatio"]
+        samples = pca_data["samples"]
+        points = pca_data["points"]
+
+        df = pd.DataFrame(
+            [
+                sample | {"PC1": point[0], "PC2": point[1]}
+                for sample, point in zip(samples, points)
+            ]
+        )
+
+        # Slice the df such that only custom columns are dropped in the absence of data
+        df = pd.concat(
+            [
+                df.drop(columns=generic_columns).dropna(how="all", axis=1),
+                df[generic_columns],
+            ],
+            axis=1,
+        )
+
+        # Filter down to a minimal set of columns
+        permitted_columns = [
+            x
+            for x in df.columns
+            if x in generic_columns or x.startswith("custom_")
+        ]
+
+        df = df.loc(axis=1)[permitted_columns]
+
+        # Return the data as a DataFrame if as_df is True
+        if not as_df:
+            df = df.to_dict(orient="records")
+        result = dict(
+            x_contribution_ratio=x_contribution_ratio,
+            y_contribution_ratio=y_contribution_ratio,
+            data=df,
+        )
+        return result
