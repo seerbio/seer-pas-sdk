@@ -383,6 +383,20 @@ class InternalSDK(_SeerSDK):
             if not plate_ids:
                 raise ValueError("Cannot connect to the server.")
 
+        # RS-5313: Conduct sample description file and plate map transforms before plate record creation
+        sample_info = get_sample_info(
+            id_uuid,
+            ms_data_files,
+            plate_map_file,
+            space,
+            sample_description_file,
+        )
+
+        # Parse the plate map file and convert the data into a form that can be POSTed to `/api/v1/msdatas`.
+        plate_map_data = parse_plate_map_file(
+            plate_map_file, samples, raw_file_paths, space
+        )
+
         # Step 2: Fetch the UUID that needs to be passed into the backend from `/api/v1/plates` to fetch the AWS upload config and raw file path. This will sync the plates backend with samples when the user uploads later. This UUID will also be void of duplicates since duplication is handled by the backend.
 
         with self._get_auth_session() as s:
@@ -511,13 +525,6 @@ class InternalSDK(_SeerSDK):
 
         # Step 6: Get sample info from the plate map file and make a call to `/api/v1/samples` with the sample_info. This returns the plateId, sampleId and sampleName for each sample in the plate map file. Also validate and upload the sample_description_file if it exists.
         if sample_description_file:
-            sample_info = get_sample_info(
-                id_uuid,
-                ms_data_files,
-                plate_map_file,
-                space,
-                sample_description_file,
-            )
 
             sdf_upload = upload_file(
                 sample_description_file,
@@ -553,17 +560,7 @@ class InternalSDK(_SeerSDK):
                         "Upload failed, please check if backend is still active and running."
                     )
 
-        else:
-            sample_info = get_sample_info(
-                id_uuid, ms_data_files, plate_map_file, space
-            )
-
         samples = self._add_samples(sample_info)
-
-        # Step 7: Parse the plate map file and convert the data into a form that can be POSTed to `/api/v1/msdatas`.
-        plate_map_data = parse_plate_map_file(
-            plate_map_file, samples, raw_file_paths, space
-        )
 
         # Step 8: Make a request to `/api/v1/msdatas/batch` with the processed samples data.
         with self._get_auth_session() as s:
