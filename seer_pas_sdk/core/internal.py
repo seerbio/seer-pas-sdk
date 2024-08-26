@@ -310,17 +310,15 @@ class InternalSDK(_SeerSDK):
 
         Returns
         -------
-        res : dict
-            A dictionary containing the status of the request if succeeded.
+        id_uuid : str
+            The UUID of the plate.
 
         Examples
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.add_plate(["MS_DATA_FILE_1", "MS_DATA_FILE_2"], "PLATE_MAP_FILE", "PLATE_ID", "PLATE_NAME")
-        >>> {
-                "status": "Plate with id = PLATE_ID started."
-            }
+        "9d5b6ab0-5a8c-11ef-8110-dd5cb94025eb"
         """
 
         plate_ids = (
@@ -340,19 +338,19 @@ class InternalSDK(_SeerSDK):
         for file in ms_data_files:
             if not os.path.exists(file):
                 raise ValueError(
-                    f"File path '{file}' is invalid. Please check your parameters again."
+                    f"File path '{file}' is invalid. Please check your parameters."
                 )
 
         if type(plate_map_file) == str and not os.path.exists(plate_map_file):
             raise ValueError(
-                f"File path '{plate_map_file}' is invalid. Please check your parameters again."
+                f"File path '{plate_map_file}' is invalid. Please check your parameters."
             )
 
         if sample_description_file and not os.path.exists(
             sample_description_file
         ):
             raise ValueError(
-                f"File path '{sample_description_file}' is invalid. Please check your parameters again."
+                f"File path '{sample_description_file}' is invalid. Please check your parameters."
             )
 
         # Validate plate id, plate name as entity names
@@ -376,12 +374,16 @@ class InternalSDK(_SeerSDK):
             plate_response = s.get(f"{self._auth.url}api/v1/plateids")
 
             if plate_response.status_code != 200:
-                raise ValueError("Cannot connect to the server.")
+                raise ValueError(
+                    "Failed to fetch plate ids from the server. Please check your connection and reauthenticate."
+                )
 
             plate_ids = set(plate_response.json()["data"])
 
             if not plate_ids:
-                raise ValueError("Cannot connect to the server.")
+                raise ValueError(
+                    "No plate ids returned from the server. Please reattempt."
+                )
 
         # RS-5313: Conduct sample description file and plate map transforms before plate record creation
         sample_info = get_sample_info(
@@ -411,14 +413,14 @@ class InternalSDK(_SeerSDK):
 
             if plate_response.status_code != 200:
                 raise ValueError(
-                    "Cannot connect to the server while fetching plates."
+                    "Failed to connect to the server. Please check your connection and reauthenticate."
                 )
 
             id_uuid = plate_response.json()["id"]
 
             if not id_uuid:
                 raise ValueError(
-                    "Cannot connect to the server while fetching plates."
+                    "Failed to fetch a UUID from the server. Please check your connection and reauthenticate."
                 )
 
         # Step 3: Fetch AWS upload config from the backend with the plateId we just generated. Populates `s3_upload_path` and `s3_bucket` global variables.
@@ -433,15 +435,16 @@ class InternalSDK(_SeerSDK):
                 or not config_response.json()
             ):
                 raise ValueError(
-                    "Upload failed, please check if backend is still running."
+                    "Failed to fetch AWS upload config for the plate. Please check your connection and reauthenticate."
                 )
 
-            if (
-                "s3Bucket" not in config_response.json()
-                or "s3UploadPath" not in config_response.json()
-            ):
+            if "s3Bucket" not in config_response.json():
                 raise ValueError(
-                    "Upload failed. Please check if the backend is still running."
+                    "Failed to fetch the S3 bucket from AWS. Please check your connection and reauthenticate."
+                )
+            elif "s3UploadPath" not in config_response.json():
+                raise ValueError(
+                    "Failed to fetch the S3 upload path from AWS. Please check your connection and reauthenticate."
                 )
 
             s3_bucket = config_response.json()["s3Bucket"]
@@ -456,11 +459,13 @@ class InternalSDK(_SeerSDK):
                 config_response.status_code != 200
                 or not config_response.json()
             ):
-                raise ValueError("Could not fetch config for user.")
+                raise ValueError(
+                    "Failed to fetch credentials. Please check your connection and reauthenticate."
+                )
 
             if "S3Bucket" not in config_response.json()["credentials"]:
                 raise ValueError(
-                    "Upload failed. Please check if the backend is still running."
+                    "Failed to fetch data from AWS. Please check your connection and reauthenticate."
                 )
 
             credentials = config_response.json()["credentials"]
@@ -490,7 +495,9 @@ class InternalSDK(_SeerSDK):
         )
 
         if not res:
-            raise ValueError("Platemap upload failed.")
+            raise ValueError(
+                "Failed to upload plate map to AWS. Please check your connection and reauthenticate."
+            )
 
         with self._get_auth_session() as s:
             plate_map_response = s.post(
@@ -512,7 +519,7 @@ class InternalSDK(_SeerSDK):
                 or "created" not in plate_map_response.json()
             ):
                 raise ValueError(
-                    "Upload failed, please check if backend is still active and running."
+                    "Failed to upload raw files to PAS. Please check your connection and reauthenticate."
                 )
 
         # Step 5: Populate `raw_file_paths` for sample upload.
@@ -533,7 +540,9 @@ class InternalSDK(_SeerSDK):
             )
 
             if not sdf_upload:
-                raise ValueError("Sample description file upload failed.")
+                raise ValueError(
+                    "Failed to upload sample description file to AWS. Please check your connection and reauthenticate."
+                )
 
             with self._get_auth_session() as s:
                 sdf_response = s.post(
@@ -557,7 +566,7 @@ class InternalSDK(_SeerSDK):
                     or "created" not in sdf_response.json()
                 ):
                     raise ValueError(
-                        "Upload failed, please check if backend is still active and running."
+                        "Failed to upload sample description file to PAS DB. Please check your connection and reauthenticate."
                     )
 
         samples = self._add_samples(sample_info)
@@ -570,7 +579,7 @@ class InternalSDK(_SeerSDK):
             )
             if ms_data_response.status_code != 200:
                 raise ValueError(
-                    "Upload failed, please check if backend is still active and running."
+                    "Failed to create samples in PAS. Please check your connection and reauthenticate."
                 )
 
         # Step 9: Upload each msdata file to the S3 bucket.
@@ -587,7 +596,7 @@ class InternalSDK(_SeerSDK):
 
             if "S3Bucket" not in config_response.json()["credentials"]:
                 raise ValueError(
-                    "Upload failed. Please check if the backend is still running."
+                    "Failed to connect to AWS. Please check your connection and reauthenticate."
                 )
 
             credentials = config_response.json()["credentials"]
@@ -604,7 +613,9 @@ class InternalSDK(_SeerSDK):
             res = upload_file(file, s3_bucket, f"{s3_upload_path}{filename}")
 
             if not res:
-                raise ValueError("Upload to AWS S3 failed.")
+                raise ValueError(
+                    "Failed to upload MS data files to AWS. Please check your connection and reauthenticate."
+                )
 
             files.append(
                 {
@@ -627,13 +638,14 @@ class InternalSDK(_SeerSDK):
                 or "created" not in file_response.json()
             ):
                 raise ValueError(
-                    "Upload failed, please check if backend is still active and running."
+                    "Failed to update PAS MS Files view. Your data has been uploaded."
                 )
 
         if os.path.exists("generated_files") and not dir_exists:
             shutil.rmtree("generated_files")
 
-        return {"message": f"Plate generated with id: '{id_uuid}'"}
+        print(f"Plate generated with id: '{id_uuid}'")
+        return id_uuid
 
     def start_analysis(
         self,
@@ -1094,14 +1106,14 @@ class InternalSDK(_SeerSDK):
         for file in ms_data_files:
             if not self.list_ms_data_files(file):
                 raise ValueError(
-                    f"File '{file}' does not exist. Please check your parameters again."
+                    f"File '{file}' does not exist. Please check your parameters."
                 )
 
         if sample_description_file and not os.path.exists(
             sample_description_file
         ):
             raise ValueError(
-                f"File path '{sample_description_file}' is invalid. Please check your parameters again."
+                f"File path '{sample_description_file}' is invalid. Please check your parameters."
             )
 
         # Validate plate id, plate name as entity names
@@ -1125,12 +1137,16 @@ class InternalSDK(_SeerSDK):
             plate_response = s.get(f"{self._auth.url}api/v1/plateids")
 
             if plate_response.status_code != 200:
-                raise ValueError("Cannot connect to the server.")
+                raise ValueError(
+                    "Failed to fetch plate ids from the server. Please check your connection and reauthenticate."
+                )
 
             plate_ids = set(plate_response.json()["data"])
 
             if not plate_ids:
-                raise ValueError("Cannot connect to the server.")
+                raise ValueError(
+                    "No plate ids returned from the server. Please reattempt."
+                )
 
         # Step 2: Fetch the UUID that needs to be passed into the backend from `/api/v1/plates` to fetch the AWS upload config and raw file path. This will sync the plates backend with samples when the user uploads later. This UUID will also be void of duplicates since duplication is handled by the backend.
 
@@ -1146,14 +1162,14 @@ class InternalSDK(_SeerSDK):
 
             if plate_response.status_code != 200:
                 raise ValueError(
-                    "Cannot connect to the server while fetching plates."
+                    "Failed to connect to the server. Please check your connection and reauthenticate."
                 )
 
             id_uuid = plate_response.json()["id"]
 
             if not id_uuid:
                 raise ValueError(
-                    "Cannot connect to the server while fetching plates."
+                    "Failed to fetch a UUID from the server. Please check your connection and reauthenticate."
                 )
 
         # Step 3: Fetch AWS upload config from the backend with the plateId we just generated. Populates `s3_upload_path` and `s3_bucket` global variables.
@@ -1168,15 +1184,16 @@ class InternalSDK(_SeerSDK):
                 or not config_response.json()
             ):
                 raise ValueError(
-                    "Upload failed, please check if backend is still running."
+                    "Failed to fetch AWS upload config for the plate. Please check your connection and reauthenticate."
                 )
 
-            if (
-                "s3Bucket" not in config_response.json()
-                or "s3UploadPath" not in config_response.json()
-            ):
+            if "s3Bucket" not in config_response.json():
                 raise ValueError(
-                    "Upload failed. Please check if the backend is still running."
+                    "Failed to fetch the S3 bucket from AWS. Please check your connection and reauthenticate."
+                )
+            elif "s3UploadPath" not in config_response.json():
+                raise ValueError(
+                    "Failed to fetch the S3 upload path from AWS. Please check your connection and reauthenticate."
                 )
 
             s3_bucket = config_response.json()["s3Bucket"]
@@ -1191,11 +1208,13 @@ class InternalSDK(_SeerSDK):
                 config_response.status_code != 200
                 or not config_response.json()
             ):
-                raise ValueError("Could not fetch config for user.")
+                raise ValueError(
+                    "Failed to fetch credentials. Please check your connection and reauthenticate."
+                )
 
             if "S3Bucket" not in config_response.json()["credentials"]:
                 raise ValueError(
-                    "Upload failed. Please check if the backend is still running."
+                    "Failed to fetch data from AWS. Please check your connection and reauthenticate."
                 )
 
             credentials = config_response.json()["credentials"]
@@ -1225,7 +1244,9 @@ class InternalSDK(_SeerSDK):
         )
 
         if not res:
-            raise ValueError("Platemap upload failed.")
+            raise ValueError(
+                "Failed to upload plate map to AWS. Please check your connection and reauthenticate."
+            )
 
         with self._get_auth_session() as s:
             plate_map_response = s.post(
@@ -1247,7 +1268,7 @@ class InternalSDK(_SeerSDK):
                 or "created" not in plate_map_response.json()
             ):
                 raise ValueError(
-                    "Upload failed, please check if backend is still active and running."
+                    "Failed to upload raw files to PAS. Please check your connection and reauthenticate."
                 )
 
         # Step 5: Populate `raw_file_paths` for sample upload.
@@ -1273,7 +1294,9 @@ class InternalSDK(_SeerSDK):
             )
 
             if not sdf_upload:
-                raise ValueError("Sample description file upload failed.")
+                raise ValueError(
+                    "Failed to upload sample description file to AWS. Please check your connection and reauthenticate."
+                )
 
             with self._get_auth_session() as s:
                 sdf_response = s.post(
@@ -1297,7 +1320,7 @@ class InternalSDK(_SeerSDK):
                     or "created" not in sdf_response.json()
                 ):
                     raise ValueError(
-                        "Upload failed, please check if backend is still active and running."
+                        "Failed to upload sample description file to PAS DB. Please check your connection and reauthenticate."
                     )
 
         else:
@@ -1326,7 +1349,8 @@ class InternalSDK(_SeerSDK):
 
                 if ms_data_response.status_code != 200:
                     raise ValueError(
-                        "Upload failed, please check if backend is still active and running."
+                        "Failed to create samples in PAS. Please check your connection and reauthenticate."
                     )
 
-        return {"message": f"Plate generated with id: '{id_uuid}'"}
+        print(f"Plate generated with id: '{id_uuid}'")
+        return id_uuid

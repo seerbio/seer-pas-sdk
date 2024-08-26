@@ -166,13 +166,20 @@ def get_sample_info(
 
     # Step 1: Check if ms_data_files are contained within the plate_map_file.
     if len(files) != len(local_file_names):
-        raise ValueError("Plate map file is invalid.")
+        raise ValueError(
+            f"User provided {len(local_file_names)} MS files, however the plate map lists {len(files)} MS files. \
+                         Please check your inputs."
+        )
 
+    missing_files = []
     for file in files:
         if file not in local_file_names:
-            raise ValueError(
-                "Plate map file does not contain the attached MS data files."
-            )
+            missing_files.append(file)
+
+    if missing_files:
+        raise ValueError(
+            f"Plate map file does not contain the following MS files: {', '.join(missing_files)}."
+        )
 
     # Step 2: Validating and mapping the contents of the sample description file.
     if sample_description_file:
@@ -396,12 +403,13 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
                 f'Error fetching id for sample ID {row["Sample ID"]}'
             )
 
-        for filename in raw_file_paths:
-            if filename == row["MS file name"]:
-                path = raw_file_paths[filename]
+        # Validate that the raw file path exists in the raw file paths list
+        path = raw_file_paths.get(row["MS file name"], None)
 
-        if not path or not sample_id:
-            raise ValueError("Plate map file is invalid.")
+        if not path:
+            raise ValueError(
+                f"Row {rowIndex} is missing a value in MS file name."
+            )
 
         res.append(
             {
