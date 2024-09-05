@@ -32,11 +32,9 @@ def test_get_sample_info(platemap_file, mock_sample):
     filename, sample_name, sample_id = mock_sample
 
     plate_id = "TEST_plate_id"
-    ms_data_files = {filename}
     space = "TEST_space_id"
     res = get_sample_info(
         plate_id=plate_id,
-        ms_data_files=ms_data_files,
         plate_map_file=platemap_file,
         space=space,
         sample_description_file=None,  # TODO: test sample description file
@@ -51,19 +49,13 @@ def test_get_sample_info(platemap_file, mock_sample):
         assert sampleinfo["sampleUserGroup"] == space
 
 
-def test_get_sample_info_missing_file(platemap_file):
-    """Test that get_sample_info raises an exception if a file doesn't exist"""
+def test_validate_plate_map_missing_file(platemap_file):
+    """Test that validate_plate_map raises an exception if a file doesn't exist"""
 
-    plate_id = "TEST_plate_id"
     ms_data_files = {"XXX_file_does_not_exist"}
-    space = "TEST_space_id"
+    plate_map_data = pd.read_csv(platemap_file)
     with pytest.raises(ValueError):
-        res = get_sample_info(
-            plate_id=plate_id,
-            ms_data_files=ms_data_files,
-            plate_map_file=platemap_file,
-            space=space,
-        )
+        res = validate_plate_map(plate_map_data, ms_data_files)
 
 
 def test_camel_case():

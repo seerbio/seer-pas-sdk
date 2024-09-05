@@ -119,7 +119,6 @@ def url_to_df(url):
 
 def get_sample_info(
     plate_id,
-    ms_data_files,
     plate_map_file,
     space,
     sample_description_file=None,
@@ -131,8 +130,6 @@ def get_sample_info(
     ----------
     plate_id : str
         The plate ID.
-    ms_data_files : list
-        A list of MS data files.
     plate_map_file : str
         The plate map file.
     space : str
@@ -145,7 +142,7 @@ def get_sample_info(
     list
         A list of dictionaries containing the `plateID`, `sampleID`, `sampleName`, and `sampleUserGroup` values.
 
-    >>> get_sample_info("plate_id", ["AgamSDKTest1.raw", "AgamSDKTest2.raw"], "AgamSDKPlateMapATest.csv", "sdkTestPlateId1", "SDKPlate", "Generated from SDK")
+    >>> get_sample_info("plate_id", "AgamSDKPlateMapATest.csv", "sdkTestPlateId1", "SDKPlate", "Generated from SDK")
     >>> [
             {
                 "plateID": "YOUR_PLATE_ID",
@@ -157,29 +154,8 @@ def get_sample_info(
     """
 
     df = pd.read_csv(plate_map_file, on_bad_lines="skip")
-    data = df.iloc[:, :]  # all the data in the platemap csv
-    files = data["MS file name"]  # all filenames in the platemap csv
-    local_file_names = set(
-        [os.path.basename(file) for file in ms_data_files]
-    )  # all filenames in the local directory
+    # all filenames in the local directory
     res = []
-
-    # Step 1: Check if ms_data_files are contained within the plate_map_file.
-    if len(files) != len(local_file_names):
-        raise ValueError(
-            f"User provided {len(local_file_names)} MS files, however the plate map lists {len(files)} MS files. \
-                         Please check your inputs."
-        )
-
-    missing_files = []
-    for file in files:
-        if file not in local_file_names:
-            missing_files.append(file)
-
-    if missing_files:
-        raise ValueError(
-            f"Plate map file does not contain the following MS files: {', '.join(missing_files)}."
-        )
 
     # Step 2: Validating and mapping the contents of the sample description file.
     if sample_description_file:
@@ -236,7 +212,7 @@ def entity_name_ruler(entity_name):
         return False
 
 
-def validate_plate_map(df):
+def validate_plate_map(df, local_file_names):
     """
     Validates the plate map contents
 
@@ -304,6 +280,30 @@ def validate_plate_map(df):
             f"The following column(s) must be numeric: {', '.join(invalid_cols)}"
         )
 
+    files = df["MS file name"].tolist()
+
+    # Check if ms_data_files are contained within the plate_map_file.
+    if len(files) != len(local_file_names):
+        raise ValueError(
+            f"User provided {len(local_file_names)} MS files, however the plate map lists {len(files)} MS files. \
+                         Please check your inputs."
+        )
+
+    missing_files = []
+    for file in files:
+        if file not in local_file_names:
+            missing_files.append(file)
+
+    if missing_files:
+        msg = ""
+        try:
+            msg = f"Plate map file does not contain the following MS files: {', '.join(missing_files)}."
+        except:
+            raise ValueError(
+                "Rawfile names must be type string. Float or None type detected."
+            )
+        raise ValueError(msg)
+
     # Check rawfiles end with valid extensions
     invalid_rawfile_extensions = df[
         ~df["MS file name"].apply(_validate_rawfile_extensions)
@@ -331,7 +331,7 @@ def validate_plate_map(df):
     return df
 
 
-def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
+def parse_plate_map_file(plate_map_file, samples, space=None):
     """
     Parses the plate map CSV file and returns a list of parameters for each sample.
 
@@ -341,8 +341,6 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
         The plate map file.
     samples : list
         A list of samples.
-    raw_file_paths : dict
-        A dictionary of raw file paths.
     space : str
         The space or usergroup.
 
@@ -366,7 +364,7 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
                 "plate_id": "PLATE_ID_HERE",
             }
         ]
-    >>> parse_plate_map_file("AgamSDKPlateMapATest.csv", samples, raw_file_paths, "SDKPlate")
+    >>> parse_plate_map_file("AgamSDKPlateMapATest.csv", samples, "SDKPlate")
     >>> [
             {
                 "sampleId": "YOUR_SAMPLE_ID",
@@ -392,8 +390,8 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
 
     for rowIndex in range(number_of_rows):
         row = df.iloc[rowIndex]
-        path = None
         sample_id = None
+        path = row["MS file name"]
 
         # Validate that the sample ID exists in the samples list
         if samples.get(row["Sample ID"], None):
@@ -401,14 +399,6 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
         else:
             raise ValueError(
                 f'Error fetching id for sample ID {row["Sample ID"]}'
-            )
-
-        # Validate that the raw file path exists in the raw file paths list
-        path = raw_file_paths.get(row["MS file name"], None)
-
-        if not path:
-            raise ValueError(
-                f"Row {rowIndex} is missing a value in MS file name."
             )
 
         res.append(

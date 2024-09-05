@@ -14,4 +14,8 @@ def platemap():
         ms_file_name=["test.msfile"],
         sample_name=["TEST_sample_name"],
         sample_id=["TEST0"],
+        well_location=["A1"],
+        control=[None],
+        plate_id=["TEST_plate_id"],
+        plate_name=["TEST_plate_name"],
     )
