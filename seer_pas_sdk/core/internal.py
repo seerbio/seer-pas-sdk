@@ -657,6 +657,7 @@ class InternalSDK(_SeerSDK):
         notes: str = "",
         description: str = "",
         space: str = None,
+        filter: str = None,
     ):
         """
         Given a name, analysis_protocol_id, project_id, creates a new analysis for the authenticated user.
@@ -687,6 +688,9 @@ class InternalSDK(_SeerSDK):
         space : str, optional
             ID of the user group to which the analysis belongs, defaulted to None.
 
+        filter : str, optional
+            Filter to be applied to the samples, defaulted to None. Acceptable values are 'sample', 'control', or None.
+
         Returns
         -------
         dict
@@ -713,7 +717,7 @@ class InternalSDK(_SeerSDK):
 
             if not valid_analysis_protocol:
                 raise ValueError(
-                    "Analysis protocol not found. Your protocol name is incorrect."
+                    f"Analysis protocol not found with name {analysis_protocol_name}."
                 )
 
             analysis_protocol_id = valid_analysis_protocol[0]["id"]
@@ -725,12 +729,12 @@ class InternalSDK(_SeerSDK):
 
             if not valid_analysis_protocol:
                 raise ValueError(
-                    "Analysis protocol not found. Your protocol ID is incorrect."
+                    f"Analysis protocol not found with ID {analysis_protocol_id}."
                 )
 
         if not analysis_protocol_id and not analysis_protocol_name:
             raise ValueError(
-                "You must specify either analysis protocol ID or analysis protocol name. Both cannot be empty."
+                "You must specify either analysis protocol ID or analysis protocol name."
             )
 
         if sample_ids:
@@ -742,8 +746,12 @@ class InternalSDK(_SeerSDK):
             for sample_id in sample_ids:
                 if sample_id not in valid_ids:
                     raise ValueError(
-                        f"Sample ID '{sample_id}' is either not valid or not associated with the project. Please check your parameters again."
+                        f"Sample ID '{sample_id}' is either not valid or not associated with the project."
                     )
+        if filter:
+            sample_ids = self._filter_samples_metadata(
+                project_id, filter, sample_ids
+            )
 
         URL = f"{self._auth.url}api/v1/analyze"
 
@@ -765,9 +773,10 @@ class InternalSDK(_SeerSDK):
 
             if analysis.status_code != 200:
                 raise ValueError(
-                    "Invalid request. Please check your parameters."
+                    "Failed to start analysis. Please check your connection."
                 )
 
+            # Analysis id is not contained in response.
             return analysis.json()
 
     def upload_ms_data_files(

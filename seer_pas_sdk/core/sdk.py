@@ -294,25 +294,21 @@ class SeerSDK:
                 try:
                     self.get_plate_metadata(plate_id)
                 except:
-                    raise ValueError(
-                        "Plate ID is invalid. Please check your parameters and see if the backend is running."
-                    )
+                    raise ValueError("Plate ID is invalid.")
                 sample_params["plateId"] = plate_id
 
             elif project_id:
                 try:
                     self.get_project_metadata(project_id)
                 except:
-                    raise ValueError(
-                        "Project ID is invalid. Please check your parameters and see if the backend is running."
-                    )
+                    raise ValueError("Project ID is invalid.")
 
                 sample_params["projectId"] = project_id
 
             samples = s.get(URL, params=sample_params)
             if samples.status_code != 200:
                 raise ValueError(
-                    "Invalid request. Please check if your plate ID has any samples associated with it."
+                    f"Failed to fetch sample data for plate ID: {plate_id}."
                 )
             res = samples.json()["data"]
 
@@ -332,7 +328,74 @@ class SeerSDK:
             ]
         ]
 
+        # API returns empty strings if not a control, replace with None for filtering purposes
+        res_df["control"] = res_df["control"].apply(lambda x: x if x else None)
+
         return res_df.to_dict(orient="records") if not df else res_df
+
+    def _filter_samples_metadata(
+        self,
+        project_id: str,
+        filter: str,
+        sample_ids: list = None,
+    ):
+        """
+        ****************
+        [UNEXPOSED METHOD CALL]
+        ****************
+        Get samples given a filter and project_id.
+
+        Parameters
+        ----------
+        project_id : str
+            The project id.
+        filter : str
+            The filter to be applied. Acceptable values are 'control' or 'sample'.
+        sample_ids : list, optional
+            List of user provided sample ids
+
+        Returns
+        -------
+        res : list
+            A list of sample ids
+
+        Examples
+        -------
+        >>> from core import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk._get_samples_filter("FILTER", "PROJECT_ID")
+        >>> {
+                "samples": [
+                    {
+                        "id": "SAMPLE_ID",
+                        "plate_id": "PLATE_ID",
+                        "sample_name": "SAMPLE_NAME",
+                        ...
+                        ...
+                    },
+                    ...
+                    ...
+                ]
+            }
+        """
+
+        if filter and filter not in ["control", "sample"]:
+            raise ValueError(
+                "Invalid filter. Please choose between 'control' or 'sample'."
+            )
+
+        df = self._get_samples_metadata(project_id=project_id, df=True)
+
+        if filter == "control":
+            df = df[~df["control"].isna()]
+        elif filter == "sample":
+            df = df[df["control"].isna()]
+
+        valid_samples = df["id"].tolist()
+        if sample_ids:
+            valid_samples = list(set(valid_samples) & set(sample_ids))
+
+        return valid_samples
 
     def get_sample_custom_fields(self):
         """
