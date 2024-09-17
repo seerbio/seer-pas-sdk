@@ -15,7 +15,7 @@ from ..auth.auth import Auth
 load_dotenv()
 
 
-def upload_file(file_name, bucket, object_name=None):
+def upload_file(file_name, bucket, credentials, object_name=None):
     """
     Upload a file to an S3 bucket.
 
@@ -43,7 +43,12 @@ def upload_file(file_name, bucket, object_name=None):
         object_name = os.path.basename(file_name)
 
     # Upload the file
-    s3_client = boto3.client("s3")
+    s3_client = boto3.client(
+        "s3",
+        aws_access_key_id=credentials["AccessKeyId"],
+        aws_secret_access_key=credentials["SecretAccessKey"],
+        aws_session_token=credentials["SessionToken"],
+    )
     try:
         response = s3_client.upload_file(file_name, bucket, object_name)
     except ClientError as e:

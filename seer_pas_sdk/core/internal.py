@@ -458,12 +458,6 @@ class InternalSDK(_SeerSDK):
 
             credentials = config_response.json()["credentials"]
 
-            os.environ["AWS_ACCESS_KEY_ID"] = credentials["AccessKeyId"]
-            os.environ["AWS_SECRET_ACCESS_KEY"] = credentials[
-                "SecretAccessKey"
-            ]
-            os.environ["AWS_SESSION_TOKEN"] = credentials["SessionToken"]
-
         # Step 4: Upload the platemap file to the S3 bucket.
         if isinstance(plate_map_file, PlateMap):
             plate_map_file_name = f"plateMap_{id_uuid}.csv"
@@ -479,7 +473,10 @@ class InternalSDK(_SeerSDK):
             plate_map_file_name = os.path.basename(plate_map_file)
 
         res = upload_file(
-            plate_map_file, s3_bucket, f"{s3_upload_path}{plate_map_file_name}"
+            plate_map_file,
+            s3_bucket,
+            credentials,
+            f"{s3_upload_path}{plate_map_file_name}",
         )
 
         if not res:
@@ -531,6 +528,7 @@ class InternalSDK(_SeerSDK):
             sdf_upload = upload_file(
                 sample_description_file,
                 s3_bucket,
+                credentials,
                 f"{s3_upload_path}{os.path.basename(sample_description_file)}",
             )
 
@@ -608,7 +606,9 @@ class InternalSDK(_SeerSDK):
         for file in ms_data_files:
             filename = os.path.basename(file)
             filesize = os.stat(file).st_size
-            res = upload_file(file, s3_bucket, f"{s3_upload_path}{filename}")
+            res = upload_file(
+                file, s3_bucket, credentials, f"{s3_upload_path}{filename}"
+            )
 
             if not res:
                 raise ValueError(
@@ -836,18 +836,12 @@ class InternalSDK(_SeerSDK):
 
             if "S3Bucket" not in config_response.json()["credentials"]:
                 raise ValueError(
-                    "Upload failed. Please check if the backend is still running."
+                    "Could not fetch config for user - incomplete response."
                 )
 
             s3_bucket = config_response.json()["credentials"]["S3Bucket"]
 
             credentials = config_response.json()["credentials"]
-
-            os.environ["AWS_ACCESS_KEY_ID"] = credentials["AccessKeyId"]
-            os.environ["AWS_SECRET_ACCESS_KEY"] = credentials[
-                "SecretAccessKey"
-            ]
-            os.environ["AWS_SESSION_TOKEN"] = credentials["SessionToken"]
 
         # Step 4: Upload each msdata file to the S3 bucket.
         for file in ms_data_files:
@@ -857,10 +851,14 @@ class InternalSDK(_SeerSDK):
                 f"{tenant_id}" if not path else f"{tenant_id}/{path}"
             )
 
-            res = upload_file(file, s3_bucket, f"{s3_upload_path}/{filename}")
+            res = upload_file(
+                file, s3_bucket, credentials, f"{s3_upload_path}/{filename}"
+            )
 
             if not res:
-                raise ValueError("Upload to AWS S3 failed.")
+                raise ValueError(
+                    f"Upload to AWS S3 failed. {s3_upload_path/filename}"
+                )
 
             files.append(
                 {
@@ -1228,12 +1226,6 @@ class InternalSDK(_SeerSDK):
 
             credentials = config_response.json()["credentials"]
 
-            os.environ["AWS_ACCESS_KEY_ID"] = credentials["AccessKeyId"]
-            os.environ["AWS_SECRET_ACCESS_KEY"] = credentials[
-                "SecretAccessKey"
-            ]
-            os.environ["AWS_SESSION_TOKEN"] = credentials["SessionToken"]
-
         # Step 4: Upload the platemap file to the S3 bucket.
         if isinstance(plate_map_file, PlateMap):
             plate_map_file_name = f"plateMap_{id_uuid}.csv"
@@ -1249,7 +1241,10 @@ class InternalSDK(_SeerSDK):
             plate_map_file_name = os.path.basename(plate_map_file)
 
         res = upload_file(
-            plate_map_file, s3_bucket, f"{s3_upload_path}{plate_map_file_name}"
+            plate_map_file,
+            s3_bucket,
+            credentials,
+            f"{s3_upload_path}{plate_map_file_name}",
         )
 
         if not res:
@@ -1297,6 +1292,7 @@ class InternalSDK(_SeerSDK):
             sdf_upload = upload_file(
                 sample_description_file,
                 s3_bucket,
+                credentials,
                 f"{s3_upload_path}{os.path.basename(sample_description_file)}",
             )
 
