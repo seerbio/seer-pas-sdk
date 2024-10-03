@@ -1475,3 +1475,54 @@ class SeerSDK:
             data=df,
         )
         return result
+
+    def get_enrichment_plot(
+        self,
+        analysis_id: str,
+        significant_pgs: _List[str],
+        summarize_output: bool = False,
+        exclude_singleton: bool = False,
+        cutoff: float = None,
+        species: str = None,
+    ):
+        """
+        Get enrichment plot data for a given analysis ID.
+
+        Args:
+            analysis_id (str): ID of the analysis.
+            significant_pgs (_List[str]): List of significant protein/peptide groups.
+            summarize_output (bool, optional): Summarize the output. Defaults to False.
+            exclude_singleton (bool, optional): Exclude singleton values. Defaults to False.
+            cutoff (float, optional): Cutoff value for the p-value to determine significance. Defaults to None.
+            species (str, optional): Species to filter the data by. Defaults to None.
+
+        Raises:
+            ServerError - could not fetch enrichment plot data.
+
+        Returns:
+            dict: A dictionary containing the enrichment plot data.
+        """
+
+        URL = f"{self._auth.url}api/v1/groupanalysis/enrichmentgo"
+
+        if not significant_pgs:
+            raise ValueError("Significant protein groups cannot be empty.")
+
+        with self._get_auth_session() as s:
+            json = {
+                "analysisId": analysis_id,
+                "significantPGs": significant_pgs,
+                "summarizeOutput": summarize_output,
+                "excludeSingleton": exclude_singleton,
+            }
+            if cutoff:
+                json["cutoff"] = cutoff
+            if species:
+                json["species"] = species
+
+            enrichment_data = s.post(URL, json=json)
+
+            if enrichment_data.status_code != 200:
+                raise ValueError("Could not fetch enrichment plot data.")
+
+            return enrichment_data.json()
