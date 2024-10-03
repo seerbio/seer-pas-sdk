@@ -1506,7 +1506,7 @@ class SeerSDK:
         URL = f"{self._auth.url}api/v1/groupanalysis/enrichmentgo"
 
         if not significant_pgs:
-            raise ValueError("Significant protein groups cannot be empty.")
+            raise ValueError("Significant pgs cannot be empty.")
 
         with self._get_auth_session() as s:
             json = {
