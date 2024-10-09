@@ -1536,3 +1536,37 @@ class SeerSDK:
             data=df,
         )
         return result
+
+    def get_ppi_network_data(
+        self, significant_pgs: _List[str], species: str = None
+    ):
+        """
+        Get PPI network data for given significant protein groups.
+        Args:
+            significant_pgs (_List[str]): Significant protein groups.
+            species (str, optional): Species of interest. Defaults to None.
+        Raises:
+            ValueError: No significant protein groups provided.
+            ValueError: Response status code is not 200.
+        Returns:
+            dict
+                Response returned by the API.
+        """
+        if not significant_pgs:
+            raise ValueError("Significant protein groups cannot be empty.")
+
+        URL = f"{self._auth.url}api/v1/groupanalysis/stringdb"
+
+        with self._get_auth_session() as s:
+            json = {
+                "significantPGs": ",".join(significant_pgs),
+            }
+            if species:
+                json["species"] = species
+
+            ppi_data = s.post(URL, json=json)
+
+            if ppi_data.status_code != 200:
+                raise ValueError("Server error - bad response")
+
+            return ppi_data.json()
