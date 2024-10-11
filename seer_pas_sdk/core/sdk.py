@@ -755,11 +755,16 @@ class SeerSDK:
         self,
         analysis_id: str = None,
         folder_id: str = None,
-        show_folders=True,
-        analysis_only=True,
+        show_folders: bool = True,
+        analysis_only: bool = True,
+        project_id: str = None,
+        plate_name: str = None,
+        **kwargs,
     ):
         """
         Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
+        Search parameters may be passed in as keyword arguments to filter the results. Acceptable values are 'analysis_name', 'folder_name', 'description', 'notes', or 'number_msdatafile'.
+        Only search on a single field is supported.
 
         Parameters
         ----------
@@ -770,12 +775,21 @@ class SeerSDK:
             ID of the folder to be fetched, defaulted to None.
 
         show_folders : bool, optional
-            Mark True if folder contents are to be returned in the response, defaulted to True.
+            Mark True if folder contents are to be returned in the response, i.e. recursive search, defaulted to True.
             Will be disabled if an analysis id is provided.
 
         analysis_only : bool, optional
             Mark True if only analyses objects are to be returned in the response, defaulted to True.
             If marked false, folder objects will also be included in the response.
+
+        project_id : str, optional
+            ID of the project to be fetched, defaulted to None.
+
+        plate_name : str, optional
+            Name of the plate to be fetched, defaulted to None.
+
+        **kwargs : dict, optional
+            Search keyword parameters to be passed in. Acceptable values are 'analysis_name', 'folder_name', 'description', 'notes', or 'number_msdatafile'.
 
         Returns
         -------
@@ -793,18 +807,65 @@ class SeerSDK:
                 {id: "YOUR_ANALYSIS_ID_HERE", ...}
             ]
 
-        >>> seer_sdk.get_analyses("YOUR_ANALYSIS_ID_HERE")
+        >>> seer_sdk.get_analysis("YOUR_ANALYSIS_ID_HERE")
+        >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
+
+        >>> seer_sdk.get_analysis(folder_name="YOUR_FOLDER_NAME_HERE")
+        >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
+
+        >>> seer_sdk.get_analysis(analysis_name="YOUR_ANALYSIS")
+        >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
+
+        >>> seer_sdk.get_analysis(description="YOUR_DESCRIPTION")
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
         """
 
         URL = f"{self._auth.url}api/v1/analyses"
         res = []
 
+        search_field = None
+        search_item = None
+        if kwargs:
+            if len(kwargs.keys()) > 1:
+                raise ValueError("Please include only one search parameter.")
+            search_field = list(kwargs.keys())[0]
+            search_item = kwargs[search_field]
+
+            if not search_item:
+                raise ValueError(
+                    f"Please provide a non null value for {search_field}"
+                )
+
+        if search_field and search_field not in [
+            "analysis_name",
+            "folder_name",
+            "description",
+            "notes",
+            "number_msdatafile",
+        ]:
+            raise ValueError(
+                "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'description', 'notes', or 'number_msdatafile'."
+            )
+
         with self._get_auth_session() as s:
 
             params = {"all": "true"}
             if folder_id:
                 params["folder"] = folder_id
+
+            if search_field:
+                params["searchField"] = search_field
+                params["searchItem"] = search_item
+                del params["all"]
+
+                if search_field == "folder_name":
+                    params["searchField"] = "analysis_name"
+
+            if project_id:
+                params["projectId"] = project_id
+
+            if plate_name:
+                params["plateName"] = plate_name
 
             analyses = s.get(
                 f"{URL}/{analysis_id}" if analysis_id else URL, params=params
@@ -1475,6 +1536,40 @@ class SeerSDK:
             data=df,
         )
         return result
+
+    def get_ppi_network_data(
+        self, significant_pgs: _List[str], species: str = None
+    ):
+        """
+        Get PPI network data for given significant protein groups.
+        Args:
+            significant_pgs (_List[str]): Significant protein groups.
+            species (str, optional): Species of interest. Defaults to None.
+        Raises:
+            ValueError: No significant protein groups provided.
+            ValueError: Response status code is not 200.
+        Returns:
+            dict
+                Response returned by the API.
+        """
+        if not significant_pgs:
+            raise ValueError("Significant protein groups cannot be empty.")
+
+        URL = f"{self._auth.url}api/v1/groupanalysis/stringdb"
+
+        with self._get_auth_session() as s:
+            json = {
+                "significantPGs": ",".join(significant_pgs),
+            }
+            if species:
+                json["species"] = species
+
+            ppi_data = s.post(URL, json=json)
+
+            if ppi_data.status_code != 200:
+                raise ValueError("Server error - bad response")
+
+            return ppi_data.json()
 
     def get_enrichment_plot(
         self,
