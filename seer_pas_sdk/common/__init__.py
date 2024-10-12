@@ -12,6 +12,8 @@ import json
 
 from ..auth.auth import Auth
 
+from .groupanalysis import *
+
 load_dotenv()
 
 

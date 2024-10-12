@@ -6,7 +6,7 @@ import requests
 import urllib.request
 import ssl
 
-from typing import List as _List
+from typing import List as _List, Tuple as _Tuple
 
 from ..common import *
 from ..auth import Auth
@@ -1570,6 +1570,80 @@ class SeerSDK:
                 raise ValueError("Server error - bad response")
 
             return ppi_data.json()
+
+    # groups are user defined by the sample description file
+    def get_cluster_heatmap_data(
+        self,
+        analysis_id: str,
+        grouping: str,
+        groups: _List[str],
+        contrasts: _List[_Tuple[int, ...]],
+        stat_test: str,
+        feature_type: str,
+        significant_pgs: _List[str] = [],
+    ):
+        """Get cluster heatmap data for the given analysis.
+
+        Args:
+            analysis_id (str): ID of the analysis
+            grouping (str): Category of sample groups
+            groups (_List[str]): sample groups
+            contrasts (_List[_Tuple[int, ...]]): Indicate which groups are compared against each other. e.g. [(0, 1, -1, 0), (1, 0, 0, -1)]
+            stat_test (str): Statistical test to be used
+            feature_type (str): Type of feature to be used, either proteingroup or peptide
+            significant_pgs (_List[str], optional): significant protein group IDs. Defaults to [].
+
+        Raises:
+            ValueError: "Feature type must be either 'proteingroup' or 'peptide'."
+            ValueError: "Stat test must be either 'ttest' or 'wilcoxon'."
+            ValueError: Invalid contrast value.
+            ValueError: Server error
+
+        Returns:
+            dict: the response object
+                    clusterProtein: List of protein clusters
+                        clusters:
+                            indexes: list[int], List of indexes
+                            height: int, Height of the cluster
+                            children: list[dict] | None, Children of the cluster
+                    clusterSample: List of sample clusters
+                        clusters:
+                            indexes: list[int], List of indexes
+                            height: int, Height of the cluster
+                            children: list[dict] | None, Children of the cluster
+                    data: List of data
+
+        """
+        if feature_type not in ["proteingroup", "peptide"]:
+            raise ValueError(
+                "Feature type must be either 'proteingroup' or 'peptide'."
+            )
+
+        if stat_test not in ["ttest", "wilcoxon"]:
+            raise ValueError("Stat test must be either 'ttest' or 'wilcoxon'.")
+
+        [validate_contrast(contrast, len(groups)) for contrast in contrasts]
+
+        formatted_contrasts = ";".join(
+            [",".join(map(str, x)) for x in contrasts]
+        )
+
+        payload = dict(
+            analysisId=analysis_id,
+            grouping=grouping,
+            groups=",".join(groups),
+            contrasts=formatted_contrasts,
+            statTest=stat_test,
+            featureType=feature_type,
+            significantPGs=",".join(significant_pgs),
+        )
+
+        with self._get_auth_session() as s:
+            URL = f"{self._auth.url}api/v2/clusterheatmap"
+            response = s.post(URL, json=payload)
+            if response.status_code != 200:
+                raise ValueError("Server error. Bad response.")
+            return response.json()
 
     def get_enrichment_plot(
         self,
