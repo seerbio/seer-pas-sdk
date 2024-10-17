@@ -922,7 +922,7 @@ class SeerSDK:
         analysis_id : str
             ID of the analysis for which the data is to be fetched.
 
-        download_path : bool
+        download_path : str
             String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid. Defaults to an empty string.
 
         Returns
@@ -943,6 +943,15 @@ class SeerSDK:
                 "protein_panel": <protein_panel dataframe object>
             }
 
+        >>> seer_sdk.get_analysis_result("YOUR_DIANN_ANALYSIS_ID_HERE")
+        >>> {
+                "peptide_np": <peptide_np dataframe object>,
+                "peptide_panel": <peptide_panel dataframe object>,
+                "protein_np": <protein_np dataframe object>,
+                "protein_panel": <protein_panel dataframe object>,
+                "diann_report": <diann_report dataframe object>
+            }
+
         >>> seer_sdk.get_analysis_result("YOUR_ANALYSIS_ID_HERE", download_path="/Users/Downloads")
         >>> { "status": "Download complete." }
         """
@@ -953,7 +962,8 @@ class SeerSDK:
         if download_path and not os.path.exists(download_path):
             raise ValueError("The download path you entered is invalid.")
 
-        if self.get_analysis(analysis_id)[0]["status"] in ["FAILED", None]:
+        analysis_metadata = self.get_analysis(analysis_id)[0]
+        if analysis_metadata["status"] in ["FAILED", None]:
             raise ValueError(
                 "Cannot generate links for failed or null analyses."
             )
@@ -990,6 +1000,20 @@ class SeerSDK:
                 "protein_panel": url_to_df(protein_data["panelLink"]["url"]),
             }
 
+            diann_report_url = s.post(
+                f"{self._auth.url}api/v1/analysisResultFiles/getUrl",
+                json={
+                    "analysisId": analysis_id,
+                    "projectId": analysis_metadata["project_id"],
+                    "filename": "report.tsv",
+                },
+            )
+            try:
+                diann_report_url = diann_report_url.json()
+                links["diann_report"] = url_to_df(diann_report_url["url"])
+            except ValueError:
+                print("DIANN report not found")
+
             if download_path:
                 name = f"{download_path}/downloads/{analysis_id}"
                 if not os.path.exists(name):
@@ -1003,6 +1027,11 @@ class SeerSDK:
                 links["protein_panel"].to_csv(
                     f"{name}/protein_panel.csv", sep="\t"
                 )
+
+                if "diann_report" in links:
+                    links["diann_report"].to_csv(
+                        f"{name}/diann_report.csv", sep="\t"
+                    )
 
                 return {"status": "Download complete."}
 

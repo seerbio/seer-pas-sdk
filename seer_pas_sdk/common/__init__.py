@@ -10,6 +10,7 @@ import requests
 import boto3
 import json
 
+import xml.etree.ElementTree as ET
 from ..auth.auth import Auth
 
 from .groupanalysis import *
@@ -94,17 +95,22 @@ def dict_to_df(data):
 
 def url_to_df(url):
     """
-    Returns a Pandas DataFrame from a URL.
+    Fetches a TSV file from a URL and returns as a Pandas DataFrame.
 
     Parameters
     ----------
     url : str
-        The URL of the CSV file.
+        The URL of the TSV file.
 
     Returns
     -------
     pandas.core.frame.DataFrame
-        A Pandas DataFrame.
+        The data from the TSV file as a Pandas DataFrame
+
+    Raises
+    ------
+    ValueError
+        Error response from AWS S3
 
     Examples
     --------
@@ -120,7 +126,15 @@ def url_to_df(url):
     """
 
     url_content = io.StringIO(requests.get(url).content.decode("utf-8"))
-    csv = pd.read_csv(url_content, sep="\t")
+
+    test_contents = url_content.read()
+    url_content.seek(0)
+    # Interpret error response from AWS S3
+    try:
+        ET.fromstring(test_contents)
+        raise ValueError(f"Fetching from {url} returned an error response.")
+    except ET.ParseError:
+        csv = pd.read_csv(url_content, sep="\t")
     return csv
 
 
