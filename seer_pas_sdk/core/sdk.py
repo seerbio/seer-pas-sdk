@@ -789,7 +789,7 @@ class SeerSDK:
             Name of the plate to be fetched, defaulted to None.
 
         **kwargs : dict, optional
-            Search keyword parameters to be passed in. Acceptable values are 'analysis_name', 'folder_name', 'description', 'notes', or 'number_msdatafile'.
+            Search keyword parameters to be passed in. Acceptable values are 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'.
 
         Returns
         -------
@@ -839,12 +839,13 @@ class SeerSDK:
         if search_field and search_field not in [
             "analysis_name",
             "folder_name",
+            "analysis_protocol_name",
             "description",
             "notes",
             "number_msdatafile",
         ]:
             raise ValueError(
-                "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'description', 'notes', or 'number_msdatafile'."
+                "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'."
             )
 
         with self._get_auth_session() as s:
@@ -854,12 +855,12 @@ class SeerSDK:
                 params["folder"] = folder_id
 
             if search_field:
-                params["searchField"] = search_field
+                params["searchFields"] = search_field
                 params["searchItem"] = search_item
                 del params["all"]
 
                 if search_field == "folder_name":
-                    params["searchField"] = "analysis_name"
+                    params["searchFields"] = "analysis_name"
 
             if project_id:
                 params["projectId"] = project_id
