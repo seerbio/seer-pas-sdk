@@ -14,6 +14,8 @@ from ..auth.auth import Auth
 
 from .groupanalysis import *
 
+from .errors import *
+
 load_dotenv()
 
 

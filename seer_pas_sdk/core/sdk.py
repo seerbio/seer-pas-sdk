@@ -10,6 +10,7 @@ from typing import List as _List, Tuple as _Tuple
 
 from ..common import *
 from ..auth import Auth
+from ..objects.volcanoplot import VolcanoPlotBuilder
 
 
 class SeerSDK:
@@ -1172,9 +1173,9 @@ class SeerSDK:
         print(f'Downloading files to "{name}"\n')
 
         URL = f"{self._auth.url}api/v1/msdataindex/download/getUrl"
-        tenant_id = jwt.decode(ID_TOKEN, options={"verify_signature": False})[
-            "custom:tenantId"
-        ]
+        tenant_id = jwt.decode(
+            self._auth.get_token(), options={"verify_signature": False}
+        )["custom:tenantId"]
 
         for path in paths:
             with self._get_auth_session() as s:
@@ -1236,7 +1237,7 @@ class SeerSDK:
 
         return {"message": f"Files downloaded successfully to '{name}'"}
 
-    def group_analysis_results(self, analysis_id: str, box_plot: dict = None):
+    def group_analysis_results(self, analysis_id: str):
         """
         Returns the group analysis data for the given analysis id, provided it exists.
 
@@ -1301,7 +1302,6 @@ class SeerSDK:
                     "peptide_processed_long_form_file_url": "",
                 },
             },
-            "box_plot": [],
         }
 
         # Pre-GA data call
@@ -1312,7 +1312,7 @@ class SeerSDK:
                 json={"analysisId": analysis_id, "grouping": "condition"},
             )
             if protein_pre_data.status_code != 200:
-                raise ValueError(
+                raise ServerError(
                     "Invalid request. Could not fetch group analysis protein pre data. Please check your parameters."
                 )
 
@@ -1320,15 +1320,15 @@ class SeerSDK:
 
             res["pre"]["protein"] = protein_pre_data
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             peptide_pre_data = s.post(
                 url=f"{URL}api/v2/groupanalysis/peptide",
                 json={"analysisId": analysis_id, "grouping": "condition"},
             )
+
             if peptide_pre_data.status_code != 200:
-                raise ValueError(
+                raise ServerError(
                     "Invalid request. Could not fetch group analysis peptide pre data. Please check your parameters."
                 )
 
@@ -1336,16 +1336,15 @@ class SeerSDK:
             res["pre"]["peptide"] = peptide_pre_data
 
         # Post-GA data call
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
 
             get_saved_result = s.get(
                 f"{URL}api/v1/groupanalysis/getSavedResults?analysisid={analysis_id}"
             )
 
             if get_saved_result.status_code != 200:
-                raise ValueError(
-                    "Invalid request. Could not fetch group analysis post data. Please check your parameters."
+                raise ServerError(
+                    "Could not fetch saved results. Please check your analysis id."
                 )
             get_saved_result = get_saved_result.json()
 
@@ -1356,6 +1355,13 @@ class SeerSDK:
             # Peptide data
             if "peptideResult" in get_saved_result:
                 res["post"]["peptide"] = get_saved_result["peptideResult"]
+
+            # require that either protein or peptide data exists
+            # Error handling is necessary for volcano plot calculations downstream
+            if not (res["post"].get("protein") or res["post"].get("peptide")):
+                raise ValueError(
+                    "No group analysis data returned from server."
+                )
 
             # Protein URLs
             if "pgProcessedFileUrl" in get_saved_result:
@@ -1378,35 +1384,93 @@ class SeerSDK:
                     "peptide_processed_long_form_file_url"
                 ] = get_saved_result["peptideProcessedLongFormFileUrl"]
 
-        # Box plot data call
-        if not box_plot:
-            del res["box_plot"]
-            return res
+        return res
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
-            box_plot["feature_type"] = box_plot["feature_type"].lower()
+    # NOTE: this function contains three API calls
+    def get_box_plot_data(
+        self,
+        analysis_id: str,
+        feature_type: str,
+        feature_ids: _List[str] = [],
+        show_significant_only: bool = False,
+        as_df=False,
+    ):
+        """Get box plot data for given analyses and samples formatted in a DataFrame or a dictionary.
+
+        Args:
+            analysis_id (str): ID of the analysis.
+            feature_type (str): Type of data to be fetched. Must be either 'protein' or 'peptide'.
+            feature_ids (list[str], optional): Filter result object to a set of ids. Defaults to [].
+            show_significant_only (bool, optional): Mark true if only significant results are to be returned. Defaults to False.
+            as_df (bool, optional): Mark true if return object should be a pandas DataFrame. Defaults to False.
+
+        Raises:
+            ValueError: Invalid feature type. Must be either 'protein' or 'peptide'.
+            ServerError: Could not fetch box plot data.
+
+        Returns:
+            list[dict] | pd.DataFrame : A list of dictionaries or a dataframe with each row containing the following keys/columns:
+                                        'proteinId', 'intensity', 'sampleName', 'sampleId', 'condition','gene'
+        """
+        feature_type = feature_type.lower()
+        if feature_type not in ["protein", "peptide"]:
+            raise ValueError(
+                "Invalid feature type. Must be either 'protein' or 'peptide'."
+            )
+        json = {
+            "analysisId": analysis_id,
+            "featureType": f"{feature_type}group",
+        }
+        if feature_ids:
+            json["featureIds"] = ",".join(feature_ids)
+        with self._get_auth_session() as s:
+
+            # API call 1 - get intensities
             box_plot_data = s.post(
-                url=f"{URL}api/v1/groupanalysis/rawdata",
-                json={
-                    "analysisId": analysis_id,
-                    "featureIds": (
-                        ",".join(box_plot["feature_ids"])
-                        if len(box_plot["feature_ids"]) > 1
-                        else box_plot["feature_ids"][0]
-                    ),
-                    "featureType": f"{box_plot['feature_type']}group",
-                },
+                url=f"{self._auth.url}api/v1/groupanalysis/rawdata", json=json
             )
             if box_plot_data.status_code != 200:
-                raise ValueError(
-                    "Invalid request, could not fetch box plot data. Please verify your 'box_plot' parameters, including 'feature_ids' (comma-separated list of feature IDs) and 'feature_type' (needs to be a either 'protein' or 'peptide')."
-                )
+                raise ServerError("Could not fetch box plot data.")
 
             box_plot_data = box_plot_data.json()
-            res["box_plot"] = box_plot_data
 
-        return res
+            # API call 2 - get volcano plot data for filtered results and gene mapping
+            builder = self.get_volcano_plot_data(analysis_id, cached=True)
+
+            protein_peptide_gene_map = builder.protein_gene_map
+
+            # API call 3 - get analysis samples metadata to get condition
+            samples_metadata = self.get_analysis_samples(analysis_id)
+
+            # only return protein/peptide available "post" group analysis
+            box_plot_data = [
+                x
+                for x in box_plot_data
+                if x[f"{builder.type}Id"] in protein_peptide_gene_map
+            ]
+            sample_id_condition = {
+                x["id"]: x["condition"] for x in samples_metadata[0]["samples"]
+            }
+
+            if show_significant_only:
+                significant_rows = set(builder.get_significant_rows())
+                box_plot_data = [
+                    x
+                    for x in box_plot_data
+                    if x[f"{builder.type}Id"] in significant_rows
+                ]
+
+            for row in box_plot_data:
+                row["condition"] = sample_id_condition.get(
+                    row["sampleId"], None
+                )
+                row["gene"] = builder.protein_gene_map[
+                    row[f"{builder.type}Id"]
+                ]
+
+            if as_df:
+                box_plot_data = pd.DataFrame(box_plot_data)
+            return box_plot_data
 
     def _get_analysis_pca(
         self,
@@ -1421,18 +1485,18 @@ class SeerSDK:
         ****************
         Get PCA data for given analyses and samples.
         Args:
-            analysis_ids (_List[str]): IDs of the analyses of interest.
-            sample_ids (_List[str]): IDs of the samples of interest.
+            analysis_ids (list[str]): IDs of the analyses of interest.
+            sample_ids (list[str]): IDs of the samples of interest.
             type (str): Type of data to be fetched. Must be either 'protein' or 'peptide'.
             hide_control (bool, optional): Mark true if controls are to be excluded. Defaults to False.
         Raises:
             ValueError: No analysis IDs provided.
             ValueError: No sample IDs provided.
             ValueError: Invalid type provided.
-            ValueError: Response status code is not 200.
+            ServerError: Could not fetch PCA data.
         Returns:
             dict
-                Response returned by the API.
+                Pure response from the API.
         """
         if not analysis_ids:
             raise ValueError("Analysis IDs cannot be empty.")
@@ -1441,15 +1505,9 @@ class SeerSDK:
         if type not in ["protein", "peptide"]:
             raise ValueError("Type must be either 'protein' or 'peptide'.")
 
-        ID_TOKEN, ACCESS_TOKEN = self._auth.get_token()
-        HEADERS = {
-            "Authorization": f"{ID_TOKEN}",
-            "access-token": f"{ACCESS_TOKEN}",
-        }
         URL = f"{self._auth.url}api/v1/analysisqcpca"
 
-        with requests.Session() as s:
-            s.headers.update(HEADERS)
+        with self._get_auth_session() as s:
             json = {
                 "analysisIds": ",".join(analysis_ids),
                 "sampleIds": ",".join(sample_ids),
@@ -1465,9 +1523,7 @@ class SeerSDK:
             pca_data = s.post(URL, json=json)
 
             if pca_data.status_code != 200:
-                raise ValueError(
-                    "Invalid request. Please check your parameters."
-                )
+                raise ServerError("Could not fetch PCA data.")
 
             return pca_data.json()
 
@@ -1482,21 +1538,21 @@ class SeerSDK:
         """
         Get PCA data for given analyses and samples formatted in a DataFrame or a dictionary.
         Args:
-            analysis_ids (_List[str]): IDs of the analyses of interest.
-            sample_ids (_List[str]): IDs of the samples of interest.
+            analysis_ids (list[str]): IDs of the analyses of interest.
+            sample_ids (list[str]): IDs of the samples of interest.
             type (str): Type of data to be fetched. Must be either 'protein' or 'peptide'.
             hide_control (bool, optional): Mark true if controls are to be excluded. Defaults to False.
             as_df (bool, optional): Mark true if the data should be returned as a pandas DataFrame. Defaults to False.
         Raises:
             ValueError: No analysis IDs provided.
             ValueError: No sample IDs provided.
-            ValueError: Invalid type provided.
-            ValueError: Response status code is not 200.
+            ValueError: Invalid type parameter provided.
+            ServerError: Could not fetch PCA data.
         Returns:
             A dictionary with the following keys:
                 - x_contribution_ratio (float): Proportion of variance explained by the x-axis.
                 - y_contribution_ratio (float): Proportion of variance explained by the y-axis.
-                - data (_List[dict] | pd.DataFrame): A list of dictionaries or a dataframe with each row containing the following keys/columns:
+                - data (list[dict] | pd.DataFrame): A list of dictionaries or a dataframe with each row containing the following keys/columns:
                     - sample_name (str): Name of the sample.
                     - plate_name (str): Name of the plate.
                     - sample_id (int): ID of the sample.
@@ -1732,3 +1788,72 @@ class SeerSDK:
                 raise ValueError("Could not fetch enrichment plot data.")
 
             return enrichment_data.json()
+
+    def get_volcano_plot_data(
+        self,
+        analysis_id,
+        significance_threshold=0.05,
+        fold_change_threshold=1,
+        label_by="fold_change",
+        cached=False,
+        as_df=False,
+    ):
+        """Get volcano plot data for a given analysis ID.
+
+        Args:
+            analysis_id (str): ID of the analysis.
+            significance_threshold (float, optional): Cutoff value for the p-value to determine significance. Defaults to 0.05.
+            fold_change_threshold (float, optional): Cutoff value for the fold change to determine significance. Defaults to 1.
+            label_by (str, optional): Metric to sort result data. Defaults to "fold_change".
+            cached (bool, optional): Return a VolcanoPlotBuilder object for calculation reuse. Defaults to False.
+            as_df (bool, optional): Return data as a pandas DataFrame. Defaults to False.
+
+        Raises:
+            ServerError - could not fetch group analysis results.
+        Returns:
+           list[dict] | pd.DataFrame | VolcanoPlotBuilder: A list of dictionaries, a DataFrame, or a VolcanoPlotBuilder object containing the volcano plot data.
+                                                           Object contains the following columns: 'logFD', 'negativeLog10P', 'dataIndex', 'rowID', 'gene', 'protein',
+                                                                                                   'group', 'significant', 'euclideanDistance'
+        """
+        try:
+            response = self.group_analysis_results(analysis_id)
+        except:
+            return ServerError(
+                f"Could not fetch group analysis results. Please check that group analysis has completed for analysis {analysis_id}."
+            )
+
+        obj = VolcanoPlotBuilder(
+            response, significance_threshold, fold_change_threshold, label_by
+        )
+
+        if cached:
+            return obj
+        else:
+            if as_df:
+                return pd.DataFrame(obj.volcano_plot)
+            else:
+                return obj.volcano_plot
+
+    def get_analysis_samples(self, analysis_id: str):
+        """
+        Get the samples associated with a given analysis ID.
+
+        Args:
+            analysis_id (str): The analysis ID.
+
+        Raises:
+            ServerError - could not retrieve samples for analysis.
+        Returns:
+            dict: A dictionary containing the samples associated with the analysis.
+        """
+        if not analysis_id:
+            raise ValueError("Analysis ID cannot be empty.")
+
+        URL = f"{self._auth.url}api/v1/analyses/samples/{analysis_id}"
+        with self._get_auth_session() as s:
+            samples = s.get(URL)
+
+            if samples.status_code != 200:
+                raise ServerError("Could not retrieve samples for analysis.")
+
+            return samples.json()
