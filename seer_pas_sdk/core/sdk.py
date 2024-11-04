@@ -1630,6 +1630,66 @@ class SeerSDK:
         )
         return result
 
+    def get_analysis_hierarchical_clustering(
+        self,
+        analysis_ids: _List[str],
+        sample_ids: _List[str],
+        hide_control: bool = False,
+    ):
+        """
+        Get hierarchical clustering data for given analyses and samples.
+        Args:
+            analysis_ids (list[str]): IDs of the analyses.
+            sample_ids (list[str]): IDs of the samples.
+            hide_control (bool, optional): Mark true if controls are to be excluded. Defaults to False.
+            raw_data (bool, optional): Mark true if raw data should be returned. Defaults to True.
+        Raises:
+            ValueError: No analysis IDs provided.
+            ValueError: No sample IDs provided.
+            ValueError: Response status code is not 200.
+        Returns:
+            dict
+                Hierarchical clustering data returned by the API.
+        """
+        if not analysis_ids:
+            raise ValueError("Analysis IDs cannot be empty.")
+        if not sample_ids:
+            raise ValueError("Sample IDs cannot be empty.")
+
+        URL = f"{self._auth.url}api/v1/analysishcluster"
+
+        with self._get_auth_session() as s:
+            json = {
+                "analysisIds": ",".join(analysis_ids),
+                "sampleIds": ",".join(sample_ids),
+            }
+
+            # specify hideControl as a string
+            # Python bool values are not recognized by the API
+            if hide_control:
+                json["hideControl"] = "true"
+            else:
+                json["hideControl"] = "false"
+
+            hc_data = s.post(URL, json=json)
+
+            if hc_data.status_code != 200:
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
+
+            data = hc_data.json()
+
+            # Filter out custom fields that are not part of the tenant's custom fields
+            if not "samples" in data:
+                raise ValueError("No sample data returned from server.")
+
+            data["samples"] = [
+                {k: v for k, v in sample.items()} for sample in data["samples"]
+            ]
+
+            return data
+
     def get_ppi_network_data(
         self, significant_pgs: _List[str], species: str = None
     ):
