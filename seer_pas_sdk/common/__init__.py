@@ -10,7 +10,6 @@ import requests
 import boto3
 import json
 
-import xml.etree.ElementTree as ET
 from ..auth.auth import Auth
 
 from .groupanalysis import *
@@ -126,15 +125,7 @@ def url_to_df(url):
     """
 
     url_content = io.StringIO(requests.get(url).content.decode("utf-8"))
-
-    test_contents = url_content.read()
-    url_content.seek(0)
-    # Interpret error response from AWS S3
-    try:
-        ET.fromstring(test_contents)
-        raise ValueError(f"Fetching from {url} returned an error response.")
-    except ET.ParseError:
-        csv = pd.read_csv(url_content, sep="\t")
+    csv = pd.read_csv(url_content, sep="\t")
     return csv
 
 

@@ -913,7 +913,12 @@ class SeerSDK:
                 ]
             return res
 
-    def get_analysis_result(self, analysis_id: str, download_path: str = ""):
+    def get_analysis_result(
+        self,
+        analysis_id: str,
+        download_path: str = "",
+        diann_report: bool = False,
+    ):
         """
         Given an `analysis_id`, this function returns all relevant analysis data files in form of downloadable content, if applicable.
 
@@ -924,6 +929,9 @@ class SeerSDK:
 
         download_path : str
             String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid. Defaults to an empty string.
+
+        diann_report : bool
+            Boolean flag denoting whether the user wants the DIANN report to be included in the response. Defaults to False.
 
         Returns
         -------
@@ -1008,11 +1016,10 @@ class SeerSDK:
                     "filename": "report.tsv",
                 },
             )
-            try:
+
+            if diann_report:
                 diann_report_url = diann_report_url.json()
                 links["diann_report"] = url_to_df(diann_report_url["url"])
-            except ValueError:
-                print("DIANN report not found")
 
             if download_path:
                 name = f"{download_path}/downloads/{analysis_id}"
