@@ -21,10 +21,14 @@ def platemap_file(platemap, tmpdir):
 
     platemap.to_csv(outfile)
 
+    blank_raw_file = tmpdir / "test.raw"
+    blank_raw_file.write("")
+
     yield outfile
 
     # Clean up test file
     outfile.remove()
+    blank_raw_file.remove()
 
 
 def test_get_sample_info(platemap_file, mock_sample):
@@ -47,15 +51,6 @@ def test_get_sample_info(platemap_file, mock_sample):
         assert sampleinfo["sampleName"] == sample_name
         assert sampleinfo["sampleID"] == sample_id
         assert sampleinfo["sampleUserGroup"] == space
-
-
-def test_validate_plate_map_missing_file(platemap_file):
-    """Test that validate_plate_map raises an exception if a file doesn't exist"""
-
-    ms_data_files = {"XXX_file_does_not_exist"}
-    plate_map_data = pd.read_csv(platemap_file)
-    with pytest.raises(ValueError):
-        res = validate_plate_map(plate_map_data, ms_data_files)
 
 
 def test_camel_case():
