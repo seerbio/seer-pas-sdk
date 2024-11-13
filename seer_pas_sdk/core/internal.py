@@ -274,7 +274,7 @@ class InternalSDK(_SeerSDK):
         samples = (
             x["id"]
             for plate_id in plates
-            for x in self._get_samples_metadata(plate_id=plate_id)
+            for x in self.get_samples_metadata(plate_id=plate_id)
         )
 
         return self.add_samples_to_project(
@@ -738,7 +738,7 @@ class InternalSDK(_SeerSDK):
         if sample_ids:
             valid_ids = [
                 entry["id"]
-                for entry in self._get_samples_metadata(project_id=project_id)
+                for entry in self.get_samples_metadata(project_id=project_id)
             ]
 
             for sample_id in sample_ids:

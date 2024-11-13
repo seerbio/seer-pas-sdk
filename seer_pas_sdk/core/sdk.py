@@ -229,14 +229,10 @@ class SeerSDK:
                 ]
         return res if not df else dict_to_df(res)
 
-    def _get_samples_metadata(
+    def get_samples_metadata(
         self, plate_id: str = None, project_id: str = None, df: bool = False
     ):
         """
-        ****************
-        [UNEXPOSED METHOD CALL]
-        ****************
-
         Fetches a list of samples for the authenticated user, filtered by `plate_id`. Returns all samples for the plate with the given `plate_id`, provided it exists.
 
         If both `plate_id` and `project_id` are passed in, only the `plate_id` is validated first.
@@ -260,14 +256,14 @@ class SeerSDK:
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
 
-        >>> seer_sdk._get_samples_metadata(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
+        >>> seer_sdk.get_samples_metadata(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
         >>> [
                 { "id": ... },
                 { "id": ... },
                 ...
             ]
 
-        >>> seer_sdk._get_samples_metadata(df=True)
+        >>> seer_sdk.get_samples_metadata(df=True)
         >>>                                     id  ...      control
         0     812139c0-15e0-11ee-bdf1-bbaa73585acf  ...
         1     803e05b0-15e0-11ee-bdf1-bbaa73585acf  ...  MPE Control
@@ -385,7 +381,7 @@ class SeerSDK:
                 "Invalid filter. Please choose between 'control' or 'sample'."
             )
 
-        df = self._get_samples_metadata(project_id=project_id, df=True)
+        df = self.get_samples_metadata(project_id=project_id, df=True)
 
         if filter == "control":
             df = df[~df["control"].isna()]
@@ -522,7 +518,7 @@ class SeerSDK:
 
             [2 rows x 26 columns]
         """
-        plate_samples = self._get_samples_metadata(plate_id=plate_id)
+        plate_samples = self.get_samples_metadata(plate_id=plate_id)
         sample_ids = [sample["id"] for sample in plate_samples]
         return self.get_msdata(sample_ids, df)
 
@@ -629,7 +625,7 @@ class SeerSDK:
             return ValueError("No project ID specified.")
 
         sample_ids = []
-        project_samples = self._get_samples_metadata(
+        project_samples = self.get_samples_metadata(
             project_id=project_id, df=False
         )
 
