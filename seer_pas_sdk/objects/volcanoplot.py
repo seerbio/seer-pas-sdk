@@ -64,6 +64,9 @@ class VolcanoPlotBuilder:
 
     """
 
+    PROTEIN_GROUP_INDEX = "pg"
+    PEPTIDE_INDEX = "peptide"
+
     def __init__(
         self,
         data: _List[_Dict],
@@ -107,6 +110,11 @@ class VolcanoPlotBuilder:
             self.data
         )
         self.protein_gene_map = dict()
+        self.feature_type_index = (
+            self.PROTEIN_GROUP_INDEX
+            if self.type == "protein"
+            else self.PEPTIDE_INDEX
+        )
         self.volcano_plot = self.build()
 
     def build(self):
@@ -139,14 +147,14 @@ class VolcanoPlotBuilder:
         Returns:
             dict: The row data
         """
-        self.protein_gene_map[data["pg"]] = data["gene"]
-        return dict(
+        self.protein_gene_map[data[self.feature_type_index]] = data["gene"]
+
+        row = dict(
             logFD=data["logFD"],
             negativeLog10P=data["negativeLog10P"],
             dataIndex=i,
             rowID=json.dumps(data),
             gene=data["gene"],
-            protein=data["pg"],
             group=self.get_contrast_group_string(data),
             significant=self.get_significance_class(data),
             euclideanDistance=self.calculate_euclidean_distance(
@@ -154,6 +162,8 @@ class VolcanoPlotBuilder:
                 data["negativeLog10P"] / self.max_negative_log10_p,
             ),
         )
+        row[self.type] = data[self.feature_type_index]
+        return row
 
     def is_significant_point(self, data):
         return (
