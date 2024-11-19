@@ -910,6 +910,234 @@ class SeerSDK:
                 ]
             return res
 
+    def get_analysis_result_protein_data(
+        self, analysis_id: str, link: bool = False
+    ):
+        """
+        Given an analysis id, this function returns the protein data for the analysis.
+        """
+        with self._get_auth_session() as s:
+            URL = f"{self._auth.url}api/v1/data"
+            protein_data = s.get(
+                f"{URL}/protein?analysisId={analysis_id}&retry=false"
+            )
+
+            if protein_data.status_code != 200:
+                raise ValueError(
+                    "Could not fetch protein data. Please verify that your analysis completed."
+                )
+            protein_data = protein_data.json()
+            if link:
+                return protein_data
+            else:
+                return {
+                    "protein_np.tsv": url_to_df(protein_data["npLink"]["url"]),
+                    "protein_panel.tsv": url_to_df(
+                        protein_data["panelLink"]["url"]
+                    ),
+                }
+
+    def get_analysis_result_peptide_data(
+        self, analysis_id: str, link: bool = False
+    ):
+        with self._get_auth_session() as s:
+            URL = f"{self._auth.url}api/v1/data"
+            peptide_data = s.get(
+                f"{URL}/peptide?analysisId={analysis_id}&retry=false"
+            )
+
+            if peptide_data.status_code != 200:
+                raise ValueError(
+                    "Could not fetch peptide data. Please verify that your analysis completed."
+                )
+
+            peptide_data = peptide_data.json()
+            if link:
+                return peptide_data
+            else:
+                return {
+                    "peptide_np.tsv": url_to_df(peptide_data["npLink"]["url"]),
+                    "peptide_panel.tsv": url_to_df(
+                        peptide_data["panelLink"]["url"]
+                    ),
+                }
+
+    def get_analysis_result_file_url(self, analysis_id: str, filename: str):
+        """
+        Given an analysis id and a analysis result filename, this function returns the signed URL for the file.
+
+        Parameters
+        ----------
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+
+        filename : str
+            Name of the file to be fetched.
+
+        Returns
+        -------
+        file_url: dict
+            Response object containing the url for the file.
+        """
+
+        analysis_metadata = self.get_analysis(analysis_id)[0]
+        if analysis_metadata.get("status") in ["Failed", None]:
+            raise ValueError("Cannot generate links for failed analyses.")
+        with self._get_auth_session() as s:
+            file_url = s.post(
+                f"{self._auth.url}api/v1/analysisResultFiles/getUrl",
+                json={
+                    "analysisId": analysis_id,
+                    "projectId": analysis_metadata["project_id"],
+                    "filename": filename,
+                },
+            )
+        response = file_url.json()
+        if not response.get("url"):
+            raise ValueError(f"File {filename} not found.")
+        return response
+
+    def get_analysis_result_files(
+        self,
+        analysis_id: str,
+        filenames: _List[str],
+        download_path: str = "",
+        protein_all: bool = False,
+        peptide_all: bool = False,
+    ):
+        """
+        Given an analysis id and a list of file names, this function returns the file in form of downloadable content, if applicable.
+
+        Parameters
+        ----------
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+
+        filenames : list
+            List of filenames to be fetched. Only csv and tsv files are supported.
+
+        download_path : str
+            String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid. Defaults to an empty string.
+
+        protein_all : bool
+            Boolean flag denoting whether the user wants the default protein data. Defaults to False.
+
+        peptide_all : bool
+            Boolean flag denoting whether the user wants the default peptide data. Defaults to False.
+
+        Returns
+        -------
+        links: dict
+            Contains dataframe objects for the requested files. If a filename is not found, it is skipped.
+
+
+        Examples
+        -------
+        >>> from seer_pas_sdk import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> analysis_id = "YOUR_ANALYSIS_ID_HERE"
+        >>> filenames = ["protein_np.tsv", "peptide_np.tsv"]
+        >>> seer_sdk.get_analysis_result_files(analysis_id, filenames)
+            {
+                "protein_np.tsv": <protein_np dataframe object>,
+                "peptide_np.tsv": <peptide_np dataframe object>
+            }
+        >>> seer_sdk.get_analysis_result_files(analysis_id, [], protein_all=True, peptide_all=True)
+            {
+                "protein_np.tsv": <protein_np dataframe object>,
+                "protein_panel.tsv": <protein_panel dataframe object>,
+                "peptide_np.tsv": <peptide_np dataframe object>,
+                "peptide_panel.tsv": <peptide_panel dataframe object>
+            }
+        >>> seer_sdk.get_analysis_result_files(analysis_id, ["report.tsv"], download_path="/Users/Downloads")
+            { "report.tsv": <report.tsv dataframe object> }
+        """
+
+        if not analysis_id:
+            raise ValueError("Analysis ID cannot be empty.")
+
+        if download_path and not os.path.exists(download_path):
+            raise ValueError(
+                "Please specify a valid folder path as download path."
+            )
+
+        # only accept .csv and .tsv file extensions
+        if any([x.split(".")[-1] not in ["csv", "tsv"] for x in filenames]):
+            raise ValueError(
+                "Invalid file extension. Please use either .csv or .tsv."
+            )
+
+        links = {}
+        if protein_all:
+            protein_data = self.get_analysis_result_protein_data(
+                analysis_id, link=True
+            )
+            links["protein_np.tsv"] = protein_data["npLink"]["url"]
+            links["protein_panel.tsv"] = protein_data["panelLink"]["url"]
+        if peptide_all:
+            peptide_data = self.get_analysis_result_peptide_data(
+                analysis_id, link=True
+            )
+            links["peptide_np.tsv"] = peptide_data["npLink"]["url"]
+            links["peptide_panel.tsv"] = peptide_data["panelLink"]["url"]
+
+        filenames = set(filenames)
+        for filename in filenames:
+            if filename == "protein_np.tsv":
+                if protein_all:
+                    continue
+                protein_data = self.get_analysis_result_protein_data(
+                    analysis_id, link=True
+                )
+                links["protein_np.tsv"] = protein_data["npLink"]["url"]
+            elif filename == "protein_panel.tsv":
+                if protein_all:
+                    continue
+                protein_data = self.get_analysis_result_protein_data(
+                    analysis_id, link=True
+                )
+                links["protein_panel.tsv"] = protein_data["panelLink"]["url"]
+            elif filename == "peptide_np.tsv":
+                if peptide_all:
+                    continue
+                peptide_data = self.get_analysis_result_peptide_data(
+                    analysis_id, link=True
+                )
+                links["peptide_np.tsv"] = peptide_data["npLink"]["url"]
+            elif filename == "peptide_panel.tsv":
+                if peptide_all:
+                    continue
+                peptide_data = self.get_analysis_result_peptide_data(
+                    analysis_id, link=True
+                )
+                links["peptide_panel.tsv"] = peptide_data["panelLink"]["url"]
+            else:
+                try:
+                    links[filename] = self.get_analysis_result_file_url(
+                        analysis_id, filename
+                    )["url"]
+                except Exception as e:
+                    print(e)
+                    continue
+
+        links = {
+            k: url_to_df(v, is_tsv=k.endswith(".tsv"))
+            for k, v in links.items()
+        }
+        if download_path:
+            name = f"{download_path}/downloads/{analysis_id}"
+            print(f"Start download to path {name}")
+            if not os.path.exists(name):
+                os.makedirs(name)
+            for filename, content in links.items():
+                separator = ","
+                if filename.endswith(".tsv"):
+                    separator = "\t"
+                content.to_csv(f"{name}/{filename}", sep=separator)
+            print("Download complete.")
+
+        return links
+
     def get_analysis_result(
         self,
         analysis_id: str,
@@ -954,7 +1182,7 @@ class SeerSDK:
                 "peptide_panel": <peptide_panel dataframe object>,
                 "protein_np": <protein_np dataframe object>,
                 "protein_panel": <protein_panel dataframe object>,
-                "diann_report": <diann_report dataframe object>
+                "diann_report": <report.tsv dataframe object>
             }
 
         >>> seer_sdk.get_analysis_result("YOUR_ANALYSIS_ID_HERE", download_path="/Users/Downloads")
@@ -967,79 +1195,47 @@ class SeerSDK:
         if download_path and not os.path.exists(download_path):
             raise ValueError("The download path you entered is invalid.")
 
-        analysis_metadata = self.get_analysis(analysis_id)[0]
-        if analysis_metadata["status"] in ["FAILED", None]:
-            raise ValueError(
-                "Cannot generate links for failed or null analyses."
+        protein_data = self.get_analysis_result_protein_data(
+            analysis_id, link=True
+        )
+        peptide_data = self.get_analysis_result_peptide_data(
+            analysis_id, link=True
+        )
+        links = {
+            "peptide_np": url_to_df(peptide_data["npLink"]["url"]),
+            "peptide_panel": url_to_df(peptide_data["panelLink"]["url"]),
+            "protein_np": url_to_df(protein_data["npLink"]["url"]),
+            "protein_panel": url_to_df(protein_data["panelLink"]["url"]),
+        }
+
+        if diann_report:
+            diann_report_url = self.get_analysis_result_file_url(
+                analysis_id, "report.tsv"
+            )
+            links["diann_report"] = url_to_df(diann_report_url["url"])
+
+        if download_path:
+            name = f"{download_path}/downloads/{analysis_id}"
+            if not os.path.exists(name):
+                os.makedirs(name)
+
+            links["peptide_np"].to_csv(f"{name}/peptide_np.csv", sep="\t")
+            links["peptide_panel"].to_csv(
+                f"{name}/peptide_panel.csv", sep="\t"
+            )
+            links["protein_np"].to_csv(f"{name}/protein_np.csv", sep="\t")
+            links["protein_panel"].to_csv(
+                f"{name}/protein_panel.csv", sep="\t"
             )
 
-        URL = f"{self._auth.url}api/v1/data"
-
-        with self._get_auth_session() as s:
-
-            protein_data = s.get(
-                f"{URL}/protein?analysisId={analysis_id}&retry=false"
-            )
-
-            if protein_data.status_code != 200:
-                raise ValueError(
-                    "Invalid request. Could not fetch protein data. Please check your parameters."
-                )
-            protein_data = protein_data.json()
-
-            peptide_data = s.get(
-                f"{URL}/peptide?analysisId={analysis_id}&retry=false"
-            )
-
-            if peptide_data.status_code != 200:
-                raise ValueError(
-                    "Invalid request. Could not fetch peptide data. Please check your parameters."
+            if "diann_report" in links:
+                links["diann_report"].to_csv(
+                    f"{name}/diann_report.csv", sep="\t"
                 )
 
-            peptide_data = peptide_data.json()
+            return {"status": "Download complete."}
 
-            links = {
-                "peptide_np": url_to_df(peptide_data["npLink"]["url"]),
-                "peptide_panel": url_to_df(peptide_data["panelLink"]["url"]),
-                "protein_np": url_to_df(protein_data["npLink"]["url"]),
-                "protein_panel": url_to_df(protein_data["panelLink"]["url"]),
-            }
-
-            diann_report_url = s.post(
-                f"{self._auth.url}api/v1/analysisResultFiles/getUrl",
-                json={
-                    "analysisId": analysis_id,
-                    "projectId": analysis_metadata["project_id"],
-                    "filename": "report.tsv",
-                },
-            )
-
-            if diann_report:
-                diann_report_url = diann_report_url.json()
-                links["diann_report"] = url_to_df(diann_report_url["url"])
-
-            if download_path:
-                name = f"{download_path}/downloads/{analysis_id}"
-                if not os.path.exists(name):
-                    os.makedirs(name)
-
-                links["peptide_np"].to_csv(f"{name}/peptide_np.csv", sep="\t")
-                links["peptide_panel"].to_csv(
-                    f"{name}/peptide_panel.csv", sep="\t"
-                )
-                links["protein_np"].to_csv(f"{name}/protein_np.csv", sep="\t")
-                links["protein_panel"].to_csv(
-                    f"{name}/protein_panel.csv", sep="\t"
-                )
-
-                if "diann_report" in links:
-                    links["diann_report"].to_csv(
-                        f"{name}/diann_report.csv", sep="\t"
-                    )
-
-                return {"status": "Download complete."}
-
-            return links
+        return links
 
     def analysis_complete(self, analysis_id: str):
         """
