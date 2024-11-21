@@ -523,12 +523,18 @@ class SeerSDK:
         return self.get_msdata(sample_ids, df)
 
     def get_project(
-        self, project_id: str, msdata: bool = False, df: bool = False
+        self,
+        project_id: str,
+        msdata: bool = False,
+        df: bool = False,
+        flat: bool = False,
     ):
         """
         Fetches samples (and MS data files) for a `project_id` (provided that the `project_id` is valid and has samples associated with it) for an authenticated user.
 
         The function returns a DataFrame object if the `df` flag is passed in as True, otherwise a nested dict object is returned instead. If the both the `df` and `msdata` flags are passed in as True, then a nested DataFrame object is returned instead.
+
+        If the `flat` flag is passed in as True, then the nested dict object is returned as an array of dict objects and the nested df object is returned as a single df object.
 
         Parameters
         ----------
@@ -628,6 +634,7 @@ class SeerSDK:
         project_samples = self.get_samples_metadata(
             project_id=project_id, df=False
         )
+        flat_result = []
 
         if msdata:
             sample_ids = [
@@ -641,23 +648,37 @@ class SeerSDK:
                         project_samples[sample_index]["id"]
                         == ms_data_file["sample_id"]
                     ):
-                        if "ms_data_file" not in project_samples[sample_index]:
-                            project_samples[sample_index]["ms_data_files"] = [
-                                ms_data_file
-                            ]
+                        if not flat:
+                            if (
+                                "ms_data_file"
+                                not in project_samples[sample_index]
+                            ):
+                                project_samples[sample_index][
+                                    "ms_data_files"
+                                ] = [ms_data_file]
+                            else:
+                                project_samples[sample_index][
+                                    "ms_data_files"
+                                ].append(ms_data_file)
                         else:
-                            project_samples[sample_index][
-                                "ms_data_files"
-                            ].append(ms_data_file)
+                            flat_result.append(
+                                {
+                                    **project_samples[sample_index],
+                                    **ms_data_file,
+                                }
+                            )
 
         if df:
-            for sample_index in range(len(project_samples)):
-                if "ms_data_files" in project_samples[sample_index]:
-                    project_samples[sample_index]["ms_data_files"] = (
-                        dict_to_df(
-                            project_samples[sample_index]["ms_data_files"]
+            if flat:
+                return pd.DataFrame(flat_result)
+            else:
+                for sample_index in range(len(project_samples)):
+                    if "ms_data_files" in project_samples[sample_index]:
+                        project_samples[sample_index]["ms_data_files"] = (
+                            dict_to_df(
+                                project_samples[sample_index]["ms_data_files"]
+                            )
                         )
-                    )
 
             project_samples = dict_to_df(project_samples)
 
