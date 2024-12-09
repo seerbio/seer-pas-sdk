@@ -9,6 +9,8 @@ import io
 import requests
 import boto3
 import json
+import zipfile
+import tempfile
 
 from ..auth.auth import Auth
 
@@ -544,3 +546,50 @@ def camel_case(s):
 
     # Join the string, ensuring the first letter is lowercase
     return "".join([s[0].lower(), s[1:]])
+
+
+def rename_d_zip_file(source, destination):
+    """
+    Renames a .d.zip file. The function extracts the contents of the source zip file, renames the inner .d folder, and rezips the contents into the destination zip file.
+
+    Parameters
+    ----------
+    file : str
+        The name of the zip file.
+    new_name : str
+        The new name of the zip file.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> rename_zip_file("old_name.zip", "new_name.zip")
+    Renamed old_name.zip to new_name.zip
+
+    """
+    if not source.lower().endswith(".d.zip"):
+        raise ValueError("Invalid zip file extension")
+
+    if not destination.lower().endswith(".d.zip"):
+        raise ValueError("Invalid zip file extension")
+
+    # Remove the .zip extension from the destination file
+    d_destination = destination[:-4]
+
+    # Create a temporary directory to extract the contents
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Unzip the source file
+        with zipfile.ZipFile(source, "r") as zip_ref:
+            zip_ref.extractall(temp_dir)
+
+        # Rezip the contents into the destination file
+        with zipfile.ZipFile(destination, "w") as zip_ref:
+            for foldername, subfolders, filenames in os.walk(temp_dir):
+                for filename in filenames:
+                    file_path = os.path.join(foldername, filename)
+                    arcname = f"{d_destination}/{os.path.relpath(file_path, temp_dir)}"  # substitute the original .d name with the new .d name
+                    zip_ref.write(file_path, arcname)
+
+    print(f"Renamed {source} to {destination}")

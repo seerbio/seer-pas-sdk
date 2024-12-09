@@ -778,7 +778,11 @@ class InternalSDK(_SeerSDK):
             return analysis.json()
 
     def upload_ms_data_files(
-        self, ms_data_files: list, path: str = "", space: str = None
+        self,
+        ms_data_files: list,
+        path: str = "",
+        space: str = None,
+        filenames=[],
     ):
         """
         Upload MS data files to the backend.
@@ -791,6 +795,8 @@ class InternalSDK(_SeerSDK):
             Path to upload the files to in the S3, defaulted to an empty string. Should NOT contain trailing slashes.
         space: str, optional
             ID of the user group to which the files belongs, defaulted to None.
+        filenames: list, optional
+            List of preferred PAS filenames. This rename occurs on both the cloud and the user interface level. Indexes should be mapped to the correlating source file in ms_data_files. Defaulted to [].
 
         Returns
         -------
@@ -802,12 +808,27 @@ class InternalSDK(_SeerSDK):
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.upload_ms_data_files(["/path/to/file1", "/path/to/file2"])
-        >>> { "message": "Files uploaded successfully." }
+            [{'filePath': '/path/to/file1', 'fileSize': 1234, 'userGroupId': None}, {'filePath': '/path/to/file2', 'fileSize': 1234, 'userGroupId': None}]
+
+        >>> seer_sdk.upload_ms_data_files(["/path/to/file1", "/path/to/file2"], path="path/to/pas/folder")
+            [{'filePath': 'path/to/pas/folder/file1', 'fileSize': 1234, 'userGroupId': None}, {'filePath': 'path/to/pas/folder/file2', 'fileSize': 1234, 'userGroupId': None}]
+
+        >>> seer_sdk.upload_ms_data_files(["/path/to/file1", "/path/to/file2"], path="path/to/pas/folder", space="user_group_id")
+            [{'filePath': 'path/to/pas/folder/file1', 'fileSize': 1234, 'userGroupId': 'user_group_id'}, {'filePath': 'path/to/pas/folder/file2', 'fileSize': 1234, 'userGroupId': 'user_group_id'}]
+
+        >>> seer_sdk.upload_ms_data_files(["/path/to/file1", "/path/to/file2"], path="path/to/pas/folder", space="user_group_id", filenames=["fileA", "fileB"])
+            [{'filePath': 'path/to/pas/folder/fileA', 'fileSize': 1234, 'userGroupId': 'user_group_id'}, {'filePath': 'path/to/pas/folder/fileB', 'fileSize': 1234, 'userGroupId': 'user_group_id'}]
+
         """
 
         files = []
         tenant_id = ""
         s3_bucket = ""
+
+        if filenames and len(filenames) != len(ms_data_files):
+            raise ValueError(
+                "Number of filenames must match the number of source files."
+            )
 
         # Step 1: Check if paths and file extensions are valid.
         for file in ms_data_files:
@@ -816,6 +837,14 @@ class InternalSDK(_SeerSDK):
                     "Invalid file or file format. Please check your file."
                 )
 
+        extensions = set(
+            [os.path.splitext(file.lower())[1] for file in ms_data_files]
+        )
+
+        if filenames and ".d.zip" in extensions:
+            raise ValueError(
+                "Please leave the 'filenames' parameter empty when working with .d.zip files. SeerSDK.rename_d_zip_file() is available for this use case."
+            )
         # Step 2: Fetch the tenant id by decoding the JWT token.
         ID_TOKEN, _ = self._auth.get_token()
         tenant_id = jwt.decode(ID_TOKEN, options={"verify_signature": False})[
@@ -844,8 +873,8 @@ class InternalSDK(_SeerSDK):
             credentials = config_response.json()["credentials"]
 
         # Step 4: Upload each msdata file to the S3 bucket.
-        for file in ms_data_files:
-            filename = os.path.basename(file)
+        for i, file in enumerate(ms_data_files):
+            filename = filenames[i] if filenames else os.path.basename(file)
             filesize = os.stat(file).st_size
             s3_upload_path = (
                 f"{tenant_id}" if not path else f"{tenant_id}/{path}"
@@ -856,8 +885,8 @@ class InternalSDK(_SeerSDK):
             )
 
             if not res:
-                raise ValueError(
-                    f"Upload to AWS S3 failed. {s3_upload_path/filename}"
+                raise ServerError(
+                    f"Failed to upload to cloud storage. {filename}"
                 )
 
             files.append(
@@ -869,6 +898,7 @@ class InternalSDK(_SeerSDK):
             )
 
         # Step 5: Make a call to `/api/v1/msdataindex/file` to sync with frontend. This should only be done after all files have finished uploading, simulating an async "promise"-like scenario in JavaScript.
+        result_files = None
         with self._get_auth_session() as s:
             file_response = s.post(
                 f"{self._auth.url}api/v1/msdataindex/file",
@@ -880,11 +910,15 @@ class InternalSDK(_SeerSDK):
                 or not file_response.json()
                 or "created" not in file_response.json()
             ):
-                raise ValueError(
-                    "Upload failed, please check if backend is still active and running."
-                )
+                raise ServerError("Could not upload MS Files to PAS.")
+            result_files = file_response.json()["files"]
 
-        return {"message": "Files uploaded successfully."}
+        # omit tenant_id from return file path
+        for result in result_files:
+            result["filePath"] = "/".join(result["filePath"].split("/")[1:])
+
+        print("Files uploaded successfully.")
+        return result_files
 
     def download_analysis_files(
         self, analysis_id: str, download_path: str = "", file_name: str = ""
