@@ -1178,14 +1178,14 @@ class InternalSDK(_SeerSDK):
             plate_response = s.get(f"{self._auth.url}api/v1/plateids")
 
             if plate_response.status_code != 200:
-                raise ValueError(
+                raise ServerError(
                     "Failed to fetch plate ids from the server. Please check your connection and reauthenticate."
                 )
 
             plate_ids = set(plate_response.json()["data"])
 
             if not plate_ids:
-                raise ValueError(
+                raise ServerError(
                     "No plate ids returned from the server. Please reattempt."
                 )
 
@@ -1202,14 +1202,14 @@ class InternalSDK(_SeerSDK):
             )
 
             if plate_response.status_code != 200:
-                raise ValueError(
+                raise ServerError(
                     "Failed to connect to the server. Please check your connection and reauthenticate."
                 )
 
             id_uuid = plate_response.json()["id"]
 
             if not id_uuid:
-                raise ValueError(
+                raise ServerError(
                     "Failed to fetch a UUID from the server. Please check your connection and reauthenticate."
                 )
 
@@ -1224,16 +1224,16 @@ class InternalSDK(_SeerSDK):
                 config_response.status_code != 200
                 or not config_response.json()
             ):
-                raise ValueError(
+                raise ServerError(
                     "Failed to fetch AWS upload config for the plate. Please check your connection and reauthenticate."
                 )
 
             if "s3Bucket" not in config_response.json():
-                raise ValueError(
+                raise ServerError(
                     "Failed to fetch the S3 bucket from AWS. Please check your connection and reauthenticate."
                 )
             elif "s3UploadPath" not in config_response.json():
-                raise ValueError(
+                raise ServerError(
                     "Failed to fetch the S3 upload path from AWS. Please check your connection and reauthenticate."
                 )
 
@@ -1249,12 +1249,12 @@ class InternalSDK(_SeerSDK):
                 config_response.status_code != 200
                 or not config_response.json()
             ):
-                raise ValueError(
+                raise ServerError(
                     "Failed to fetch credentials. Please check your connection and reauthenticate."
                 )
 
             if "S3Bucket" not in config_response.json()["credentials"]:
-                raise ValueError(
+                raise ServerError(
                     "Failed to fetch data from AWS. Please check your connection and reauthenticate."
                 )
 
@@ -1282,7 +1282,7 @@ class InternalSDK(_SeerSDK):
         )
 
         if not res:
-            raise ValueError(
+            raise ServerError(
                 "Failed to upload plate map to AWS. Please check your connection and reauthenticate."
             )
 
@@ -1305,7 +1305,7 @@ class InternalSDK(_SeerSDK):
                 or not plate_map_response.json()
                 or "created" not in plate_map_response.json()
             ):
-                raise ValueError(
+                raise ServerError(
                     "Failed to upload raw files to PAS. Please check your connection and reauthenticate."
                 )
 
@@ -1356,7 +1356,7 @@ class InternalSDK(_SeerSDK):
                     or not sdf_response.json()
                     or "created" not in sdf_response.json()
                 ):
-                    raise ValueError(
+                    raise ServerError(
                         "Failed to upload sample description file to PAS DB. Please check your connection and reauthenticate."
                     )
 
@@ -1367,20 +1367,16 @@ class InternalSDK(_SeerSDK):
         # Step 7: Parse the plate map file and convert the data into a form that can be POSTed to `/api/v1/msdatas`.
         plate_map_data = parse_plate_map_file(plate_map_file, samples, space)
 
-        # Step 8: Make a request to `/api/v1/msdatas` with the processed samples data.
-        for file_index in range(len(ms_data_file_names)):
-            file = ms_data_file_names[file_index]
-
-            with self._get_auth_session() as s:
-                ms_data_response = s.post(
-                    f"{self._auth.url}api/v1/msdatas",
-                    json=plate_map_data[file_index],
+        # Step 8: Make a request to `/api/v1/msdatas/batch` with the processed samples data.
+        with self._get_auth_session() as s:
+            ms_data_response = s.post(
+                f"{self._auth.url}api/v1/msdatas/batch",
+                json={"msdatas": plate_map_data},
+            )
+            if ms_data_response.status_code != 200:
+                raise ServerError(
+                    "Failed to add samples to plate in PAS. Please check your connection and reauthenticate."
                 )
-
-                if ms_data_response.status_code != 200:
-                    raise ValueError(
-                        "Failed to create samples in PAS. Please check your connection and reauthenticate."
-                    )
 
         print(f"Plate generated with id: '{id_uuid}'")
         return id_uuid
