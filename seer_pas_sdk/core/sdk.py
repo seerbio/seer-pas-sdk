@@ -466,7 +466,7 @@ class SeerSDK:
                         "Failed to fetch MS data for your plate ID."
                     )
 
-                res.append(msdatas.json()["data"][0])
+                res += [x for x in msdatas.json()["data"]]
 
         for entry in res:
             if "tenant_id" in entry:
@@ -637,40 +637,39 @@ class SeerSDK:
         flat_result = []
 
         if msdata:
-            sample_ids = [
-                sample["id"] for sample in project_samples
-            ]  # will always contain unique values
-            ms_data_files = self.get_msdata(sample_ids=sample_ids, df=False)
+
+            # construct map for quick index reference of sample in project_samples
+            sample_ids = {
+                sample["id"]: i for i, sample in enumerate(project_samples)
+            }  # will always contain unique values
+            ms_data_files = self.get_msdata(
+                sample_ids=list(sample_ids.keys()), df=False
+            )
 
             for ms_data_file in ms_data_files:
-                for sample_index in range(len(project_samples)):
-                    if (
-                        project_samples[sample_index]["id"]
-                        == ms_data_file["sample_id"]
-                    ):
-                        if not flat:
-                            if (
-                                "ms_data_file"
-                                not in project_samples[sample_index]
-                            ):
-                                project_samples[sample_index][
-                                    "ms_data_files"
-                                ] = [ms_data_file]
-                            else:
-                                project_samples[sample_index][
-                                    "ms_data_files"
-                                ].append(ms_data_file)
-                        else:
-                            flat_result.append(
-                                {
-                                    **project_samples[sample_index],
-                                    **ms_data_file,
-                                }
-                            )
+                index = sample_ids.get(ms_data_file["sample_id"], None)
+                if not index:
+                    continue
+
+                if not flat:
+                    if "ms_data_file" not in project_samples[sample_index]:
+                        project_samples[index]["ms_data_files"] = [
+                            ms_data_file
+                        ]
+                    else:
+                        project_samples[index]["ms_data_files"].append(
+                            ms_data_file
+                        )
+                else:
+                    flat_result.append(project_samples[index] | ms_data_file)
+
+        # return flat result if results were added to the flat object
+        if flat and flat_result:
+            project_samples = flat_result
 
         if df:
             if flat:
-                return pd.DataFrame(flat_result)
+                return pd.DataFrame(project_samples)
             else:
                 for sample_index in range(len(project_samples)):
                     if "ms_data_files" in project_samples[sample_index]:
