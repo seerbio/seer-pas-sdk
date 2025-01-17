@@ -565,7 +565,9 @@ class InternalSDK(_SeerSDK):
         samples = self._add_samples(sample_info)
 
         # Step 7: Parse the plate map file and convert the data into a form that can be POSTed to `/api/v1/msdatas`.
-        plate_map_data = parse_plate_map_file(plate_map_file, samples, space)
+        plate_map_data = parse_plate_map_file(
+            plate_map_file, samples, raw_file_paths, space
+        )
 
         # Step 8: Make a request to `/api/v1/msdatas/batch` with the processed samples data.
         with self._get_auth_session() as s:
@@ -1141,6 +1143,7 @@ class InternalSDK(_SeerSDK):
             "custom:tenantId"
         ]
 
+        ms_data_raw_file_paths = dict()
         # Step 0: Check if the file paths exist in the S3 bucket.
         for file in ms_data_files:
             if not self.list_ms_data_files(file):
@@ -1169,9 +1172,7 @@ class InternalSDK(_SeerSDK):
         else:
             plate_map_data = pd.read_csv(plate_map_file)
 
-        local_file_names = [os.path.basename(x) for x in ms_data_files]
-
-        validate_plate_map(plate_map_data, local_file_names)
+        validate_plate_map(plate_map_data, ms_data_files)
 
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
         with self._get_auth_session() as s:
@@ -1310,10 +1311,7 @@ class InternalSDK(_SeerSDK):
                 )
 
         # Step 5: Populate `raw_file_paths` for sample upload.
-        for file in ms_data_files:
-            filename = file.split("/")[-1]
-            ms_data_file_names.append(filename)
-            raw_file_paths[f"{filename}"] = f"/{s3_bucket}/{tenant_id}/{file}"
+        raw_file_paths = self._get_msdataindex_path(ms_data_files)
 
         # Step 6: Get sample info from the plate map file and make a call to `/api/v1/samples` with the sample_info. This returns the plateId, sampleId and sampleName for each sample in the plate map file. Also validate and upload the sample_description_file if it exists.
         sample_info = get_sample_info(
@@ -1365,7 +1363,9 @@ class InternalSDK(_SeerSDK):
             samples.append(sample)
 
         # Step 7: Parse the plate map file and convert the data into a form that can be POSTed to `/api/v1/msdatas`.
-        plate_map_data = parse_plate_map_file(plate_map_file, samples, space)
+        plate_map_data = parse_plate_map_file(
+            plate_map_file, samples, raw_file_paths, space
+        )
 
         # Step 8: Make a request to `/api/v1/msdatas/batch` with the processed samples data.
         with self._get_auth_session() as s:
@@ -1380,3 +1380,81 @@ class InternalSDK(_SeerSDK):
 
         print(f"Plate generated with id: '{id_uuid}'")
         return id_uuid
+
+    def _get_msdataindex_metadata(self, folder=""):
+        """
+        Get metadata for a given file path.
+
+        Raises:
+            ServerError - could not fetch metadata for file.
+
+        Returns:
+            dict: A dictionary containing the metadata for the file.
+        """
+        URL = f"{self._auth.url}api/v2/msdataindex/getmetadata"
+        with self._get_auth_session() as s:
+            params = {"all": "true"}
+            if folder:
+                tenant_id = jwt.decode(
+                    self._auth.get_token()[0],
+                    options={"verify_signature": False},
+                )["custom:tenantId"]
+                params["folderKey"] = f"{tenant_id}/{folder}"
+                print(params["folderKey"])
+
+            metadata = s.get(URL, params=params)
+
+            if metadata.status_code != 200:
+                print(metadata.text)
+                raise ServerError("Could not fetch metadata for file.")
+
+            return metadata.json()
+
+    def _get_msdataindex_path(self, display_path: list):
+        """
+        Get the underlying cloud file path from the display path.
+
+        Args:
+            display_path (list): A list of file paths as displayed on PAS
+
+        Returns:
+            dict: A dictionary mapping the display path to the raw file path.
+        """
+
+        tenant_id = jwt.decode(
+            self._auth.get_token()[0], options={"verify_signature": False}
+        )["custom:tenantId"]
+        result = {}
+        # partition by folder_path
+        folder_partitions = {os.path.dirname(x): [] for x in display_path}
+        for path in display_path:
+            folder_partitions[os.path.dirname(path)].append(path)
+
+        success = True
+        missing_data_files = []
+        # For every unique folder in the set of MS files, fetch the metadata
+        for folder_path in folder_partitions:
+            try:
+                metadata = {
+                    x["key"]: x["rawFilePath"]
+                    for x in self._get_msdataindex_metadata(
+                        folder=folder_path
+                    )["data"]
+                }
+            except:
+                # If the metadata fetch fails, skip the folder
+                continue
+
+            for display_path in folder_partitions[folder_path]:
+                if f"{tenant_id}/{display_path}" not in metadata:
+                    if success:
+                        success = False
+                    missing_data_files.append(display_path)
+                result[display_path] = metadata[f"{tenant_id}/{display_path}"]
+
+        if not success:
+            raise ValueError(
+                f"Could not fetch metadata for the following files: {missing_data_files}"
+            )
+
+        return result

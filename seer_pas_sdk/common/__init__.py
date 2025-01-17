@@ -244,6 +244,8 @@ def validate_plate_map(df, local_file_names):
     plate_map: pd.Dataframe
         The plate map data as a dataframe
 
+    local_file_names: file names that were passed to the top level function.
+
     Returns
     -------
     pd.DataFrame : the cleaned data as a dataframe
@@ -311,16 +313,16 @@ def validate_plate_map(df, local_file_names):
             f"User provided {len(local_file_names)} MS files, however the plate map lists {len(files)} MS files. \
                          Please check your inputs."
         )
-
     missing_files = []
-    for file in files:
-        if file not in local_file_names:
+    for file in local_file_names:
+        if file not in files:
             missing_files.append(file)
 
+    # Found file mismatch between function argument and plate map
     if missing_files:
         msg = ""
         try:
-            msg = f"Plate map file does not contain the following MS files: {', '.join(missing_files)}."
+            msg = f"The following file names were not found in the plate map: {', '.join(missing_files)}. Please revise the plate map file."
         except:
             raise ValueError(
                 "Rawfile names must be type string. Float or None type detected."
@@ -354,7 +356,7 @@ def validate_plate_map(df, local_file_names):
     return df
 
 
-def parse_plate_map_file(plate_map_file, samples, space=None):
+def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
     """
     Parses the plate map CSV file and returns a list of parameters for each sample.
 
@@ -364,6 +366,8 @@ def parse_plate_map_file(plate_map_file, samples, space=None):
         The plate map file.
     samples : list
         A list of samples.
+    raw_file_paths: dict
+        A dictionary mapping the display file paths with the cloud upload path.
     space : str
         The space or usergroup.
 
@@ -414,7 +418,7 @@ def parse_plate_map_file(plate_map_file, samples, space=None):
     for rowIndex in range(number_of_rows):
         row = df.iloc[rowIndex]
         sample_id = None
-        path = row["MS file name"]
+        path = None
 
         # Validate that the sample ID exists in the samples list
         if samples.get(row["Sample ID"], None):
@@ -422,6 +426,14 @@ def parse_plate_map_file(plate_map_file, samples, space=None):
         else:
             raise ValueError(
                 f'Error fetching id for sample ID {row["Sample ID"]}'
+            )
+
+        # Map display file path to its underlying file path
+        path = raw_file_paths.get(row["MS file name"], None)
+
+        if not path:
+            raise ValueError(
+                f"Row {rowIndex} is missing a value in MS file name."
             )
 
         res.append(
