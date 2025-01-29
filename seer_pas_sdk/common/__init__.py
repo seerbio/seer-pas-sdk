@@ -522,6 +522,33 @@ def valid_ms_data_file(path):
     return _validate_rawfile_extensions(path)
 
 
+def valid_pas_folder_path(path):
+    """
+    Checks if a PAS folder path is valid.
+
+    Parameters
+    ----------
+    path : str
+        The path to the PAS folder.
+
+    Returns
+    -------
+    bool
+        True if the path is valid, False otherwise.
+    """
+
+    #
+    # Invalidate the following patterns:
+    # 1. Leading forward slash
+    # 2. Trailing forward slash
+    # 3. Double forward slashes
+    #
+    if not all(path.split("/")):
+        return False
+    else:
+        return True
+
+
 def download_hook(t):
     """
     Wraps tqdm instance.

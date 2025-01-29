@@ -794,11 +794,11 @@ class InternalSDK(_SeerSDK):
         ms_data_files : List
             List of MS data files to be uploaded.
         path : str, optional
-            Path to upload the files to in the S3, defaulted to an empty string. Should NOT contain trailing slashes.
+            Path to upload the files to in the S3, defaulted to an empty string. Does not accept leading, trailing or consecutive forward slashes. Example: "path/to/pas/folder".
         space: str, optional
             ID of the user group to which the files belongs, defaulted to None.
         filenames: list, optional
-            List of preferred PAS filenames. This rename occurs on both the cloud and the user interface level. Indexes should be mapped to the correlating source file in ms_data_files. Defaulted to [].
+            List of preferred PAS filenames. This rename occurs on both the cloud and the user interface level. Indexes should be mapped to the correlating source file in ms_data_files. Folder paths are not accepted. Defaulted to [].
 
         Returns
         -------
@@ -827,11 +827,6 @@ class InternalSDK(_SeerSDK):
         tenant_id = ""
         s3_bucket = ""
 
-        if filenames and len(filenames) != len(ms_data_files):
-            raise ValueError(
-                "Number of filenames must match the number of source files."
-            )
-
         # Step 1: Check if paths and file extensions are valid.
         for file in ms_data_files:
             if not valid_ms_data_file(file):
@@ -842,10 +837,24 @@ class InternalSDK(_SeerSDK):
         extensions = set(
             [os.path.splitext(file.lower())[1] for file in ms_data_files]
         )
+        if filenames:
+            if len(filenames) != len(ms_data_files):
+                raise ValueError(
+                    "Number of filenames must match the number of source files."
+                )
+            if ".d.zip" in extensions:
+                raise ValueError(
+                    "Please leave the 'filenames' parameter empty when working with .d.zip files. SeerSDK.rename_d_zip_file() is available for this use case."
+                )
 
-        if filenames and ".d.zip" in extensions:
+            # Restrict user from causing issues with the PAS by removing any slashes from the filenames
+            filenames = [
+                os.path.basename(file).replace("/", "") for file in filenames
+            ]
+
+        if path and not valid_pas_folder_path(path):
             raise ValueError(
-                "Please leave the 'filenames' parameter empty when working with .d.zip files. SeerSDK.rename_d_zip_file() is available for this use case."
+                "Invalid PAS folder path specified. Please remove any leading, trailing or consecutive forward slashes"
             )
         # Step 2: Fetch the tenant id by decoding the JWT token.
         ID_TOKEN, _ = self._auth.get_token()
@@ -876,7 +885,11 @@ class InternalSDK(_SeerSDK):
 
         # Step 4: Upload each msdata file to the S3 bucket.
         for i, file in enumerate(ms_data_files):
-            filename = filenames[i] if filenames else os.path.basename(file)
+            filename = (
+                filenames[i]
+                if filenames
+                else os.path.basename(file).replace("/", "")
+            )
             filesize = os.stat(file).st_size
             s3_upload_path = (
                 f"{tenant_id}" if not path else f"{tenant_id}/{path}"

@@ -53,6 +53,19 @@ def test_get_sample_info(platemap_file, mock_sample):
         assert sampleinfo["sampleUserGroup"] == space
 
 
+def test_valid_pas_folder():
+    assert valid_pas_folder_path("foo")
+    assert valid_pas_folder_path("foo/bar")
+    assert valid_pas_folder_path("foo/bar/baz")
+    assert not valid_pas_folder_path("foo/bar/")
+    assert not valid_pas_folder_path("/foo/bar")
+    assert not valid_pas_folder_path("foo//bar")
+    assert not valid_pas_folder_path("foo/bar//")
+    assert not valid_pas_folder_path("//foo/bar/")
+    assert not valid_pas_folder_path("foo///bar")
+    assert not valid_pas_folder_path("foo////////////////////////bar")
+
+
 def test_camel_case():
     assert camel_case("my favorite") == "myFavorite"
     assert camel_case("my Favorite") == "myFavorite"
