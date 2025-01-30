@@ -1,4 +1,5 @@
 import requests
+import jwt
 
 
 class Auth:
@@ -78,5 +79,8 @@ class Auth:
             raise ValueError(
                 "Check if the credentials are correct or if the backend is running or not."
             )
+        self.tenant_id = jwt.decode(
+            res["id_token"], options={"verify_signature": False}
+        )["custom:tenantId"]
 
         return res["id_token"], res["access_token"]

@@ -1385,9 +1385,7 @@ class SeerSDK:
         print(f'Downloading files to "{name}"\n')
 
         URL = f"{self._auth.url}api/v1/msdataindex/download/getUrl"
-        tenant_id = jwt.decode(
-            self._auth.get_token(), options={"verify_signature": False}
-        )["custom:tenantId"]
+        tenant_id = self._auth.tenant_id
 
         for path in paths:
             with self._get_auth_session() as s:

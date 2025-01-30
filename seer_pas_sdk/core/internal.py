@@ -824,7 +824,7 @@ class InternalSDK(_SeerSDK):
         """
 
         files = []
-        tenant_id = ""
+        tenant_id = self._auth.tenant_id
         s3_bucket = ""
 
         # Step 1: Check if paths and file extensions are valid.
@@ -934,6 +934,173 @@ class InternalSDK(_SeerSDK):
 
         print("Files uploaded successfully.")
         return result_files
+
+    def _move_ms_data_files(
+        self,
+        source_data_files: _List,
+        target_data_files: _List,
+        target_space: str = None,
+    ):
+        """
+        Move MS data files from one location to another.
+
+        Parameters
+        ----------
+        source_data_files : List
+            List of MS data files to be moved.
+        target_data_files : List
+            List of target MS data files.
+        target_space : str, optional
+            Name of the user group to move the files to.
+            If None is provided, the files will remain in the same space prior to the move action.
+
+        Returns
+        -------
+        list
+            The list of files moved.
+
+        Examples
+        -------
+        >>> from core import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk.move_ms_data_files(["/path/to/file1", "/path/to/file2"], ["/path/to/target_file1", "/path/to/target_file2"])
+        ["/path/to/target_file1", "/path/to/target_file2"]
+        """
+
+        if not source_data_files:
+            raise ValueError("Source data files cannot be empty.")
+
+        if len(source_data_files) != len(target_data_files):
+            raise ValueError(
+                "Source and target files should have the same number of files."
+            )
+
+        folder_paths = list({os.path.dirname(x) for x in source_data_files})
+        if len(folder_paths) > 1:
+            raise ValueError(
+                "Files can only be moved from one folder path at a time."
+            )
+        folder_path = f"{self._auth.tenant_id}/{folder_paths[0]}"
+
+        target_folder_paths = list(
+            {os.path.dirname(x) for x in target_data_files}
+        )
+        if len(target_folder_paths) > 1:
+            raise ValueError(
+                "Files can only be moved to one folder path at a time."
+            )
+
+        available_spaces = self.get_spaces()
+        target_space_id = None
+        if target_space:
+            target_spaces = [
+                x["id"]
+                for x in available_spaces
+                if x["usergroup_name"].lower() == target_space.lower()
+            ]
+            if not target_spaces:
+                raise ValueError(
+                    f"Target space not found with name {target_space}. Please correct this value."
+                )
+            target_space_id = target_spaces[0]
+
+        target_folder_path = f"{self._auth.tenant_id}/{target_folder_paths[0]}"
+        # Retrieve msdatafileindex metadata to determine source space
+        base_space = None
+        with self._get_auth_session() as s:
+            URL = self._auth.url + "api/v1/msdataindex/getmetadata"
+            params = {"folderKey": folder_path}
+            r = s.get(URL, params=params)
+            if r.status_code != 200:
+                raise ValueError("Failed to locate source files in PAS.")
+            data = r.json()["files"]
+            found_files = [
+                x
+                for x in data
+                if x["filename"]
+                in [os.path.basename(x) for x in source_data_files]
+            ]
+            if len(found_files) != len(source_data_files):
+                raise ValueError(
+                    "Not all source files were found in the source folder."
+                )
+            spaces = list({x["userGroupId"] for x in found_files})
+            if len(spaces) > 1:
+                raise ValueError(
+                    "Files are located in multiple spaces. Please separate these into multiple move requests."
+                )
+            base_space = spaces[0]
+
+        if not target_space:
+            target_space_id = base_space
+
+        json = {
+            "type": "file",
+            "sourceFolder": folder_path,
+            "targetFolder": target_folder_path,
+            "sourceFiles": [os.path.basename(x) for x in source_data_files],
+            "targetFiles": [os.path.basename(x) for x in target_data_files],
+        }
+
+        # we must specify base_space if not General because it's a criteria for finding source files.
+        if base_space:
+            json["sourceUserGroupId"] = base_space
+
+        # If target space is General, we still omit it
+        if target_space_id and base_space != target_space_id:
+            json["targetUserGroupId"] = target_space_id
+
+        with self._get_auth_session() as s:
+            URL = self._auth.url + "api/v1/msdataindex/move"
+            json = json
+            r = s.post(URL, json=json)
+            if r.status_code != 200:
+                raise ServerError("Failed to move files in PAS.")
+            return target_data_files
+
+    def change_ms_file_space(
+        self, ms_data_files: _List, destination_space: str
+    ):
+        """
+        Change the space of MS data files.
+
+        Parameters
+        ----------
+        ms_data_files : List
+            List of MS data files to be moved.
+        destination_space : str
+            name of the desired user group
+
+        Returns
+        -------
+        List
+            List of files that were converted to the new space.
+        """
+        return self._move_ms_data_files(
+            ms_data_files, ms_data_files, destination_space
+        )
+
+    def move_ms_data_files(
+        self, source_ms_data_files: _List, target_ms_data_files: _List
+    ):
+        """
+        Move MS data files from one PAS file location to another. Space will be unchanged.
+
+        Parameters
+        ----------
+        source_ms_data_files : List
+            List of file paths of the MS data files to be moved.
+        target_ms_data_files : List
+            List of destination file paths. Should be indexed one to one with the source ms data files list.
+
+        Returns
+        -------
+            List
+                List of files that were moved.
+        """
+        return self._move_ms_data_files(
+            source_ms_data_files, target_ms_data_files
+        )
 
     def download_analysis_files(
         self, analysis_id: str, download_path: str = "", file_name: str = ""
@@ -1136,7 +1303,7 @@ class InternalSDK(_SeerSDK):
         >>> { "message": "Plate generated with id: 'plate_id'" }
         """
 
-        ID_TOKEN, _ = self._auth.get_token()
+        tenant_id = self._auth.tenant_id
 
         plate_ids = (
             set()
@@ -1152,11 +1319,6 @@ class InternalSDK(_SeerSDK):
             True  # flag to check if the generated_files directory exists
         )
 
-        tenant_id = jwt.decode(ID_TOKEN, options={"verify_signature": False})[
-            "custom:tenantId"
-        ]
-
-        ms_data_raw_file_paths = dict()
         # Step 0: Check if the file paths exist in the S3 bucket.
         for file in ms_data_files:
             if not self.list_ms_data_files(file):
