@@ -931,10 +931,21 @@ class SeerSDK:
             return res
 
     def get_analysis_result_protein_data(
-        self, analysis_id: str, link: bool = False
+        self, analysis_id: str, link: bool = False, pg: str = None
     ):
         """
         Given an analysis id, this function returns the protein data for the analysis.
+
+        Parameters
+        ----------
+
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+        link : bool
+            Boolean flag denoting whether the user wants the default protein data. Defaults to False.
+        pg : str
+            Protein group ID to filter dataframe results. Defaults to None.
+
         """
         with self._get_auth_session() as s:
             URL = f"{self._auth.url}api/v1/data"
@@ -950,16 +961,53 @@ class SeerSDK:
             if link:
                 return protein_data
             else:
-                return {
-                    "protein_np.tsv": url_to_df(protein_data["npLink"]["url"]),
-                    "protein_panel.tsv": url_to_df(
+                if not pg:
+                    return {
+                        "protein_np.tsv": url_to_df(
+                            protein_data["npLink"]["url"]
+                        ),
+                        "protein_panel.tsv": url_to_df(
+                            protein_data["panelLink"]["url"]
+                        ),
+                    }
+                else:
+                    protein_np = url_to_df(
+                        protein_data["npLink"]["url"]
+                    ).query(f"`Protein Group` == '{pg}'")
+                    protein_panel = url_to_df(
                         protein_data["panelLink"]["url"]
-                    ),
-                }
+                    ).query(f"`Protein Group` == '{pg}'")
+
+                    if protein_np.empty and protein_panel.empty:
+                        raise ValueError(
+                            f"Protein group {pg} not found in analysis {analysis_id}."
+                        )
+
+                    return {
+                        "protein_np.tsv": protein_np,
+                        "protein_panel.tsv": protein_panel,
+                    }
 
     def get_analysis_result_peptide_data(
-        self, analysis_id: str, link: bool = False
+        self, analysis_id: str, link: bool = False, peptide: str = None
     ):
+        """
+        Given an analysis id, this function returns the peptide data for the analysis.
+
+        Parameters
+        ----------
+
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+
+        link : bool
+            Boolean flag denoting whether the user wants the default peptide data. Defaults to False.
+
+        peptide : str
+            Peptide sequence to filter dataframe results. Defaults to None.
+
+        """
+
         with self._get_auth_session() as s:
             URL = f"{self._auth.url}api/v1/data"
             peptide_data = s.get(
@@ -975,12 +1023,32 @@ class SeerSDK:
             if link:
                 return peptide_data
             else:
-                return {
-                    "peptide_np.tsv": url_to_df(peptide_data["npLink"]["url"]),
-                    "peptide_panel.tsv": url_to_df(
+                if not peptide:
+                    return {
+                        "peptide_np.tsv": url_to_df(
+                            peptide_data["npLink"]["url"]
+                        ),
+                        "peptide_panel.tsv": url_to_df(
+                            peptide_data["panelLink"]["url"]
+                        ),
+                    }
+                else:
+                    peptide_np = url_to_df(
+                        peptide_data["npLink"]["url"]
+                    ).query(f"Peptide == '{peptide}'")
+                    peptide_panel = url_to_df(
                         peptide_data["panelLink"]["url"]
-                    ),
-                }
+                    ).query(f"Peptide == '{peptide}'")
+
+                    if peptide_np.empty and peptide_panel.empty:
+                        raise ValueError(
+                            f"Peptide {peptide} not found in analysis {analysis_id}."
+                        )
+
+                    return {
+                        "peptide_np.tsv": peptide_np,
+                        "peptide_panel.tsv": peptide_panel,
+                    }
 
     def get_analysis_result_file_url(self, analysis_id: str, filename: str):
         """
