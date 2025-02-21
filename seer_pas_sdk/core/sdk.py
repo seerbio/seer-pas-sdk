@@ -1899,8 +1899,6 @@ class SeerSDK:
         """
         if not analysis_ids:
             raise ValueError("Analysis IDs cannot be empty.")
-        if not sample_ids:
-            raise ValueError("Sample IDs cannot be empty.")
         if type not in ["protein", "peptide"]:
             raise ValueError("Type must be either 'protein' or 'peptide'.")
 
@@ -1909,9 +1907,10 @@ class SeerSDK:
         with self._get_auth_session() as s:
             json = {
                 "analysisIds": ",".join(analysis_ids),
-                "sampleIds": ",".join(sample_ids),
                 "type": type,
             }
+            if sample_ids:
+                json["sampleIds"] = ",".join(sample_ids)
 
             # specify hideControl as a string - unexpected behavior occurs if a boolean is passed
             if hide_control:
@@ -1929,8 +1928,8 @@ class SeerSDK:
     def get_analysis_pca_data(
         self,
         analysis_ids: _List[str],
-        sample_ids: _List[str],
         type: str,
+        sample_ids: _List[str] = None,
         hide_control: bool = False,
         as_df=False,
     ):
@@ -2032,7 +2031,7 @@ class SeerSDK:
     def get_analysis_hierarchical_clustering(
         self,
         analysis_ids: _List[str],
-        sample_ids: _List[str],
+        sample_ids: _List[str] = [],
         hide_control: bool = False,
     ):
         """
@@ -2052,16 +2051,15 @@ class SeerSDK:
         """
         if not analysis_ids:
             raise ValueError("Analysis IDs cannot be empty.")
-        if not sample_ids:
-            raise ValueError("Sample IDs cannot be empty.")
 
         URL = f"{self._auth.url}api/v1/analysishcluster"
 
         with self._get_auth_session() as s:
             json = {
                 "analysisIds": ",".join(analysis_ids),
-                "sampleIds": ",".join(sample_ids),
             }
+            if sample_ids:
+                json["sampleIds"] = ",".join(sample_ids)
 
             # specify hideControl as a string
             # Python bool values are not recognized by the API
