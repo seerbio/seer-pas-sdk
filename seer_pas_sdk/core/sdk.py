@@ -26,32 +26,181 @@ class SeerSDK:
     >>> seer_sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
     """
 
-    def __init__(self, username, password, instance="US"):
+    def __init__(self, username, password, instance="US", tenant=None):
         try:
             self._auth = Auth(username, password, instance)
 
             self._auth.get_token()
-
             print(f"User '{username}' logged in.\n")
 
+            if not tenant:
+                tenant = self._auth.active_tenant_id
+            try:
+                self.switch_tenant(tenant)
+            except Exception as e:
+                print(
+                    f"Encountered an error directing you to tenant {tenant}."
+                )
+                print("Logging into home tenant...")
+                # If an error occurs while directing the user to a tenant, default to home tenant.
+                print(f"You are now active in {self.get_active_tenant_name()}")
         except:
             raise ValueError(
                 "Could not log in.\nPlease check your credentials and/or instance."
             )
 
-    def _get_auth_headers(self):
+    def _get_auth_headers(self, use_multi_tenant=True):
         id_token, access_token = self._auth.get_token()
-        return {
+        header = {
             "Authorization": id_token,
-            "access-token": access_token,
+            "Access-Token": access_token,
         }
+        if use_multi_tenant:
+            multi_tenant = {
+                "Tenant-Id": self._auth.active_tenant_id,
+                "Role": self._auth.active_role,
+            }
+            header.update(multi_tenant)
+        return header
 
-    def _get_auth_session(self):
+    def _get_auth_session(self, use_multi_tenant=True):
         sess = requests.Session()
 
-        sess.headers.update(self._get_auth_headers())
+        sess.headers.update(self._get_auth_headers(use_multi_tenant))
 
         return sess
+
+    def get_user_tenant_metadata(self, index=True):
+        """
+        Fetches the tenant metadata for the authenticated user.
+
+        Returns
+        -------
+        response : dict
+            A dictionary containing the tenant metadata for the authenticated user.
+        """
+        with self._get_auth_session() as s:
+            response = s.get(f"{self._auth.url}api/v1/usertenants")
+
+            if response.status_code != 200:
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
+
+            response = response.json()
+            if index:
+                return {x["institution"]: x for x in response}
+            else:
+                return response
+
+    def list_tenants(self, reverse=False):
+        """
+        Lists the institution names and the tenant ids for the authenticated user.
+
+        Parameters
+        ----------
+        reverse: bool
+            Boolean denoting whether the user wants the result dictionary indexed by tenant id (True) or institution name (False).
+
+        Returns
+        -------
+        tenants : dict
+            A dictionary containing the institution names and tenant ids for the authenticated user.
+        """
+        tenants = self.get_user_tenant_metadata()
+        if reverse:
+            return {x["tenantId"]: x["institution"] for x in tenants.values()}
+        else:
+            return {x["institution"]: x["tenantId"] for x in tenants.values()}
+
+    def switch_tenant(self, identifier: str):
+        """
+        Switches the tenant for the authenticated user.
+
+        Parameters
+        ----------
+        identifier: str
+            Tenant ID or organization name to switch to.
+
+        Returns
+        -------
+        tenant_id: str
+            Returns the value of the active tenant id after the operation.
+        """
+        map = self.get_user_tenant_metadata()
+        tenant_ids = [x["tenantId"] for x in map.values()]
+        institution_names = map.keys()
+
+        if identifier in tenant_ids:
+            tenant_id = identifier
+            row = [x for x in map.values() if x["tenantId"] == tenant_id]
+            if row:
+                row = row[0]
+            else:
+                raise ValueError(
+                    "Invalid tenant identifier. Tenant was not switched."
+                )
+        elif identifier in institution_names:
+            row = map[identifier]
+            tenant_id = row["tenantId"]
+        else:
+            raise ValueError(
+                "Invalid tenant identifier. Tenant was not switched."
+            )
+
+        with self._get_auth_session() as s:
+            response = s.put(
+                self._auth.url + "api/v1/users/tenant",
+                json={"currentTenantId": tenant_id},
+            )
+            if response.status_code != 200:
+                raise ServerError(
+                    "Could not update current tenant for user. Tenant was not switched."
+                )
+
+        self._auth.active_tenant_id = tenant_id
+        self._auth.active_role = row["role"]
+        print(f"You are now active in {row['institution']}")
+        return self._auth.active_tenant_id, self._auth.active_role
+
+    def get_active_tenant(self):
+        """
+        Fetches the active tenant for the authenticated user.
+
+        Returns
+        -------
+        tenant: dict
+            Tenant metadata for the authenticated user containing "institution" and "tenantId" keys.
+        """
+        tenants = self.get_user_tenant_metadata(index=False)
+        row = [
+            x for x in tenants if x["tenantId"] == self._auth.active_tenant_id
+        ]
+        return row[0] if row else None
+
+    def get_active_tenant_id(self):
+        """
+        Fetches the active tenant ID for the authenticated user.
+
+        Returns
+        -------
+        tenant_id: str
+            Tenant ID for the authenticated user.
+        """
+        tenant = self.get_active_tenant()
+        return tenant["tenantId"] if tenant else None
+
+    def get_active_tenant_name(self):
+        """
+        Fetches the active tenant name for the authenticated user.
+
+        Returns
+        -------
+        tenant: str
+            Tenant name for the authenticated user.
+        """
+        tenant = self.get_active_tenant()
+        return tenant["institution"] if tenant else None
 
     def get_spaces(self):
         """
@@ -1453,7 +1602,7 @@ class SeerSDK:
         print(f'Downloading files to "{name}"\n')
 
         URL = f"{self._auth.url}api/v1/msdataindex/download/getUrl"
-        tenant_id = self._auth.tenant_id
+        tenant_id = self._auth.active_tenant_id
 
         for path in paths:
             with self._get_auth_session() as s:

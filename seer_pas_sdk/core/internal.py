@@ -824,7 +824,7 @@ class InternalSDK(_SeerSDK):
         """
 
         files = []
-        tenant_id = self._auth.tenant_id
+        tenant_id = self._auth.active_tenant_id
         s3_bucket = ""
 
         # Step 1: Check if paths and file extensions are valid.
@@ -837,30 +837,13 @@ class InternalSDK(_SeerSDK):
         extensions = set(
             [os.path.splitext(file.lower())[1] for file in ms_data_files]
         )
-        if filenames:
-            if len(filenames) != len(ms_data_files):
-                raise ValueError(
-                    "Number of filenames must match the number of source files."
-                )
-            if ".d.zip" in extensions:
-                raise ValueError(
-                    "Please leave the 'filenames' parameter empty when working with .d.zip files. SeerSDK.rename_d_zip_file() is available for this use case."
-                )
 
-            # Restrict user from causing issues with the PAS by removing any slashes from the filenames
-            filenames = [
-                os.path.basename(file).replace("/", "") for file in filenames
-            ]
-
-        if path and not valid_pas_folder_path(path):
+        if filenames and ".d.zip" in extensions:
             raise ValueError(
-                "Invalid PAS folder path specified. Please remove any leading, trailing or consecutive forward slashes"
+                "Please leave the 'filenames' parameter empty when working with .d.zip files. SeerSDK.rename_d_zip_file() is available for this use case."
             )
-        # Step 2: Fetch the tenant id by decoding the JWT token.
-        ID_TOKEN, _ = self._auth.get_token()
-        tenant_id = jwt.decode(ID_TOKEN, options={"verify_signature": False})[
-            "custom:tenantId"
-        ]
+        # Step 2: Use active tenant to fetch the tenant_id.
+        tenant_id = self.get_active_tenant_id()
 
         # Step 3: Fetch the S3 bucket name by making a call to `/api/v1/auth/getawscredential`
         with self._get_auth_session() as s:
@@ -932,7 +915,10 @@ class InternalSDK(_SeerSDK):
         for result in result_files:
             result["filePath"] = "/".join(result["filePath"].split("/")[1:])
 
-        print("Files uploaded successfully.")
+        print(
+            f"Files uploaded successfully to {self.get_active_tenant_name()}."
+        )
+
         return result_files
 
     def _move_ms_data_files(
@@ -967,6 +953,8 @@ class InternalSDK(_SeerSDK):
         ["/path/to/target_file1", "/path/to/target_file2"]
         """
 
+        tenant_id = self._auth.active_tenant_id
+
         if not source_data_files:
             raise ValueError("Source data files cannot be empty.")
 
@@ -980,7 +968,7 @@ class InternalSDK(_SeerSDK):
             raise ValueError(
                 "Files can only be moved from one folder path at a time."
             )
-        folder_path = f"{self._auth.tenant_id}/{folder_paths[0]}"
+        folder_path = f"{tenant_id}/{folder_paths[0]}"
 
         target_folder_paths = list(
             {os.path.dirname(x) for x in target_data_files}
@@ -1004,7 +992,7 @@ class InternalSDK(_SeerSDK):
                 )
             target_space_id = target_spaces[0]
 
-        target_folder_path = f"{self._auth.tenant_id}/{target_folder_paths[0]}"
+        target_folder_path = f"{tenant_id}/{target_folder_paths[0]}"
         # Retrieve msdatafileindex metadata to determine source space
         base_space = None
         with self._get_auth_session() as s:
@@ -1302,8 +1290,6 @@ class InternalSDK(_SeerSDK):
         >>> sdk.link_plate(["/path/to/file1", "/path/to/file2"], "/path/to/plate_map_file", "plate_id", "plate_name")
         >>> { "message": "Plate generated with id: 'plate_id'" }
         """
-
-        tenant_id = self._auth.tenant_id
 
         plate_ids = (
             set()

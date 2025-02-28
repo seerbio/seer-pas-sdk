@@ -41,6 +41,14 @@ class Auth:
 
         self.instance = instance
 
+        # Null initialize multi tenant attributes
+        (
+            self.base_tenant_id,
+            self.active_tenant_id,
+            self.base_role,
+            self.active_role,
+        ) = [None] * 4
+
     def login(self):
         """
         Logs into the PAS instance using the mapped URL and the login credentials (username and password) provided in the constructor.
@@ -79,8 +87,16 @@ class Auth:
             raise ValueError(
                 "Check if the credentials are correct or if the backend is running or not."
             )
-        self.tenant_id = jwt.decode(
+        decoded_token = jwt.decode(
             res["id_token"], options={"verify_signature": False}
-        )["custom:tenantId"]
+        )
+        self.base_tenant_id = decoded_token["custom:tenantId"]
+        self.base_role = decoded_token["custom:role"]
+
+        if not self.active_tenant_id:
+            self.active_tenant_id = self.base_tenant_id
+
+        if not self.active_role:
+            self.active_role = self.base_role
 
         return res["id_token"], res["access_token"]
