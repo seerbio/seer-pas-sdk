@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 from botocore.config import Config
 from botocore.exceptions import ClientError
+import re
 from re import match, sub, UNICODE
 
 import pandas as pd
@@ -228,6 +229,8 @@ def _validate_rawfile_extensions(rawfile):
 
 
 def entity_name_ruler(entity_name):
+    if pd.isna(entity_name):
+        return False
     pattern = r"^[\w ._+()!@-]+$"
     if match(pattern, entity_name, UNICODE):
         return True
@@ -255,20 +258,31 @@ def validate_plate_map(df, local_file_names):
     >>> df = validate_plate_map_file("AgamSDKPlateMapATest.csv")
     """
 
-    # Check required columns
     required_cols = [
         "MS file name",
         "Sample name",
         "Sample ID",
         "Well location",
-        "Control",
         "Plate ID",
         "Plate Name",
     ]
 
+    # We use the presence of the "Method set ID" column as a heuristic to determine if the plate map is Biscayne+
+    if "Method set ID" not in df.columns:
+        required_cols.append("Control")
+
+    # Catch case variations of Plate Name due to change between XT and Biscayne
+    pattern = re.compile(r"(?i)(Plate Name)")
+    matches = [s for s in df.columns if pattern.match(s)]
+    if matches:
+        df.rename(columns={matches[0]: "Plate Name"}, inplace=True)
+
     if not all(col in df.columns for col in required_cols):
+        err_headers = [
+            "'" + col + "'" for col in required_cols if col not in df.columns
+        ]
         raise ValueError(
-            "The following column headers are required: 'MS file name', 'Sample name', 'Sample ID', 'Well location', 'Control', 'Plate ID', 'Plate Name'"
+            f"The following column headers are required: {', '.join(err_headers)}"
         )
 
     # Check entity name requirement
@@ -290,6 +304,9 @@ def validate_plate_map(df, local_file_names):
         "Peptide concentration",
         "Peptide mass sample",
         "Recon volume",
+        "Reconstituted peptide concentration",
+        "Recovered peptide mass",
+        "Reconstitution volume",
     ]
 
     invalid_cols = []
@@ -305,7 +322,7 @@ def validate_plate_map(df, local_file_names):
             f"The following column(s) must be numeric: {', '.join(invalid_cols)}"
         )
 
-    files = df["MS file name"].tolist()
+    files = [os.path.basename(x) for x in df["MS file name"].tolist()]
 
     # Check if ms_data_files are contained within the plate_map_file.
     if len(files) != len(local_file_names):
@@ -315,7 +332,7 @@ def validate_plate_map(df, local_file_names):
         )
     missing_files = []
     for file in local_file_names:
-        if file not in files:
+        if os.path.basename(file) not in files:
             missing_files.append(file)
 
     # Found file mismatch between function argument and plate map
@@ -367,7 +384,7 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
     samples : list
         A list of samples.
     raw_file_paths: dict
-        A dictionary mapping the display file paths with the cloud upload path.
+        A dictionary mapping the plate map MS file paths with the cloud upload path.
     space : str
         The space or usergroup.
 
@@ -415,6 +432,12 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
     # reformat samples to be a dictionary with sample_id as the key
     samples = {sample["sample_id"]: sample for sample in samples}
 
+    # Catch case variations of Plate Name due to change between XT and Biscayne
+    pattern = re.compile(r"(?i)(Plate Name)")
+    matches = [s for s in df.columns if pattern.match(s)]
+    if matches:
+        df.rename(columns={matches[0]: "Plate Name"}, inplace=True)
+
     for rowIndex in range(number_of_rows):
         row = df.iloc[rowIndex]
         sample_id = None
@@ -429,7 +452,7 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
             )
 
         # Map display file path to its underlying file path
-        path = raw_file_paths.get(row["MS file name"], None)
+        path = raw_file_paths.get(os.path.basename(row["MS file name"]), None)
 
         if not path:
             raise ValueError(
@@ -447,50 +470,113 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
                 ),
                 "nanoparticle": (
                     str(row["Nanoparticle"])
-                    if pd.notna(row["Nanoparticle"])
-                    else ""
+                    if pd.notna(row.get("Nanoparticle", None))
+                    else (
+                        str(row["Nanoparticle set"])
+                        if pd.notna(row.get("Nanoparticle set", None))
+                        else ""
+                    )
                 ),
                 "nanoparticleID": (
                     str(row["Nanoparticle ID"])
-                    if pd.notna(row["Nanoparticle ID"])
-                    else ""
+                    if pd.notna(row.get("Nanoparticle ID", None))
+                    else (
+                        str(row["Nanoparticle set ID"])
+                        if pd.notna(row.get("Nanoparticle set ID", None))
+                        else ""
+                    )
                 ),
                 "control": (
-                    str(row["Control"]) if pd.notna(row["Control"]) else ""
+                    str(row["Control"])
+                    if pd.notna(row.get("Control", None))
+                    else ""
                 ),
                 "controlID": (
                     str(row["Control ID"])
-                    if pd.notna(row["Control ID"])
+                    if pd.notna(row.get("Control ID", None))
                     else ""
                 ),
                 "instrumentName": (
                     str(row["Instrument name"])
-                    if pd.notna(row["Instrument name"])
-                    else ""
+                    if pd.notna(row.get("Instrument name", None))
+                    else (
+                        str(row["Instrument ID"])
+                        if pd.notna(row.get("Instrument ID", None))
+                        else ""
+                    )
                 ),
                 "dateSamplePrep": (
                     str(row["Date sample preparation"])
-                    if pd.notna(row["Date sample preparation"])
-                    else ""
+                    if pd.notna(row.get("Date sample preparation", None))
+                    else (
+                        str(row["Date assay initiated"])
+                        if pd.notna(row.get("Date assay initiated", None))
+                        else ""
+                    )
                 ),
                 "sampleVolume": (
                     str(row["Sample volume"])
-                    if pd.notna(row["Sample volume"])
+                    if pd.notna(row.get("Sample volume", None))
                     else ""
                 ),
                 "peptideConcentration": (
                     str(row["Peptide concentration"])
-                    if pd.notna(row["Peptide concentration"])
-                    else ""
+                    if pd.notna(row.get("Peptide concentration", None))
+                    else (
+                        str(row["Reconstituted peptide concentration"])
+                        if pd.notna(
+                            row.get(
+                                "Reconstituted peptide concentration", None
+                            )
+                        )
+                        else ""
+                    )
                 ),
                 "peptideMassSample": (
                     str(row["Peptide mass sample"])
-                    if pd.notna(row["Peptide mass sample"])
-                    else ""
+                    if pd.notna(row.get("Peptide mass sample", None))
+                    else (
+                        str(row["Recovered peptide mass"])
+                        if pd.notna(row.get("Recovered peptide mass", None))
+                        else ""
+                    )
+                ),
+                "reconVolume": (
+                    str(row["Recon volume"])
+                    if pd.notna(row.get("Recon volume", None))
+                    else (
+                        str(row["Reconstitution volume"])
+                        if pd.notna(row.get("Reconstitution volume", None))
+                        else ""
+                    )
                 ),
                 "dilutionFactor": (
                     str(row["Dilution factor"])
-                    if pd.notna(row["Dilution factor"])
+                    if pd.notna(row.get("Dilution factor", None))
+                    else ""
+                ),
+                "sampleTubeId": (
+                    str(row["Sample tube ID"])
+                    if pd.notna(row.get("Sample tube ID", None))
+                    else ""
+                ),
+                "assayProduct": (
+                    str(row["Assay"])
+                    if pd.notna(row.get("Assay", None))
+                    else (
+                        str(row["Assay product"])
+                        if pd.notna(row.get("Assay product", None))
+                        else ""
+                    )
+                ),
+                "methodSetId": (
+                    str(row["Method set ID"])
+                    if pd.notna(row.get("Method set ID", None))
+                    else ""
+                ),
+                "assayMethodId": (
+                    str(row["Assay method ID"])
+                    if pd.notna(row.get("Assay method ID", None))
                     else ""
                 ),
                 "msdataUserGroup": space,

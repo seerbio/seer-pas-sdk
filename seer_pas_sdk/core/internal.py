@@ -1474,6 +1474,11 @@ class InternalSDK(_SeerSDK):
         # Step 5: Populate `raw_file_paths` for sample upload.
         raw_file_paths = self._get_msdataindex_path(ms_data_files)
 
+        # Step 5.5: trim display paths to basename to align with plate map
+        raw_file_paths = {
+            os.path.basename(k): v for k, v in raw_file_paths.items()
+        }
+
         # Step 6: Get sample info from the plate map file and make a call to `/api/v1/samples` with the sample_info. This returns the plateId, sampleId and sampleName for each sample in the plate map file. Also validate and upload the sample_description_file if it exists.
         sample_info = get_sample_info(
             id_uuid,

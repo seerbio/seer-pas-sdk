@@ -160,8 +160,8 @@ class TestPlateMapValidation:
                 "Sample ID": ["TEST1"],
                 "Well location": ["A1"],
                 "Control": [None],
-                "Plate ID": ["TEST_plate_id!"],
-                "Plate name": ["TEST_plate_name"],
+                "Plate ID": ["TEST_plate_id&"],
+                "Plate Name": ["TEST_plate_name"],
             }
         )
         ms_data_files = ["test.raw"]

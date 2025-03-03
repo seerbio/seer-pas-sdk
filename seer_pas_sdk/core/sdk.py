@@ -2078,7 +2078,7 @@ class SeerSDK:
         self,
         analysis_ids: _List[str],
         type: str,
-        sample_ids: _List[str] = None,
+        sample_ids: _List[str] = [],
         hide_control: bool = False,
         as_df=False,
     ):
@@ -2086,8 +2086,8 @@ class SeerSDK:
         Get PCA data for given analyses and samples formatted in a DataFrame or a dictionary.
         Args:
             analysis_ids (list[str]): IDs of the analyses of interest.
-            sample_ids (list[str]): IDs of the samples of interest.
             type (str): Type of data to be fetched. Must be either 'protein' or 'peptide'.
+            sample_ids (list[str], optional): IDs of the samples of interest.
             hide_control (bool, optional): Mark true if controls are to be excluded. Defaults to False.
             as_df (bool, optional): Mark true if the data should be returned as a pandas DataFrame. Defaults to False.
         Raises:
@@ -2187,7 +2187,7 @@ class SeerSDK:
         Get hierarchical clustering data for given analyses and samples.
         Args:
             analysis_ids (list[str]): IDs of the analyses.
-            sample_ids (list[str]): IDs of the samples.
+            sample_ids (list[str], optional): IDs of the samples.
             hide_control (bool, optional): Mark true if controls are to be excluded. Defaults to False.
             raw_data (bool, optional): Mark true if raw data should be returned. Defaults to True.
         Raises:
@@ -2207,6 +2207,9 @@ class SeerSDK:
             json = {
                 "analysisIds": ",".join(analysis_ids),
             }
+            if sample_ids:
+                json["sampleIds"] = ",".join(sample_ids)
+
             if sample_ids:
                 json["sampleIds"] = ",".join(sample_ids)
 
