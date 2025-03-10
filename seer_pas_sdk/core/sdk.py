@@ -151,7 +151,10 @@ class SeerSDK:
         with self._get_auth_session() as s:
             response = s.put(
                 self._auth.url + "api/v1/users/tenant",
-                json={"currentTenantId": tenant_id},
+                json={
+                    "currentTenantId": tenant_id,
+                    "username": self._auth.username,
+                },
             )
             if response.status_code != 200:
                 raise ServerError(
