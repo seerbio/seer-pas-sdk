@@ -1115,10 +1115,8 @@ class SeerSDK:
             else:
                 if not pg:
                     return {
-                        "protein_np.tsv": url_to_df(
-                            protein_data["npLink"]["url"]
-                        ),
-                        "protein_panel.tsv": url_to_df(
+                        "protein_np": url_to_df(protein_data["npLink"]["url"]),
+                        "protein_panel": url_to_df(
                             protein_data["panelLink"]["url"]
                         ),
                     }
@@ -1136,8 +1134,8 @@ class SeerSDK:
                         )
 
                     return {
-                        "protein_np.tsv": protein_np,
-                        "protein_panel.tsv": protein_panel,
+                        "protein_np": protein_np,
+                        "protein_panel": protein_panel,
                     }
 
     def get_analysis_result_peptide_data(
@@ -1177,10 +1175,8 @@ class SeerSDK:
             else:
                 if not peptide:
                     return {
-                        "peptide_np.tsv": url_to_df(
-                            peptide_data["npLink"]["url"]
-                        ),
-                        "peptide_panel.tsv": url_to_df(
+                        "peptide_np": url_to_df(peptide_data["npLink"]["url"]),
+                        "peptide_panel": url_to_df(
                             peptide_data["panelLink"]["url"]
                         ),
                     }
@@ -1198,9 +1194,46 @@ class SeerSDK:
                         )
 
                     return {
-                        "peptide_np.tsv": peptide_np,
-                        "peptide_panel.tsv": peptide_panel,
+                        "peptide_np": peptide_np,
+                        "peptide_panel": peptide_panel,
                     }
+
+    def list_analysis_result_files(self, analysis_id: str):
+        """
+        Given an analysis id, this function returns a list of files associated with the analysis.
+
+        Parameters
+        ----------
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+
+        Returns
+        -------
+        files: list
+            List of files associated with the analysis.
+        """
+        try:
+            analysis_metadata = self.get_analysis(analysis_id)[0]
+        except (IndexError, ServerError):
+            raise ValueError("Invalid analysis ID.")
+        except:
+            raise ValueError("Could not fetch analysis metadata.")
+
+        if analysis_metadata.get("status") in ["Failed", None]:
+            raise ValueError("Cannot find files for a failed analysis.")
+        with self._get_auth_session() as s:
+            response = s.get(
+                f"{self._auth.url}api/v2/analysisResultFiles/{analysis_id}"
+            )
+            if response.status_code != 200:
+                raise ServerError(
+                    "Could not fetch analysis result files. Please verify that your analysis completed."
+                )
+            response = response.json()
+            files = []
+            for row in response["data"]:
+                files.append(row["filename"])
+            return files
 
     def get_analysis_result_file_url(self, analysis_id: str, filename: str):
         """
@@ -1219,6 +1252,14 @@ class SeerSDK:
         file_url: dict
             Response object containing the url for the file.
         """
+
+        # Allow user to pass in filenames without an extension.
+        analysis_result_files = self.list_analysis_result_files(analysis_id)
+        analysis_result_files_prefix_mapper = {
+            ".".join(x.split(".")[:-1]): x for x in analysis_result_files
+        }
+        if filename in analysis_result_files_prefix_mapper:
+            filename = analysis_result_files_prefix_mapper[filename]
 
         analysis_metadata = self.get_analysis(analysis_id)[0]
         if analysis_metadata.get("status") in ["Failed", None]:
@@ -1301,12 +1342,6 @@ class SeerSDK:
                 "Please specify a valid folder path as download path."
             )
 
-        # only accept .csv and .tsv file extensions
-        if any([x.split(".")[-1] not in ["csv", "tsv"] for x in filenames]):
-            raise ValueError(
-                "Invalid file extension. Please use either .csv or .tsv."
-            )
-
         links = {}
         if protein_all:
             protein_data = self.get_analysis_result_protein_data(
@@ -1322,7 +1357,14 @@ class SeerSDK:
             links["peptide_panel.tsv"] = peptide_data["panelLink"]["url"]
 
         filenames = set(filenames)
+        # Allow user to pass in filenames without an extension.
+        analysis_result_files = self.list_analysis_result_files(analysis_id)
+        analysis_result_files_prefix_mapper = {
+            ".".join(x.split(".")[:-1]): x for x in analysis_result_files
+        }
         for filename in filenames:
+            if filename in analysis_result_files_prefix_mapper:
+                filename = analysis_result_files_prefix_mapper[filename]
             if filename == "protein_np.tsv":
                 if protein_all:
                     continue
