@@ -782,7 +782,7 @@ class InternalSDK(_SeerSDK):
     def upload_ms_data_files(
         self,
         ms_data_files: list,
-        path: str = "",
+        path: str,
         space: str = None,
         filenames=[],
     ):
@@ -793,8 +793,8 @@ class InternalSDK(_SeerSDK):
         ----------
         ms_data_files : List
             List of MS data files to be uploaded.
-        path : str, optional
-            Path to upload the files to in the S3, defaulted to an empty string. Does not accept leading, trailing or consecutive forward slashes. Example: "path/to/pas/folder".
+        path : str
+            The name of the destination folder in PAS. Does not accept leading, trailing or consecutive forward slashes. Example: "path/to/pas/folder".
         space: str, optional
             ID of the user group to which the files belongs, defaulted to None.
         filenames: list, optional
@@ -826,6 +826,11 @@ class InternalSDK(_SeerSDK):
         files = []
         tenant_id = self._auth.active_tenant_id
         s3_bucket = ""
+
+        if not path:
+            raise ValueError(
+                "A folder path is required to upload files into PAS."
+            )
 
         # Step 1: Check if paths and file extensions are valid.
         for file in ms_data_files:
