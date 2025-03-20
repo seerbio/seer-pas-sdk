@@ -1665,7 +1665,6 @@ class SeerSDK:
                         "Could not download file. Please check if the backend is running."
                     )
                 urls.append(download_url.text)
-
         for i in range(len(urls)):
             filename = paths[i].split("/")[-1]
             url = urls[i]
@@ -2514,3 +2513,89 @@ class SeerSDK:
                 raise ServerError("Could not retrieve samples for analysis.")
 
             return samples.json()
+
+    def get_analysis_protocol_fasta(self, analysis_id, download_path=None):
+        if not analysis_id:
+            raise ValueError("Analysis ID cannot be empty.")
+
+        if not download_path:
+            download_path = os.getcwd()
+
+        try:
+            analysis_protocol_id = self.get_analysis(analysis_id)[0][
+                "analysis_protocol_id"
+            ]
+        except (IndexError, KeyError):
+            raise ValueError(f"Could not parse server response.")
+
+        try:
+            analysis_protocol_engine = self.get_analysis_protocols(
+                analysis_protocol_id=analysis_protocol_id
+            )[0]["analysis_engine"]
+        except (IndexError, KeyError):
+            raise ValueError(f"Could not parse server response.")
+
+        analysis_protocol_engine = analysis_protocol_engine.lower()
+        if analysis_protocol_engine == "diann":
+            URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/diann/{analysis_protocol_id}"
+        elif analysis_protocol_engine == "encyclopedia":
+            URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/dia/{analysis_protocol_id}"
+        elif analysis_protocol_engine == "msfragger":
+            URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/msfragger/{analysis_protocol_id}"
+        elif analysis_protocol_engine == "proteogenomics":
+            URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/proteogenomics/{analysis_protocol_id}"
+        else:
+            # Change needed on the backend to get s3 file path for MaxQuant
+            # URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/{analysis_protocol_id}"
+            raise ValueError(
+                f"Analysis protocol engine {analysis_protocol_engine} not supported for fasta download."
+            )
+
+        with self._get_auth_session() as s:
+            response = s.get(URL)
+            if response.status_code != 200:
+                raise ServerError("Request failed.")
+            response = response.json()
+            if type(response) == dict:
+                response = response["editableParameters"]
+            fasta_filenames = [
+                x["Value"]
+                for x in response
+                if x["Key"] in ["fasta", "fastaFilePath", "referencegenome"]
+            ]
+            if not fasta_filenames:
+                raise ServerError("No fasta file name returned from server.")
+
+        URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
+        for file in fasta_filenames:
+            with self._get_auth_session() as s:
+                response = s.post(URL, json={"filepath": file})
+                if response.status_code != 200:
+                    raise ServerError("Request failed.")
+                url = response.json()["url"]
+                filename = os.path.basename(file)
+                print(f"Downloading {filename}")
+                for _ in range(2):
+                    try:
+                        with tqdm(
+                            unit="B",
+                            unit_scale=True,
+                            unit_divisor=1024,
+                            miniters=1,
+                            desc=f"Progress",
+                        ) as t:
+                            ssl._create_default_https_context = (
+                                ssl._create_unverified_context
+                            )
+                            urllib.request.urlretrieve(
+                                url,
+                                f"{download_path}/{filename}",
+                                reporthook=download_hook(t),
+                                data=None,
+                            )
+                            break
+                    except:
+                        if not os.path.isdir(f"{download_path}"):
+                            os.makedirs(f"{download_path}")
+
+                print(f"Downloaded file to {download_path}/{file}")
