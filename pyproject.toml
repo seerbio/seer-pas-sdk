@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "seer-pas-sdk"
 description = "SDK for Seer Proteograph Analysis Suite (PAS)"
 authors = [
-	{ name = "Agam Jolly", email = "ajolly@seer.bio" },
+	{ name = "Ryan Sun", email = "rsun@seer.bio" },
 ]
 dynamic = ["version"]
 keywords = ["seer", "sdk", "pas", "mass spectrometry", "proteomics"]
