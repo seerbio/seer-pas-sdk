@@ -39,14 +39,14 @@ class SeerSDK:
                 self.switch_tenant(tenant)
             except Exception as e:
                 print(
-                    f"Encountered an error directing you to tenant {tenant}."
+                    f"Encountered an error directing you to tenant {tenant}: {e}."
                 )
                 print("Logging into home tenant...")
                 # If an error occurs while directing the user to a tenant, default to home tenant.
                 print(f"You are now active in {self.get_active_tenant_name()}")
-        except:
+        except Exception as e:
             raise ValueError(
-                "Could not log in.\nPlease check your credentials and/or instance."
+                f"Could not log in.\nPlease check your credentials and/or instance: {e}."
             )
 
     def _get_auth_headers(self, use_multi_tenant=True):
