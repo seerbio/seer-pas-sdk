@@ -615,7 +615,7 @@ class SeerSDK:
 
                 if msdatas.status_code != 200 or not msdatas.json()["data"]:
                     raise ValueError(
-                        "Failed to fetch MS data for your plate ID."
+                        f"Failed to fetch MS data for sample ID={sample_id}."
                     )
 
                 res += [x for x in msdatas.json()["data"]]
