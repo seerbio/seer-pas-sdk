@@ -23,9 +23,6 @@ jobs:
           aws codeartifact login --tool twine --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
       - name: Build package for pas-python-sdk
         run: |
-          pip config unset global.index-url || true  # Ensure we don't have old CodeArtifact creds in pip config
-          pip install setuptools wheel twine build
-          aws codeartifact login --tool twine --repository seer_ds --domain seer --domain-owner 718843040700 --region us-west-2
           python -m build --sdist --wheel .
       - name: Publish package to CodeArtifact
         run: |
