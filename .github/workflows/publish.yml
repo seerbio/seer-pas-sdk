@@ -8,7 +8,7 @@ on:
 jobs:
   deploy-pkg:
     name: Upload release to internal CodeArtifact
-    runs-on: [self-hosted, X64]
+    runs-on: [self-hosted, aws-master, X64]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
