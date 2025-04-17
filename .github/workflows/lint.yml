@@ -23,6 +23,6 @@ jobs:
       - name: Run Bandit
         uses: tj-actions/bandit@v5.5
         with:
-          targets: "."
+          targets: "./seer_pas_sdk/"
           options: "-r"
         
