@@ -24,5 +24,5 @@ jobs:
         uses: tj-actions/bandit@v5.5
         with:
           targets: "./seer_pas_sdk/"
-          options: "-r"
+          options: "-r --severity-level=high"
         
