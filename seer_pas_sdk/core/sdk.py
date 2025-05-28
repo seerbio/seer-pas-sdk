@@ -1121,6 +1121,8 @@ class SeerSDK:
                     protein_data["panelLink"] = {
                         "url": row.get("link", {}).get("url", "")
                     }
+            if not protein_data:
+                raise ValueError("No protein result files found.")
             if not "panelLink" in protein_data.keys():
                 protein_data["panelLink"] = {"url": ""}
 
@@ -1195,6 +1197,8 @@ class SeerSDK:
                     peptide_data["panelLink"] = {
                         "url": row.get("link", {}).get("url", "")
                     }
+            if not peptide_data:
+                raise ValueError("No peptide result files found.")
             if not "panelLink" in peptide_data.keys():
                 peptide_data["panelLink"] = {"url": ""}
             if link:
