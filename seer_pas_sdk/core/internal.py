@@ -22,8 +22,11 @@ from .sdk import SeerSDK as _SeerSDK
 
 class _InternalSDK(_SeerSDK):
     """
-    This class extends the publicly-available SDK class with additional methods meant only
-    for use within Seer (for the time being).
+    **************
+    [UNEXPOSED MODULE]
+    **************
+
+    This module is currently not supported and should be considered unstable. Use at your own risk. 
     """
 
     def _add_sample(self, sample_entry: dict):
@@ -79,7 +82,7 @@ class _InternalSDK(_SeerSDK):
 
             return response.json()
 
-    # RS-5131: Add samples in batch
+    # Add samples in batch
     def _add_samples(self, sample_info: list):
         """
         ****************
