@@ -804,7 +804,7 @@ class SeerSDK:
                     continue
 
                 if not flat:
-                    if "ms_data_file" not in project_samples[sample_index]:
+                    if "ms_data_file" not in project_samples[index]:
                         project_samples[index]["ms_data_files"] = [
                             ms_data_file
                         ]
