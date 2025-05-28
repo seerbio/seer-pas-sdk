@@ -53,6 +53,46 @@ You can then use the SDK's methods to create, query, or retrieve projects, plate
 Full documentation can be found [here](https://seerbio.github.io/seer-pas-sdk/reference/SeerSDK.html).
 Additional information and examples can also be found below.
 
+### Multi Tenant Management 
+Introduced in version 0.2.0
+
+By default, you will be active in your home tenant upon log in. The home tenant is defined as the organization account that issued the original invitation for the user to join PAS.
+The optional 'tenant' parameter is available in the SeerSDK constructor to navigate directly to a desired tenant.
+A notification message will display upon login.
+
+
+The following tools are available to navigate between tenants:
+```{python}
+#| eval: false
+from seer_pas_sdk import SeerSDK
+
+sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE, tenant='My Active Tenant')
+
+# Retrieve value of current active tenant
+print(sdk.get_active_tenant())
+
+# List available tenants
+print(sdk.list_user_tenants())
+
+# Switch active tenant
+pas.switch_tenant('My Next Tenant')
+
+```
+
+```{python}
+#| echo: false
+#| output: true
+print(f"User '{USERNAME}' logged in.")
+print("You are now active in My Active Tenant")
+print("My Active Tenant")
+print(
+    {'My Active Tenant' : 'abc1234abc1234',
+    'My Next Tenant' : 'abc1234abc1232'
+    }
+)
+print("You are now active in My Next Tenant")
+```
+
 ### `PlateMap` Object
 
 The PAS Python SDK would allow users to make plate maps file from within the SDK using the `PlateMap` class. The interface of the plate map file contains the following parameters, all of which need to be passed in as lists:
