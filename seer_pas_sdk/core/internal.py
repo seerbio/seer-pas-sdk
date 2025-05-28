@@ -20,7 +20,7 @@ from ..objects import PlateMap
 from .sdk import SeerSDK as _SeerSDK
 
 
-class InternalSDK(_SeerSDK):
+class _InternalSDK(_SeerSDK):
     """
     This class extends the publicly-available SDK class with additional methods meant only
     for use within Seer (for the time being).
