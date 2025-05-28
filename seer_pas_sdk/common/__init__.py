@@ -133,6 +133,8 @@ def url_to_df(url, is_tsv=True):
         5           6  SampleName6              6  SDKTest6.raw
     """
 
+    if not url:
+        return pd.DataFrame()
     url_content = io.StringIO(requests.get(url).content.decode("utf-8"))
     if is_tsv:
         csv = pd.read_csv(url_content, sep="\t")

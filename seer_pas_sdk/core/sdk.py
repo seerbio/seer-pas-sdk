@@ -1101,15 +1101,29 @@ class SeerSDK:
         """
         with self._get_auth_session() as s:
             URL = f"{self._auth.url}api/v1/data"
-            protein_data = s.get(
+            response = s.get(
                 f"{URL}/protein?analysisId={analysis_id}&retry=false"
             )
 
-            if protein_data.status_code != 200:
+            if response.status_code != 200:
                 raise ValueError(
                     "Could not fetch protein data. Please verify that your analysis completed."
                 )
-            protein_data = protein_data.json()
+            response = response.json()
+
+            protein_data = {}
+            for row in response:
+                if row.get("name") == "npLink":
+                    protein_data["npLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+                if row.get("name") == "panelLink":
+                    protein_data["panelLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+            if not "panelLink" in protein_data.keys():
+                protein_data["panelLink"] = {"url": ""}
+
             if link:
                 return protein_data
             else:
@@ -1160,16 +1174,29 @@ class SeerSDK:
 
         with self._get_auth_session() as s:
             URL = f"{self._auth.url}api/v1/data"
-            peptide_data = s.get(
+            response = s.get(
                 f"{URL}/peptide?analysisId={analysis_id}&retry=false"
             )
 
-            if peptide_data.status_code != 200:
+            if response.status_code != 200:
                 raise ValueError(
                     "Could not fetch peptide data. Please verify that your analysis completed."
                 )
 
-            peptide_data = peptide_data.json()
+            response = response.json()
+
+            peptide_data = {}
+            for row in response:
+                if row.get("name") == "npLink":
+                    peptide_data["npLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+                if row.get("name") == "panelLink":
+                    peptide_data["panelLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+            if not "panelLink" in peptide_data.keys():
+                peptide_data["panelLink"] = {"url": ""}
             if link:
                 return peptide_data
             else:
