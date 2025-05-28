@@ -26,7 +26,7 @@ class _InternalSDK(_SeerSDK):
     [UNEXPOSED MODULE]
     **************
 
-    This module is currently not supported and should be considered unstable. Use at your own risk. 
+    This module is currently not supported and should be considered unstable. Use at your own risk.
     """
 
     def _add_sample(self, sample_entry: dict):
