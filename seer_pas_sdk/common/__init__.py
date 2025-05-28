@@ -1,7 +1,8 @@
 from dotenv import load_dotenv
 from botocore.config import Config
 from botocore.exceptions import ClientError
-from re import sub
+import re
+from re import match, sub, UNICODE
 
 import pandas as pd
 import os
@@ -9,13 +10,19 @@ import io
 import requests
 import boto3
 import json
+import zipfile
+import tempfile
 
-from ..auth import Auth
+from ..auth.auth import Auth
+
+from .groupanalysis import *
+
+from .errors import *
 
 load_dotenv()
 
 
-def upload_file(file_name, bucket, object_name=None):
+def upload_file(file_name, bucket, credentials, object_name=None):
     """
     Upload a file to an S3 bucket.
 
@@ -43,7 +50,12 @@ def upload_file(file_name, bucket, object_name=None):
         object_name = os.path.basename(file_name)
 
     # Upload the file
-    s3_client = boto3.client("s3")
+    s3_client = boto3.client(
+        "s3",
+        aws_access_key_id=credentials["AccessKeyId"],
+        aws_secret_access_key=credentials["SecretAccessKey"],
+        aws_session_token=credentials["SessionToken"],
+    )
     try:
         response = s3_client.upload_file(file_name, bucket, object_name)
     except ClientError as e:
@@ -85,19 +97,28 @@ def dict_to_df(data):
     return df
 
 
-def url_to_df(url):
+# Most cases appear to be a .tsv file.
+def url_to_df(url, is_tsv=True):
     """
-    Returns a Pandas DataFrame from a URL.
+    Fetches a TSV/CSV file from a URL and returns as a Pandas DataFrame.
 
     Parameters
     ----------
     url : str
-        The URL of the CSV file.
+        The URL of the TSV/CSV file.
+
+    is_tsv : bool
+        True if the file is a TSV file, False if it is a CSV file.
 
     Returns
     -------
     pandas.core.frame.DataFrame
-        A Pandas DataFrame.
+        The data from the TSV/CSV file as a Pandas DataFrame
+
+    Raises
+    ------
+    ValueError
+        Error response from AWS S3
 
     Examples
     --------
@@ -112,14 +133,18 @@ def url_to_df(url):
         5           6  SampleName6              6  SDKTest6.raw
     """
 
+    if not url:
+        return pd.DataFrame()
     url_content = io.StringIO(requests.get(url).content.decode("utf-8"))
-    csv = pd.read_csv(url_content, sep="\t")
+    if is_tsv:
+        csv = pd.read_csv(url_content, sep="\t")
+    else:
+        csv = pd.read_csv(url_content)
     return csv
 
 
 def get_sample_info(
     plate_id,
-    ms_data_files,
     plate_map_file,
     space,
     sample_description_file=None,
@@ -131,8 +156,6 @@ def get_sample_info(
     ----------
     plate_id : str
         The plate ID.
-    ms_data_files : list
-        A list of MS data files.
     plate_map_file : str
         The plate map file.
     space : str
@@ -145,7 +168,7 @@ def get_sample_info(
     list
         A list of dictionaries containing the `plateID`, `sampleID`, `sampleName`, and `sampleUserGroup` values.
 
-    >>> get_sample_info("plate_id", ["AgamSDKTest1.raw", "AgamSDKTest2.raw"], "AgamSDKPlateMapATest.csv", "sdkTestPlateId1", "SDKPlate", "Generated from SDK")
+    >>> get_sample_info("plate_id", "AgamSDKPlateMapATest.csv", "sdkTestPlateId1", "SDKPlate", "Generated from SDK")
     >>> [
             {
                 "plateID": "YOUR_PLATE_ID",
@@ -157,22 +180,8 @@ def get_sample_info(
     """
 
     df = pd.read_csv(plate_map_file, on_bad_lines="skip")
-    data = df.iloc[:, :]  # all the data in the platemap csv
-    files = data["MS file name"]  # all filenames in the platemap csv
-    local_file_names = set(
-        [os.path.basename(file) for file in ms_data_files]
-    )  # all filenames in the local directory
+    # all filenames in the local directory
     res = []
-
-    # Step 1: Check if ms_data_files are contained within the plate_map_file.
-    if len(files) != len(local_file_names):
-        raise ValueError("Plate map file is invalid.")
-
-    for file in files:
-        if file not in local_file_names:
-            raise ValueError(
-                "Plate map file does not contain the attached MS data files."
-            )
 
     # Step 2: Validating and mapping the contents of the sample description file.
     if sample_description_file:
@@ -208,7 +217,162 @@ def get_sample_info(
 
         res.append(sample_info)
 
+    # Step 4: drop duplicates on sampleID
+    df = pd.DataFrame(res).drop_duplicates(subset=["sampleID"])
+    res = df.to_dict(orient="records")
     return res
+
+
+def _validate_rawfile_extensions(rawfile):
+    valid_extensions = [".d", ".d.zip", ".mzml", ".raw", ".wiff", ".wiff.scan"]
+    if not rawfile.lower().endswith(tuple(valid_extensions)):
+        return False
+    return True
+
+
+def entity_name_ruler(entity_name):
+    if pd.isna(entity_name):
+        return False
+    pattern = r"^[\w ._+()!@-]+$"
+    if match(pattern, entity_name, UNICODE):
+        return True
+    else:
+        return False
+
+
+def validate_plate_map(df, local_file_names):
+    """
+    Validates the plate map contents
+
+    Parameters
+    ----------
+    plate_map: pd.Dataframe
+        The plate map data as a dataframe
+
+    local_file_names: file names that were passed to the top level function.
+
+    Returns
+    -------
+    pd.DataFrame : the cleaned data as a dataframe
+
+    Examples
+    --------
+    >>> df = validate_plate_map_file("AgamSDKPlateMapATest.csv")
+    """
+
+    required_cols = [
+        "MS file name",
+        "Sample name",
+        "Sample ID",
+        "Well location",
+        "Plate ID",
+        "Plate Name",
+    ]
+
+    # We use the presence of the "Method set ID" column as a heuristic to determine if the plate map is Biscayne+
+    if "Method set ID" not in df.columns:
+        required_cols.append("Control")
+
+    # Catch case variations of Plate Name due to change between XT and Biscayne
+    pattern = re.compile(r"(?i)(Plate Name)")
+    matches = [s for s in df.columns if pattern.match(s)]
+    if matches:
+        df.rename(columns={matches[0]: "Plate Name"}, inplace=True)
+
+    if not all(col in df.columns for col in required_cols):
+        err_headers = [
+            "'" + col + "'" for col in required_cols if col not in df.columns
+        ]
+        raise ValueError(
+            f"The following column headers are required: {', '.join(err_headers)}"
+        )
+
+    # Check entity name requirement
+    invalid_plate_ids = df[~df["Plate ID"].apply(entity_name_ruler)]
+
+    invalid_plate_names = df[~df["Plate Name"].apply(entity_name_ruler)]
+
+    if not invalid_plate_ids.empty or not invalid_plate_names.empty:
+        error_msg = ""
+        if not invalid_plate_ids.empty:
+            error_msg += f"Invalid plate ID(s): {', '.join(invalid_plate_ids['Plate ID'].tolist())}"
+        if not invalid_plate_names.empty:
+            error_msg += f"Invalid plate name(s): {', '.join(invalid_plate_names['Plate Name'].tolist())}"
+        raise ValueError(error_msg)
+
+    # Check numeric columns
+    numeric_cols = [
+        "Sample volume",
+        "Peptide concentration",
+        "Peptide mass sample",
+        "Recon volume",
+        "Reconstituted peptide concentration",
+        "Recovered peptide mass",
+        "Reconstitution volume",
+    ]
+
+    invalid_cols = []
+    for col in numeric_cols:
+        if col in df.columns:
+            try:
+                df[col] = pd.to_numeric(df[col], errors="raise")
+            except Exception as e:
+                invalid_cols.append(col)
+
+    if invalid_cols:
+        raise ValueError(
+            f"The following column(s) must be numeric: {', '.join(invalid_cols)}"
+        )
+
+    files = [os.path.basename(x) for x in df["MS file name"].tolist()]
+
+    # Check if ms_data_files are contained within the plate_map_file.
+    if len(files) != len(local_file_names):
+        raise ValueError(
+            f"User provided {len(local_file_names)} MS files, however the plate map lists {len(files)} MS files. \
+                         Please check your inputs."
+        )
+    missing_files = []
+    for file in local_file_names:
+        if os.path.basename(file) not in files:
+            missing_files.append(file)
+
+    # Found file mismatch between function argument and plate map
+    if missing_files:
+        msg = ""
+        try:
+            msg = f"The following file names were not found in the plate map: {', '.join(missing_files)}. Please revise the plate map file."
+        except:
+            raise ValueError(
+                "Rawfile names must be type string. Float or None type detected."
+            )
+        raise ValueError(msg)
+
+    # Check rawfiles end with valid extensions
+    invalid_rawfile_extensions = df[
+        ~df["MS file name"].apply(_validate_rawfile_extensions)
+    ]
+    if not invalid_rawfile_extensions.empty:
+        raise ValueError(
+            f"Invalid raw file extensions: {', '.join(invalid_rawfile_extensions['MS file name'].tolist())}"
+        )
+
+    # Check sample IDs are one to one with plate ID, plate name
+    sample_ids = df["Sample ID"].unique()
+    for sample in sample_ids:
+        queryset = df[df["Sample ID"] == sample]
+        plate_names = queryset["Plate ID"].unique()
+        plate_ids = queryset["Plate ID"].unique()
+        if len(plate_names) > 1:
+            raise ValueError(
+                f"Sample ID {sample} is associated with multiple plates: {', '.join(plate_names)}"
+            )
+        if len(plate_ids) > 1:
+            raise ValueError(
+                f"Sample ID {sample} is associated with multiple plates: {', '.join(plate_ids)}"
+            )
+
+    return df
 
 
 def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
@@ -221,8 +385,8 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
         The plate map file.
     samples : list
         A list of samples.
-    raw_file_paths : dict
-        A dictionary of raw file paths.
+    raw_file_paths: dict
+        A dictionary mapping the plate map MS file paths with the cloud upload path.
     space : str
         The space or usergroup.
 
@@ -246,7 +410,7 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
                 "plate_id": "PLATE_ID_HERE",
             }
         ]
-    >>> parse_plate_map_file("AgamSDKPlateMapATest.csv", samples, raw_file_paths, "SDKPlate")
+    >>> parse_plate_map_file("AgamSDKPlateMapATest.csv", samples, "SDKPlate")
     >>> [
             {
                 "sampleId": "YOUR_SAMPLE_ID",
@@ -267,23 +431,35 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
     number_of_rows = df.shape[0]
     res = []
 
+    # reformat samples to be a dictionary with sample_id as the key
+    samples = {sample["sample_id"]: sample for sample in samples}
+
+    # Catch case variations of Plate Name due to change between XT and Biscayne
+    pattern = re.compile(r"(?i)(Plate Name)")
+    matches = [s for s in df.columns if pattern.match(s)]
+    if matches:
+        df.rename(columns={matches[0]: "Plate Name"}, inplace=True)
+
     for rowIndex in range(number_of_rows):
         row = df.iloc[rowIndex]
-        path = None
         sample_id = None
+        path = None
 
-        if (
-            samples[rowIndex]["sample_id"] == row["Sample ID"]
-            and samples[rowIndex]["sample_name"] == row["Sample name"]
-        ):
-            sample_id = samples[rowIndex]["id"]
+        # Validate that the sample ID exists in the samples list
+        if samples.get(row["Sample ID"], None):
+            sample_id = samples[row["Sample ID"]]["id"]
+        else:
+            raise ValueError(
+                f'Error fetching id for sample ID {row["Sample ID"]}'
+            )
 
-        for filename in raw_file_paths:
-            if filename == row["MS file name"]:
-                path = raw_file_paths[filename]
+        # Map display file path to its underlying file path
+        path = raw_file_paths.get(os.path.basename(row["MS file name"]), None)
 
-        if not path or not sample_id:
-            raise ValueError("Plate map file is invalid.")
+        if not path:
+            raise ValueError(
+                f"Row {rowIndex} is missing a value in MS file name."
+            )
 
         res.append(
             {
@@ -296,50 +472,113 @@ def parse_plate_map_file(plate_map_file, samples, raw_file_paths, space=None):
                 ),
                 "nanoparticle": (
                     str(row["Nanoparticle"])
-                    if pd.notna(row["Nanoparticle"])
-                    else ""
+                    if pd.notna(row.get("Nanoparticle", None))
+                    else (
+                        str(row["Nanoparticle set"])
+                        if pd.notna(row.get("Nanoparticle set", None))
+                        else ""
+                    )
                 ),
                 "nanoparticleID": (
                     str(row["Nanoparticle ID"])
-                    if pd.notna(row["Nanoparticle ID"])
-                    else ""
+                    if pd.notna(row.get("Nanoparticle ID", None))
+                    else (
+                        str(row["Nanoparticle set ID"])
+                        if pd.notna(row.get("Nanoparticle set ID", None))
+                        else ""
+                    )
                 ),
                 "control": (
-                    str(row["Control"]) if pd.notna(row["Control"]) else ""
+                    str(row["Control"])
+                    if pd.notna(row.get("Control", None))
+                    else ""
                 ),
                 "controlID": (
                     str(row["Control ID"])
-                    if pd.notna(row["Control ID"])
+                    if pd.notna(row.get("Control ID", None))
                     else ""
                 ),
                 "instrumentName": (
                     str(row["Instrument name"])
-                    if pd.notna(row["Instrument name"])
-                    else ""
+                    if pd.notna(row.get("Instrument name", None))
+                    else (
+                        str(row["Instrument ID"])
+                        if pd.notna(row.get("Instrument ID", None))
+                        else ""
+                    )
                 ),
                 "dateSamplePrep": (
                     str(row["Date sample preparation"])
-                    if pd.notna(row["Date sample preparation"])
-                    else ""
+                    if pd.notna(row.get("Date sample preparation", None))
+                    else (
+                        str(row["Date assay initiated"])
+                        if pd.notna(row.get("Date assay initiated", None))
+                        else ""
+                    )
                 ),
                 "sampleVolume": (
                     str(row["Sample volume"])
-                    if pd.notna(row["Sample volume"])
+                    if pd.notna(row.get("Sample volume", None))
                     else ""
                 ),
                 "peptideConcentration": (
                     str(row["Peptide concentration"])
-                    if pd.notna(row["Peptide concentration"])
-                    else ""
+                    if pd.notna(row.get("Peptide concentration", None))
+                    else (
+                        str(row["Reconstituted peptide concentration"])
+                        if pd.notna(
+                            row.get(
+                                "Reconstituted peptide concentration", None
+                            )
+                        )
+                        else ""
+                    )
                 ),
                 "peptideMassSample": (
                     str(row["Peptide mass sample"])
-                    if pd.notna(row["Peptide mass sample"])
-                    else ""
+                    if pd.notna(row.get("Peptide mass sample", None))
+                    else (
+                        str(row["Recovered peptide mass"])
+                        if pd.notna(row.get("Recovered peptide mass", None))
+                        else ""
+                    )
+                ),
+                "reconVolume": (
+                    str(row["Recon volume"])
+                    if pd.notna(row.get("Recon volume", None))
+                    else (
+                        str(row["Reconstitution volume"])
+                        if pd.notna(row.get("Reconstitution volume", None))
+                        else ""
+                    )
                 ),
                 "dilutionFactor": (
                     str(row["Dilution factor"])
-                    if pd.notna(row["Dilution factor"])
+                    if pd.notna(row.get("Dilution factor", None))
+                    else ""
+                ),
+                "sampleTubeId": (
+                    str(row["Sample tube ID"])
+                    if pd.notna(row.get("Sample tube ID", None))
+                    else ""
+                ),
+                "assayProduct": (
+                    str(row["Assay"])
+                    if pd.notna(row.get("Assay", None))
+                    else (
+                        str(row["Assay product"])
+                        if pd.notna(row.get("Assay product", None))
+                        else ""
+                    )
+                ),
+                "methodSetId": (
+                    str(row["Method set ID"])
+                    if pd.notna(row.get("Method set ID", None))
+                    else ""
+                ),
+                "assayMethodId": (
+                    str(row["Assay method ID"])
+                    if pd.notna(row.get("Assay method ID", None))
                     else ""
                 ),
                 "msdataUserGroup": space,
@@ -368,22 +607,34 @@ def valid_ms_data_file(path):
     if not os.path.exists(path):
         return False
 
-    full_filename = path.split("/")[-1].split(".")
+    return _validate_rawfile_extensions(path)
 
-    if len(full_filename) >= 3:
-        extension = f'.{".".join(full_filename[-2:])}'
+
+def valid_pas_folder_path(path):
+    """
+    Checks if a PAS folder path is valid.
+
+    Parameters
+    ----------
+    path : str
+        The path to the PAS folder.
+
+    Returns
+    -------
+    bool
+        True if the path is valid, False otherwise.
+    """
+
+    #
+    # Invalidate the following patterns:
+    # 1. Leading forward slash
+    # 2. Trailing forward slash
+    # 3. Double forward slashes
+    #
+    if not all(path.split("/")):
+        return False
     else:
-        extension = f".{full_filename[-1]}"
-
-    return extension.lower() in [
-        ".d",
-        ".d.zip",
-        ".mzml",
-        ".raw",
-        ".mzml",
-        ".wiff",
-        ".wiff.scan",
-    ]
+        return True
 
 
 def download_hook(t):
@@ -422,3 +673,50 @@ def camel_case(s):
 
     # Join the string, ensuring the first letter is lowercase
     return "".join([s[0].lower(), s[1:]])
+
+
+def rename_d_zip_file(source, destination):
+    """
+    Renames a .d.zip file. The function extracts the contents of the source zip file, renames the inner .d folder, and rezips the contents into the destination zip file.
+
+    Parameters
+    ----------
+    file : str
+        The name of the zip file.
+    new_name : str
+        The new name of the zip file.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> rename_zip_file("old_name.zip", "new_name.zip")
+    Renamed old_name.zip to new_name.zip
+
+    """
+    if not source.lower().endswith(".d.zip"):
+        raise ValueError("Invalid zip file extension")
+
+    if not destination.lower().endswith(".d.zip"):
+        raise ValueError("Invalid zip file extension")
+
+    # Remove the .zip extension from the destination file
+    d_destination = destination[:-4]
+
+    # Create a temporary directory to extract the contents
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Unzip the source file
+        with zipfile.ZipFile(source, "r") as zip_ref:
+            zip_ref.extractall(temp_dir)
+
+        # Rezip the contents into the destination file
+        with zipfile.ZipFile(destination, "w") as zip_ref:
+            for foldername, subfolders, filenames in os.walk(temp_dir):
+                for filename in filenames:
+                    file_path = os.path.join(foldername, filename)
+                    arcname = f"{d_destination}/{os.path.relpath(file_path, temp_dir)}"  # substitute the original .d name with the new .d name
+                    zip_ref.write(file_path, arcname)
+
+    print(f"Renamed {source} to {destination}")

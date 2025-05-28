@@ -80,6 +80,7 @@ docs/_build/
 doc/_build/
 
 # PyBuilder
+.pybuilder/
 target/
 
 # Jupyter Notebook
