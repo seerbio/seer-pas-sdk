@@ -1,5 +1,5 @@
 """
-seer_pas_sdk.core.internal -- extended SDK with addtional functionality FOR INTERNAL USE ONLY
+seer_pas_sdk.core.unsupported -- in development
 """
 
 from tqdm import tqdm
@@ -20,7 +20,7 @@ from ..objects import PlateMap
 from .sdk import SeerSDK as _SeerSDK
 
 
-class _InternalSDK(_SeerSDK):
+class _UnsupportedSDK(_SeerSDK):
     """
     **************
     [UNEXPOSED MODULE]
