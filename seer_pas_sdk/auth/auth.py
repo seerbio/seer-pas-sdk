@@ -5,7 +5,7 @@ import jwt
 class Auth:
     _instances = {
         "US": "https://api.pas.seer.software/",
-        "EU": "https://api.pas-eu.seer.bio/"
+        "EU": "https://api.pas-eu.seer.bio/",
     }
 
     def __init__(self, username, password, instance="US"):
