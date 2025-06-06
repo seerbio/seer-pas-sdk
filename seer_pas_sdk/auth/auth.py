@@ -1,4 +1,5 @@
 import requests
+import jwt
 
 
 class Auth:
@@ -25,7 +26,9 @@ class Auth:
         self.__password = password
 
         if instance not in Auth._instances:
-            if instance.startswith("https://"):
+            if instance.startswith("https://") or instance.startswith(
+                "http://"
+            ):
                 # Support arbitrary endpoint for testing
                 self.url = instance
             else:
@@ -34,6 +37,14 @@ class Auth:
             self.url = Auth._instances[instance]
 
         self.instance = instance
+
+        # Null initialize multi tenant attributes
+        (
+            self.base_tenant_id,
+            self.active_tenant_id,
+            self.base_role,
+            self.active_role,
+        ) = [None] * 4
 
     def login(self):
         """
@@ -73,5 +84,16 @@ class Auth:
             raise ValueError(
                 "Check if the credentials are correct or if the backend is running or not."
             )
+        decoded_token = jwt.decode(
+            res["id_token"], options={"verify_signature": False}
+        )
+        self.base_tenant_id = decoded_token["custom:tenantId"]
+        self.base_role = decoded_token["custom:role"]
+
+        if not self.active_tenant_id:
+            self.active_tenant_id = self.base_tenant_id
+
+        if not self.active_role:
+            self.active_role = self.base_role
 
         return res["id_token"], res["access_token"]
