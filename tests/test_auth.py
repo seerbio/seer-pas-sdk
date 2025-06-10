@@ -33,7 +33,11 @@ def test_valid_instance(username, password, valid_instance):
 
 
 @pytest.fixture(
-    params=["XX", "http://insecure-http-url.example/", "my-favorite-instance"]
+    params=[
+        "XX",
+        # "http://insecure-http-url.example/",  # Currently permitted (to support dev instance)
+        "my-favorite-instance",
+    ]
 )
 def invalid_instance(request):
     return request.param

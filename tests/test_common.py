@@ -21,10 +21,14 @@ def platemap_file(platemap, tmpdir):
 
     platemap.to_csv(outfile)
 
+    blank_raw_file = tmpdir / "test.raw"
+    blank_raw_file.write("")
+
     yield outfile
 
     # Clean up test file
     outfile.remove()
+    blank_raw_file.remove()
 
 
 def test_get_sample_info(platemap_file, mock_sample):
@@ -32,11 +36,9 @@ def test_get_sample_info(platemap_file, mock_sample):
     filename, sample_name, sample_id = mock_sample
 
     plate_id = "TEST_plate_id"
-    ms_data_files = {filename}
     space = "TEST_space_id"
     res = get_sample_info(
         plate_id=plate_id,
-        ms_data_files=ms_data_files,
         plate_map_file=platemap_file,
         space=space,
         sample_description_file=None,  # TODO: test sample description file
@@ -51,19 +53,17 @@ def test_get_sample_info(platemap_file, mock_sample):
         assert sampleinfo["sampleUserGroup"] == space
 
 
-def test_get_sample_info_missing_file(platemap_file):
-    """Test that get_sample_info raises an exception if a file doesn't exist"""
-
-    plate_id = "TEST_plate_id"
-    ms_data_files = {"XXX_file_does_not_exist"}
-    space = "TEST_space_id"
-    with pytest.raises(ValueError):
-        res = get_sample_info(
-            plate_id=plate_id,
-            ms_data_files=ms_data_files,
-            plate_map_file=platemap_file,
-            space=space,
-        )
+def test_valid_pas_folder():
+    assert valid_pas_folder_path("foo")
+    assert valid_pas_folder_path("foo/bar")
+    assert valid_pas_folder_path("foo/bar/baz")
+    assert not valid_pas_folder_path("foo/bar/")
+    assert not valid_pas_folder_path("/foo/bar")
+    assert not valid_pas_folder_path("foo//bar")
+    assert not valid_pas_folder_path("foo/bar//")
+    assert not valid_pas_folder_path("//foo/bar/")
+    assert not valid_pas_folder_path("foo///bar")
+    assert not valid_pas_folder_path("foo////////////////////////bar")
 
 
 def test_camel_case():
