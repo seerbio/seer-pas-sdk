@@ -41,8 +41,7 @@ jobs:
         uses: quarto-dev/quarto-actions/setup@v2
       - name: Set up QuartoDoc + Jupyter
 
-        # TODO: remove upper bound on quartodoc and griffe after fix for machow/quartodoc#357 is released
-        run: pip install 'quartodoc>=0.7.0,<=0.7.5' 'griffe<1.0.0' jupyter
+        run: pip install 'quartodoc>=0.7.6' jupyter
 
       - name: Install seer-pas-sdk
         run: pip install .  # Install SDK libs so quartodoc can find them
