@@ -633,18 +633,30 @@ class SeerSDK:
                 ]
         return res if not df else dict_to_df(res)
 
-    def get_plate(self, plate_id: str, df: bool = False):
+    def get_plate_samples(
+        self,
+        plate_id: str,
+        msdata: bool = False,
+        df: bool = False,
+        flat: bool = False,
+    ):
         """
-        Fetches MS data files for a `plate_id` (provided that the `plate_id` is valid and has samples associated with it) for an authenticated user.
+        Fetches samples (and MS data files) for a `project_id` (provided that the `project_id` is valid and has samples associated with it) for an authenticated user.
 
-        The function returns a dict containing DataFrame objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
+        The function returns a DataFrame object if the `df` flag is passed in as True, otherwise a nested dict object is returned instead. If the both the `df` and `msdata` flags are passed in as True, then a nested DataFrame object is returned instead.
+
+        If the `flat` flag is passed in as True, then the nested dict object is returned as an array of dict objects and the nested df object is returned as a single df object.
 
         Parameters
         ----------
         plate_id : str, optional
             ID of the plate for which samples are to be fetched, defaulted to None.
-        df: bool
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object
+        msdata: bool, optional
+            Boolean flag denoting whether the user wants relevant MS data files associated with the samples.
+        df: bool, optional
+            Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+        flat: bool, optional
+            Boolean denoting whether attributes in the 'ms_data_files' object should be pushed to the top level object.
 
         Returns
         -------
@@ -671,10 +683,56 @@ class SeerSDK:
             [2 rows x 26 columns]
         """
         plate_samples = self.get_samples_metadata(plate_id=plate_id)
-        sample_ids = [sample["id"] for sample in plate_samples]
-        return self.get_msdata(sample_ids, df)
+        sample_ids = []
+        plate_samples = self.get_samples_metadata(plate_id=plate_id, df=False)
+        flat_result = []
 
-    def get_project(
+        if msdata:
+
+            # construct map for quick index reference of sample in plate_samples
+            sample_ids = {
+                sample["id"]: i for i, sample in enumerate(plate_samples)
+            }  # will always contain unique values
+            ms_data_files = self.get_msdata(
+                sample_ids=list(sample_ids.keys()), df=False
+            )
+
+            for ms_data_file in ms_data_files:
+                index = sample_ids.get(ms_data_file["sample_id"], None)
+                if not index:
+                    continue
+
+                if not flat:
+                    if "ms_data_file" not in plate_samples[index]:
+                        plate_samples[index]["ms_data_files"] = [ms_data_file]
+                    else:
+                        plate_samples[index]["ms_data_files"].append(
+                            ms_data_file
+                        )
+                else:
+                    flat_result.append(plate_samples[index] | ms_data_file)
+
+        # return flat result if results were added to the flat object
+        if flat and flat_result:
+            plate_samples = flat_result
+
+        if df:
+            if flat:
+                return pd.DataFrame(plate_samples)
+            else:
+                for sample_index in range(len(plate_samples)):
+                    if "ms_data_files" in plate_samples[sample_index]:
+                        plate_samples[sample_index]["ms_data_files"] = (
+                            dict_to_df(
+                                plate_samples[sample_index]["ms_data_files"]
+                            )
+                        )
+
+            plate_samples = dict_to_df(plate_samples)
+
+        return plate_samples
+
+    def get_project_samples(
         self,
         project_id: str,
         msdata: bool = False,
@@ -696,7 +754,8 @@ class SeerSDK:
             Boolean flag denoting whether the user wants relevant MS data files associated with the samples.
         df: bool, optional
             Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
-
+        flat: bool, optional
+            Boolean denoting whether attributes in the 'ms_data_files' object should be pushed to the top level object.
         Returns
         -------
         res: list or DataFrame
