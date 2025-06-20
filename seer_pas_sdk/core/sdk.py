@@ -1,5 +1,6 @@
 from tqdm import tqdm
 
+import deprecation
 import os
 import jwt
 import requests
@@ -1082,6 +1083,7 @@ class SeerSDK:
                 ]
             return res
 
+    @deprecation.deprecated()
     def get_analysis_result_protein_data(
         self, analysis_id: str, link: bool = False, pg: str = None
     ):
@@ -1153,7 +1155,7 @@ class SeerSDK:
                         "protein_np": protein_np,
                         "protein_panel": protein_panel,
                     }
-
+    @deprecation.deprecated()
     def get_analysis_result_peptide_data(
         self, analysis_id: str, link: bool = False, peptide: str = None
     ):
@@ -1266,7 +1268,76 @@ class SeerSDK:
                 files.append(row["filename"])
             return files
 
-    def get_analysis_result_file_url(self, analysis_id: str, filename: str):
+    def get_analysis_result_file(self, analysis_id: str, data_type: str, file: str):
+        """
+        Load one of the files available via the "Download result files" button on the PAS UI. 
+
+        Args:
+            analysis_id (str): id of the analysis
+            data_type (str): type of the data. Acceptable options are one of ['protein', 'peptide'].
+            file (str): the desired file. Acceptable options are one of ['np', 'panel', 'report'].
+        Returns:
+            pd.DataFrame: the requested file as a pandas DataFrame
+        
+        """
+        if not analysis_id:
+            raise ValueError("Analysis ID cannot be empty.")
+        
+        if data_type not in ["protein", "peptide"]:
+            raise ValueError("Invalid data type. Please choose between 'protein' or 'peptide'.")
+        
+        if file not in ["np", "panel", "report"]:
+            raise ValueError("Invalid file. Please choose between 'np', 'panel', or 'report'.")
+        
+        if file == "report":
+            filename = "DIA-NN.tsv"
+        else:
+            filename = f"{data_type}_{file}.tsv"
+            if data_type == 'protein':
+            else:
+                
+
+
+    def download_search_output_file(self, analysis_id: str, filename: str, download_path: str):
+        """
+        Given an analysis id and a analysis result filename, this function downloads the file to the specified path.
+
+        Parameters
+        ----------
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+
+        filename : str
+            Name of the file to be fetched.
+
+        download_path : str
+            String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid.
+
+        Returns
+        -------
+        None
+            Downloads the file to the specified path.
+        """
+
+        if not analysis_id:
+            raise ValueError("Analysis ID cannot be empty.")
+
+        if not os.path.exists(download_path):
+            raise ValueError(
+                "Please specify a valid folder path as download path."
+            )
+
+        file_url = self._get_analysis_result_file_url(analysis_id, filename)
+
+        with self._get_auth_session() as s:
+            response = s.get(file_url["url"], stream=True)
+            if response.status_code != 200:
+                raise ServerError(f"File {filename} not found.")
+            with open(os.path.join(download_path, filename), "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+    def _get_analysis_result_file_url(self, analysis_id: str, filename: str):
         """
         Given an analysis id and a analysis result filename, this function returns the signed URL for the file.
 
@@ -1309,6 +1380,7 @@ class SeerSDK:
             raise ValueError(f"File {filename} not found.")
         return response
 
+    @deprecation.deprecated()
     def get_analysis_result_files(
         self,
         analysis_id: str,
@@ -1426,7 +1498,7 @@ class SeerSDK:
                 links["peptide_panel.tsv"] = peptide_data["panelLink"]["url"]
             else:
                 try:
-                    links[filename] = self.get_analysis_result_file_url(
+                    links[filename] = self._get_analysis_result_file_url(
                         analysis_id, filename
                     )["url"]
                 except Exception as e:
@@ -1451,6 +1523,7 @@ class SeerSDK:
 
         return links
 
+    @deprecation.deprecated()
     def get_analysis_result(
         self,
         analysis_id: str,
@@ -1522,7 +1595,7 @@ class SeerSDK:
         }
 
         if diann_report:
-            diann_report_url = self.get_analysis_result_file_url(
+            diann_report_url = self._get_analysis_result_file_url(
                 analysis_id, "report.tsv"
             )
             links["diann_report"] = url_to_df(diann_report_url["url"])
