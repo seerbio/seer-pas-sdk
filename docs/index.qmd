@@ -218,7 +218,7 @@ None.
 ###### <u>Example</u>
 ```{python}
 #| eval: false
-spaces = sdk.get_spaces()[:5]
+spaces = sdk.get_spaces()
 log(spaces)
 ```
 ```
@@ -279,17 +279,19 @@ log(sample_plate)
 
 
 ### Get Plate
-Fetches MS data files for a `plate_id` (provided that the `plate_id` is valid and has samples associated with it) for an authenticated user. 
+Fetches samples (and MS data files) for a `plate_id` (provided that the `plate_id` is valid and has samples associated with it) for an authenticated user. 
 
-The function returns a dict containing `DataFrame` objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
+The function returns a DataFrame object if the `df` flag is passed in as True, otherwise a nested dict object is returned instead. If the both the `df` and `msdata` flags are passed in as True, then a nested DataFrame object is returned instead.
 
 ###### <u>Params</u>
 * `plate_id`: (`str`, optional) Unique ID of the plate to be fetched, defaulted to `None`.
+* `msdata`: (`bool`, optional) Boolean flag denoting whether the user wants relevant MS data files associated with the samples.
 * `df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+* `flat`: (`bool`, optional) Boolean denoting whether attributes in the 'ms_data_files' object should be pushed to the top level object.
 <br>
 
 ###### <u>Returns</u>
-`res`: (`DataFrame`) List/`DataFrame` of MS data file objects for the authenticated user.
+`res`: (`DataFrame`) List/`DataFrame` of sample / MS data file objects for the authenticated user.
 
 ###### <u>Example</u>
 
@@ -406,10 +408,11 @@ The function returns a DataFrame object if the `df` flag is passed in as True, o
 * `project_id`: (`str`, optional) Unique ID of the project to be fetched.
 * `msdata`: (`bool`, optional) Boolean flag denoting whether the user wants relevant MS data files associated with the samples.
 * `df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+* `flat`: (`bool`, optional) Boolean denoting whether attributes in the 'ms_data_files' object should be pushed to the top level object.
 <br>
 
 ###### <u>Returns</u>
-`res`: (`list` or `DataFrame`) `List` or `DataFrame` of project objects for the authenticated user.
+`res`: (`list` or `DataFrame`) `List` or `DataFrame` of sample / MS data file objects for the authenticated user.
 
 ###### <u>Example</u>
 ```{python}
@@ -527,7 +530,6 @@ log(sample_analysis)
 
 
 <hr>
-
 
 ### Get Analysis Result
 Given an `analysis_id`, this function returns all relevant analysis data files in form of DataFrames, if the input is valid and the analysis has succeeded.
@@ -705,3 +707,49 @@ log(sdk.group_analysis_results(group_analysis_id, box_plot_info))
 ```
 
 <hr>
+
+## Analysis Plot Data 
+Returns the data points associated with the plots generated on the PAS UI. 
+
+### Volcano Plot (all group analyses)
+Returns a collection of volcano plots representing all group analyses run on a single analysis.
+
+##### <u>Params</u>
+* `analysis_id`: (`str`) The analysis ID for which the volcano plot data is to be fetched.
+* `box_plot`: (`bool`, optional) Flag to indicate whether to include box plot data in the result. Defaults to `False`.
+
+##### <u>Returns</u>
+* `volcano_data`: (`dict`) A dictionary containing the volcano plot data for the analysis.
+
+##### <u>Example</u>
+```{python}
+#| eval: false
+analysis_id = "c4089c00-16ab-11ec-b589-634014ca2005"
+volcano_data = sdk.get_all_volcano_plot_data(analysis_id, box_plot=True)
+pprint(volcano_data)
+```
+<hr>
+
+### Volcano Plot (for a specific group analysis)
+Returns a volcano plot for a specific group analysis.
+
+##### <u>Params</u>
+* `analysis_id`: (`str`) The analysis ID for which the volcano plot data is to be fetched.
+* `group_analysis_id`: (`str`) The group analysis ID for which the volcano plot data is to be fetched.
+* `significance_threshold`: (`float`, optional) The significance threshold for the volcano plot. Defaults to `0.05`.
+* `fold_change_threshold`: (`float`, optional) The fold change threshold for the volcano plot. Defaults to `1.0`.
+* `label_by`: (`str`, optional) Metric to sort result data. Defaults to "fold_change".
+* `as_df`: (`bool`, optional) Flag to indicate whether to return the data as a DataFrame. Defaults to `False`.
+
+##### <u>Returns</u>
+* `volcano_data`: (`dict` or `DataFrame`) A dictionary or DataFrame containing the volcano plot data for the specific group analysis.
+
+##### <u>Example</u>
+```{python}
+#| eval: false
+analysis_id = "c4089c00-16ab-11ec-b589-634014ca2005"
+group_analysis_id = "c4089c00-16ab-11ec-c589-634014ca2005"
+volcano_data = sdk.get_volcano_plot_data(analysis_id, group_analysis_id, as_df=True)
+pprint(volcano_data)
+```
+

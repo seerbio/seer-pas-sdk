@@ -787,7 +787,7 @@ class _UnsupportedSDK(_SeerSDK):
         ms_data_files: list,
         path: str,
         space: str = None,
-        filenames=[],
+        filenames: list =[],
     ):
         """
         Upload MS data files to the backend.
