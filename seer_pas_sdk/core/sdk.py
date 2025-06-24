@@ -1413,8 +1413,10 @@ class SeerSDK:
                     ]["url"]
                 )
         else:
-            return self.get_analysis_result_file_url(
-                analysis_id, filename="report.tsv"
+            return url_to_df(
+                self.get_analysis_result_file_url(
+                    analysis_id, filename="report.tsv"
+                )
             )
 
     def download_search_output_file(
