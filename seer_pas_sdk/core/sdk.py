@@ -1155,6 +1155,7 @@ class SeerSDK:
                         "protein_np": protein_np,
                         "protein_panel": protein_panel,
                     }
+
     @deprecation.deprecated()
     def get_analysis_result_peptide_data(
         self, analysis_id: str, link: bool = False, peptide: str = None
@@ -1231,6 +1232,91 @@ class SeerSDK:
                         "peptide_panel": peptide_panel,
                     }
 
+    def _get_analysis_result_protein_data(self, analysis_id: str):
+        """
+        Given an analysis id, this function returns the protein data for the analysis.
+
+        Parameters
+        ----------
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+        """
+        with self._get_auth_session() as s:
+            URL = f"{self._auth.url}api/v1/data"
+            response = s.get(
+                f"{URL}/protein?analysisId={analysis_id}&retry=false"
+            )
+
+            if response.status_code != 200:
+                raise ValueError(
+                    "Could not fetch protein data. Please verify that your analysis completed."
+                )
+            response = response.json()
+
+            protein_data = {}
+            for row in response:
+                if row.get("name") == "npLink":
+                    protein_data["npLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+                if row.get("name") == "panelLink":
+                    protein_data["panelLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+            if not protein_data:
+                raise ValueError("No protein result files found.")
+            if not "panelLink" in protein_data.keys():
+                protein_data["panelLink"] = {"url": ""}
+
+            return protein_data
+
+    def _get_analysis_result_peptide_data(self, analysis_id: str):
+        """
+        Given an analysis id, this function returns the peptide data for the analysis.
+
+        Parameters
+        ----------
+
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+
+        Returns
+        -------
+        peptide_data : dict
+            Dictionary containing URLs for npLink and panelLink peptide data.
+
+        """
+
+        with self._get_auth_session() as s:
+            URL = f"{self._auth.url}api/v1/data"
+            response = s.get(
+                f"{URL}/peptide?analysisId={analysis_id}&retry=false"
+            )
+
+            if response.status_code != 200:
+                raise ValueError(
+                    "Could not fetch peptide data. Please verify that your analysis completed."
+                )
+
+            response = response.json()
+
+            peptide_data = {}
+            for row in response:
+                if row.get("name") == "npLink":
+                    peptide_data["npLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+                if row.get("name") == "panelLink":
+                    peptide_data["panelLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+            if not peptide_data:
+                raise ValueError("No peptide result files found.")
+            if not "panelLink" in peptide_data.keys():
+                peptide_data["panelLink"] = {"url": ""}
+
+            return peptide_data
+
     def list_analysis_result_files(self, analysis_id: str):
         """
         Given an analysis id, this function returns a list of files associated with the analysis.
@@ -1268,37 +1354,72 @@ class SeerSDK:
                 files.append(row["filename"])
             return files
 
-    def get_analysis_result_file(self, analysis_id: str, data_type: str, file: str):
+    def get_analysis_result(
+        self, analysis_id: str, analyte_type: str, rollup: str
+    ):
         """
-        Load one of the files available via the "Download result files" button on the PAS UI. 
+        Load one of the files available via the "Download result files" button on the PAS UI.
 
         Args:
             analysis_id (str): id of the analysis
-            data_type (str): type of the data. Acceptable options are one of ['protein', 'peptide'].
-            file (str): the desired file. Acceptable options are one of ['np', 'panel', 'report'].
+            analyte_type (str): type of the data. Acceptable options are one of ['protein', 'peptide', 'precursor'].
+            rollup (str): the desired file. Acceptable options are one of ['np', 'panel'].
         Returns:
             pd.DataFrame: the requested file as a pandas DataFrame
-        
+
         """
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
-        
-        if data_type not in ["protein", "peptide"]:
-            raise ValueError("Invalid data type. Please choose between 'protein' or 'peptide'.")
-        
-        if file not in ["np", "panel", "report"]:
-            raise ValueError("Invalid file. Please choose between 'np', 'panel', or 'report'.")
-        
-        if file == "report":
-            filename = "DIA-NN.tsv"
+
+        if analyte_type not in ["protein", "peptide", "precursor"]:
+            raise ValueError(
+                "Invalid data type. Please choose between 'protein', 'peptide', or 'precursor'."
+            )
+
+        if rollup not in ["np", "panel"]:
+            raise ValueError(
+                "Invalid file. Please choose between 'np', 'panel'."
+            )
+
+        if analyte_type == "precursor" and rollup == "panel":
+            raise ValueError(
+                "Precursor data is not available for panel rollup, please select np rollup."
+            )
+
+        if analyte_type == "protein":
+            if rollup == "np":
+                return url_to_df(
+                    self._get_analysis_result_protein_data(analysis_id)[
+                        "npLink"
+                    ]["url"]
+                )
+            elif rollup == "panel":
+                return url_to_df(
+                    self._get_analysis_result_protein_data(analysis_id)[
+                        "panelLink"
+                    ]["url"]
+                )
+        elif analyte_type == "peptide":
+            if rollup == "np":
+                return url_to_df(
+                    self._get_analysis_result_peptide_data(analysis_id)[
+                        "npLink"
+                    ]["url"]
+                )
+            elif rollup == "panel":
+                return url_to_df(
+                    self._get_analysis_result_peptide_data(analysis_id)[
+                        "panelLink"
+                    ]["url"]
+                )
         else:
-            filename = f"{data_type}_{file}.tsv"
-            if data_type == 'protein':
-            else:
-                
+            return self.get_analysis_result_file_url(
+                analysis_id, filename="report.tsv"
+            )
 
-
-    def download_search_output_file(self, analysis_id: str, filename: str, download_path: str):
+    def download_search_output_file(
+        self, analysis_id: str, filename: str, download_path: str
+    ):
         """
         Given an analysis id and a analysis result filename, this function downloads the file to the specified path.
 
@@ -1327,7 +1448,7 @@ class SeerSDK:
                 "Please specify a valid folder path as download path."
             )
 
-        file_url = self._get_analysis_result_file_url(analysis_id, filename)
+        file_url = self.get_analysis_result_file_url(analysis_id, filename)
 
         with self._get_auth_session() as s:
             response = s.get(file_url["url"], stream=True)
@@ -1337,7 +1458,7 @@ class SeerSDK:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
 
-    def _get_analysis_result_file_url(self, analysis_id: str, filename: str):
+    def get_analysis_result_file_url(self, analysis_id: str, filename: str):
         """
         Given an analysis id and a analysis result filename, this function returns the signed URL for the file.
 
