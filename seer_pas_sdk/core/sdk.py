@@ -1083,10 +1083,7 @@ class SeerSDK:
                 ]
             return res
 
-    @deprecation.deprecated(
-        deprecated_in="0.3.0",
-        removed_in="1.0.0"
-    )
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result_protein_data(
         self, analysis_id: str, link: bool = False, pg: str = None
     ):
@@ -1159,10 +1156,7 @@ class SeerSDK:
                         "protein_panel": protein_panel,
                     }
 
-    @deprecation.deprecated(
-        deprecated_in="0.3.0",
-        removed_in="1.0.0"
-    )
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result_peptide_data(
         self, analysis_id: str, link: bool = False, peptide: str = None
     ):
@@ -1515,10 +1509,7 @@ class SeerSDK:
             raise ValueError(f"File {filename} not found.")
         return response
 
-    @deprecation.deprecated(
-        deprecated_in="0.3.0",
-        removed_in="1.0.0"
-    )
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result_files(
         self,
         analysis_id: str,
@@ -1661,10 +1652,7 @@ class SeerSDK:
 
         return links
 
-    @deprecation.deprecated(
-        deprecated_in="0.3.0",
-        removed_in="1.0.0"
-    )
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result(
         self,
         analysis_id: str,
