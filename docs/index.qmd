@@ -739,10 +739,23 @@ Returns a volcano plot for a specific group analysis.
 * `significance_threshold`: (`float`, optional) The significance threshold for the volcano plot. Defaults to `0.05`.
 * `fold_change_threshold`: (`float`, optional) The fold change threshold for the volcano plot. Defaults to `1.0`.
 * `label_by`: (`str`, optional) Metric to sort result data. Defaults to "fold_change".
+* `cached`: (`bool`, optional) Flag to indicate whether to return a VolcanoPlotBuilder object or not. Defaults to `False`.
 * `as_df`: (`bool`, optional) Flag to indicate whether to return the data as a DataFrame. Defaults to `False`.
 
 ##### <u>Returns</u>
-* `volcano_data`: (`dict` or `DataFrame`) A dictionary or DataFrame containing the volcano plot data for the specific group analysis.
+* `volcano_data`: (`dict` or `DataFrame` or `VolcanoPlotBuilder`) A dictionary, DataFrame or VolcanoPlotBuilder containing the volcano plot data for the specific group analysis.
+
+##### VolcanoPlotBuilder object
+Reusuable object that can reuse data from a single Group Analysis to build volcano plots with different settings
+```{python}
+#| eval: false
+analysis_id = "c4089c00-16ab-11ec-b589-634014ca2005"
+group_analysis_id = "c4089c00-16ab-11ec-c589-634014ca2005"
+volcano_builder = sdk.get_volcano_plot_data(analysis_id, group_analysis_id, cached=True)
+volcano_plot1 = volcano_builder.volcano_plot
+# Use the builder to get volcano plot data with different settings
+volcano_builder.update(significance_threshold=0.1, fold_change_threshold=0.03)
+volcano_plot2 = volcano_builder.volcano_plot
 
 ##### <u>Example</u>
 ```{python}
@@ -753,3 +766,26 @@ volcano_data = sdk.get_volcano_plot_data(analysis_id, group_analysis_id, as_df=T
 pprint(volcano_data)
 ```
 
+<hr> 
+#### PCA
+Returns PCA data for a given set of analyses
+
+##### <u>Params</u>
+analysis_ids : (`list[str]`) IDs of analyses to include in the PCA
+type (str): Type of data to be fetched. Must be either "protein" or "peptide".
+sample_ids: (`list[str]`, optional) IDs of samples to include in the PCA. If not provided, all samples will be included.
+hide_control: (bool, optional) Whether to exclude control samples in the PCA. Defaults to `False`.
+as_df: (bool, optional) Whether to return the data as a DataFrame. Defaults to `False`.
+
+##### <u>Returns</u>
+pca_data: (`dict` or `DataFrame`) A dictionary or DataFrame containing the PCA data for the specified analyses.
+
+##### <u>Example</u>
+```{python}
+#| eval: false
+analysis_ids = ["c4089c00-16ab-11ec-b589-634014ca2005", "c4089c00-16ab-11ec-c589-634014ca2005"]
+pca_data = sdk.get_pca_data(analysis_ids, type="protein", sample_ids=None, hide_control=False, as_df=True)
+pprint(pca_data)
+```
+
+<hr>
