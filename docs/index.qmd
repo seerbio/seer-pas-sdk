@@ -524,14 +524,24 @@ log(sample_analysis)
 
 
 ### Get Search Result
-Given an `analysis_id`, this function returns all relevant search data files in form of DataFrames, if the input is valid and the search has succeeded.
+Given an `analysis_id`, this function returns the indicated search result file in the form of a DataFrame, if the input is valid and the search has succeeded.
 
 In case the search has failed for the given `analysis_id`, the function will return a `ValueError`.
+
+The following files are available:
+- `protein_group_np.tsv`
+- `protein_group_panel.tsv`
+- `peptide_np.tsv`
+- `peptide_panel.tsv`
+- `report.tsv` , when analyte_type='precursor' and rollup='np'
 
 
 ###### <u>Params</u>
 * `analysis_id`: (`str`) Unique ID of the analysis for which the data is to be fetched.
-* `download_path`: (`str`, optional) String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid. Defaults to an empty string.
+* `analyte_type`: (`str`) Type of analyte to be fetched. Must be one of `protein`, `peptide`, or `precursor`.
+* `rollup`: (`str`) Type of rollup to be fetched. Must be one of `np` (for nanoparticle) or `panel` (for panel). 
+    - If `analyte_type` is `precursor`, then `rollup` must be `np`. Defaults to `np`.
+
 
 ###### <u>Returns</u>
 `links`: (`dict`) Contains `DataFrame` objects for the `analysis_id`, given that the search has been complete.
@@ -551,6 +561,74 @@ File Name                         Sample Name     Plate ID Well Nanoparticle Pro
 2  EXP19044_X4541_A_Orbitrap-1_2ug_60min_20190829...  Test-Sample-110A  EXP19044  A4     SP-0336      P56181-2          8.780                   -0.156             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN
 3  EXP19044_X4540_A_Orbitrap-1_2ug_60min_20190829...  Test-Sample-110A  EXP19044  A5     SP-0337      P56181-2          8.867                    0.137             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN
 4  EXP19044_X4544_A_Orbitrap-1_2ug_60min_20190829...  Test-Sample-110A  EXP19044  A3     SP-0335      P56181-2          9.837                    0.992             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN       
+```
+
+#### Download Search Output Files
+Downloads an indicated search output files for the given `analysis_id` to the specified `download_path`. If no `download_path` is specified or the `download_path` is invalid, the file will be downloaded to the current working directory.
+
+###### <u>Params</u>
+* `analysis_id`: (`str`) Unique ID of the analysis for which the data is to be downloaded.
+* `filename`: (`str`) Name of the file to be downloaded.
+* `download_path`: (`str`) Path to download the analysis file to, defaulted to current working directory.
+
+###### <u>Returns</u>
+None
+
+###### <u>Example</u>
+```{python}
+#| eval: false
+analysis_id = "ddff8c40-0493-11ee-bd19-a77197cd1a6b"
+filename = "protein_group_np.tsv"
+sdk.download_search_output_file(analysis_id, filename, download_path="testing/")
+```
+```
+Start download to path testing/protein_group_np.tsv
+Download complete
+```
+
+#### List Search Output Files
+Returns a list of search output files for the given `analysis_id`. 
+
+If the `analysis_id` is invalid or the search has not been completed, an error is raised.
+
+###### <u>Params</u>
+`analysis_id`: (`str`) Unique ID of the analysis for which the data is to be listed.
+
+###### <u>Returns</u>
+`files`: (`list`) A list of search output files for the given `analysis_id`.
+
+###### <u>Example</u>
+```{python}
+#| eval: false
+analysis_id = "ddff8c40-0493-11ee-bd19-a77197cd1a6b"
+search_output_files = sdk.list_search_output_files(analysis_id)
+print(search_output_files)
+```
+```
+['protein_group_np.tsv', 'protein_group_panel.tsv', 'peptide_np.tsv', 'peptide_panel.tsv', 'report.tsv', 'rollup/', 'rmbatch/']
+```
+
+#### Get Search Output File URL
+Returns a pre-signed URL for downloading a search output file for the given `analysis_id` and `filename`.
+
+If the `analysis_id` or `filename` is invalid, an error is raised.
+
+###### <u>Params</u>
+`analysis_id`: (`str`) Unique ID of the analysis for which the data is to be fetched.
+`filename`: (`str`) Name of the file to be fetched.
+###### <u>Returns</u>
+`url`: (`str`) A pre-signed URL for downloading the search output file.
+
+##### <u>Example</u>
+```{python}
+#| eval: false
+analysis_id = "ddff8c40-0493-11ee-bd19-a77197cd1a6b"
+filename = "protein_group_np.tsv"
+url = sdk.get_search_output_file_url(analysis_id, filename)
+print(url)
+```
+```
+https://example-bucket.s3.region.amazonaws.com/foobarbaz%20filename%3DProtein_Group_NP.tsv...
 ```
 
 

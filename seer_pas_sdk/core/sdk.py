@@ -1478,12 +1478,14 @@ class SeerSDK:
             Response object containing the url for the file.
         """
         if "." in filename:
-            filename = filename.split(".")[0]
+            filename = ".".join(filename.split(".")[:-1])
+        filename = filename.casefold()
 
         # Allow user to pass in filenames without an extension.
         analysis_result_files = self.list_search_result_files(analysis_id)
         analysis_result_files_prefix_mapper = {
-            ".".join(x.split(".")[:-1]): x for x in analysis_result_files
+            (".".join(x.split(".")[:-1])).casefold(): x
+            for x in analysis_result_files
         }
         if filename in analysis_result_files_prefix_mapper:
             filename = analysis_result_files_prefix_mapper[filename]
