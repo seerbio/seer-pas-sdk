@@ -1449,6 +1449,11 @@ class SeerSDK:
             raise ValueError(
                 "Please specify a valid folder path as download path."
             )
+        
+        if filename not in self.list_analysis_result_files(analysis_id):
+            raise ValueError(
+                f"Filename {filename} not among the available analysis result files. Please use SeerSDK.list_analysis_result_files('{analysis_id}') to see available files for this analysis."
+            )
 
         file_url = self.get_analysis_result_file_url(analysis_id, filename)
 
