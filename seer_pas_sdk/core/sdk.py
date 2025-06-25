@@ -1083,7 +1083,10 @@ class SeerSDK:
                 ]
             return res
 
-    @deprecation.deprecated()
+    @deprecation.deprecated(
+        deprecated_in="0.3.0",
+        removed_in="1.0.0"
+    )
     def get_analysis_result_protein_data(
         self, analysis_id: str, link: bool = False, pg: str = None
     ):
@@ -1156,7 +1159,10 @@ class SeerSDK:
                         "protein_panel": protein_panel,
                     }
 
-    @deprecation.deprecated()
+    @deprecation.deprecated(
+        deprecated_in="0.3.0",
+        removed_in="1.0.0"
+    )
     def get_analysis_result_peptide_data(
         self, analysis_id: str, link: bool = False, peptide: str = None
     ):
@@ -1232,7 +1238,7 @@ class SeerSDK:
                         "peptide_panel": peptide_panel,
                     }
 
-    def _get_analysis_result_protein_data(self, analysis_id: str):
+    def _get_search_result_protein_data(self, analysis_id: str):
         """
         Given an analysis id, this function returns the protein data for the analysis.
 
@@ -1270,7 +1276,7 @@ class SeerSDK:
 
             return protein_data
 
-    def _get_analysis_result_peptide_data(self, analysis_id: str):
+    def _get_search_result_peptide_data(self, analysis_id: str):
         """
         Given an analysis id, this function returns the peptide data for the analysis.
 
@@ -1317,7 +1323,7 @@ class SeerSDK:
 
             return peptide_data
 
-    def list_analysis_result_files(self, analysis_id: str):
+    def list_search_result_files(self, analysis_id: str):
         """
         Given an analysis id, this function returns a list of files associated with the analysis.
 
@@ -1354,7 +1360,7 @@ class SeerSDK:
                 files.append(row["filename"])
             return files
 
-    def get_analysis_result(
+    def get_search_result(
         self, analysis_id: str, analyte_type: str, rollup: str
     ):
         """
@@ -1389,32 +1395,32 @@ class SeerSDK:
         if analyte_type == "protein":
             if rollup == "np":
                 return url_to_df(
-                    self._get_analysis_result_protein_data(analysis_id)[
+                    self._get_search_result_protein_data(analysis_id)[
                         "npLink"
                     ]["url"]
                 )
             elif rollup == "panel":
                 return url_to_df(
-                    self._get_analysis_result_protein_data(analysis_id)[
+                    self._get_search_result_protein_data(analysis_id)[
                         "panelLink"
                     ]["url"]
                 )
         elif analyte_type == "peptide":
             if rollup == "np":
                 return url_to_df(
-                    self._get_analysis_result_peptide_data(analysis_id)[
+                    self._get_search_result_peptide_data(analysis_id)[
                         "npLink"
                     ]["url"]
                 )
             elif rollup == "panel":
                 return url_to_df(
-                    self._get_analysis_result_peptide_data(analysis_id)[
+                    self._get_search_result_peptide_data(analysis_id)[
                         "panelLink"
                     ]["url"]
                 )
         else:
             return url_to_df(
-                self.get_analysis_result_file_url(
+                self.get_search_result_file_url(
                     analysis_id, filename="report.tsv"
                 )
             )
@@ -1450,7 +1456,7 @@ class SeerSDK:
                 "Please specify a valid folder path as download path."
             )
 
-        file_url = self.get_analysis_result_file_url(analysis_id, filename)
+        file_url = self.get_search_result_file_url(analysis_id, filename)
 
         with self._get_auth_session() as s:
             response = s.get(file_url["url"], stream=True)
@@ -1460,7 +1466,7 @@ class SeerSDK:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
 
-    def get_analysis_result_file_url(self, analysis_id: str, filename: str):
+    def get_search_result_file_url(self, analysis_id: str, filename: str):
         """
         Given an analysis id and a analysis result filename, this function returns the signed URL for the file.
 
@@ -1481,7 +1487,7 @@ class SeerSDK:
             filename = filename.split(".")[0]
 
         # Allow user to pass in filenames without an extension.
-        analysis_result_files = self.list_analysis_result_files(analysis_id)
+        analysis_result_files = self.list_search_result_files(analysis_id)
         analysis_result_files_prefix_mapper = {
             ".".join(x.split(".")[:-1]): x for x in analysis_result_files
         }
@@ -1509,7 +1515,10 @@ class SeerSDK:
             raise ValueError(f"File {filename} not found.")
         return response
 
-    @deprecation.deprecated()
+    @deprecation.deprecated(
+        deprecated_in="0.3.0",
+        removed_in="1.0.0"
+    )
     def get_analysis_result_files(
         self,
         analysis_id: str,
@@ -1590,7 +1599,7 @@ class SeerSDK:
 
         filenames = set(filenames)
         # Allow user to pass in filenames without an extension.
-        analysis_result_files = self.list_analysis_result_files(analysis_id)
+        analysis_result_files = self.list_search_result_files(analysis_id)
         analysis_result_files_prefix_mapper = {
             ".".join(x.split(".")[:-1]): x for x in analysis_result_files
         }
@@ -1627,7 +1636,7 @@ class SeerSDK:
                 links["peptide_panel.tsv"] = peptide_data["panelLink"]["url"]
             else:
                 try:
-                    links[filename] = self._get_analysis_result_file_url(
+                    links[filename] = self._get_search_result_file_url(
                         analysis_id, filename
                     )["url"]
                 except Exception as e:
@@ -1652,7 +1661,10 @@ class SeerSDK:
 
         return links
 
-    @deprecation.deprecated()
+    @deprecation.deprecated(
+        deprecated_in="0.3.0",
+        removed_in="1.0.0"
+    )
     def get_analysis_result(
         self,
         analysis_id: str,
@@ -1724,7 +1736,7 @@ class SeerSDK:
         }
 
         if diann_report:
-            diann_report_url = self._get_analysis_result_file_url(
+            diann_report_url = self._get_search_result_file_url(
                 analysis_id, "report.tsv"
             )
             links["diann_report"] = url_to_df(diann_report_url["url"])
