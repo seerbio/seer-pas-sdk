@@ -1449,11 +1449,6 @@ class SeerSDK:
             raise ValueError(
                 "Please specify a valid folder path as download path."
             )
-        
-        if filename not in self.list_analysis_result_files(analysis_id):
-            raise ValueError(
-                f"Filename {filename} not among the available analysis result files. Please use SeerSDK.list_analysis_result_files('{analysis_id}') to see available files for this analysis."
-            )
 
         file_url = self.get_analysis_result_file_url(analysis_id, filename)
 
@@ -1482,6 +1477,8 @@ class SeerSDK:
         file_url: dict
             Response object containing the url for the file.
         """
+        if "." in filename:
+            filename = filename.split(".")[0]
 
         # Allow user to pass in filenames without an extension.
         analysis_result_files = self.list_analysis_result_files(analysis_id)
@@ -1490,6 +1487,10 @@ class SeerSDK:
         }
         if filename in analysis_result_files_prefix_mapper:
             filename = analysis_result_files_prefix_mapper[filename]
+        else:
+            raise ValueError(
+                f"Filename {filename} not among the available analysis result files. Please use SeerSDK.list_analysis_result_files('{analysis_id}') to see available files for this analysis."
+            )
 
         analysis_metadata = self.get_analysis(analysis_id)[0]
         if analysis_metadata.get("status") in ["Failed", None]:
