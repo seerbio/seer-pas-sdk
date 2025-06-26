@@ -566,7 +566,7 @@ class SeerSDK:
                 del entry["tenant_id"]
             return res
 
-    def get_msdata(self, sample_ids: list, df: bool = False):
+    def get_msruns(self, sample_ids: list, as_df: bool = False):
         """
         Fetches MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user.
 
@@ -590,13 +590,13 @@ class SeerSDK:
         >>> seer_sdk = SeerSDK()
         >>> sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
 
-        >>> seer_sdk.get_msdata(sample_ids)
+        >>> seer_sdk.get_runs(sample_ids)
         >>> [
             {"id": "SAMPLE_ID_1_HERE" ... },
             {"id": "SAMPLE_ID_2_HERE" ... }
         ]
 
-        >>> seer_sdk.get_msdata(sample_ids, df=True)
+        >>> seer_sdk.get_msruns(sample_ids, as_df=True)
         >>>                                      id  ... gradient
             0  81c6a180-15e0-11ee-bdf1-bbaa73585acf  ...     None
             1  816a9ed0-15e0-11ee-bdf1-bbaa73585acf  ...     None
@@ -631,7 +631,7 @@ class SeerSDK:
                 entry["raw_file_path"] = entry["raw_file_path"][
                     location(entry["raw_file_path"]) :
                 ]
-        return res if not df else dict_to_df(res)
+        return res if not as_df else dict_to_df(res)
 
     def get_plate(self, plate_id: str, df: bool = False):
         """
@@ -794,8 +794,8 @@ class SeerSDK:
             sample_ids = {
                 sample["id"]: i for i, sample in enumerate(project_samples)
             }  # will always contain unique values
-            ms_data_files = self.get_msdata(
-                sample_ids=list(sample_ids.keys()), df=False
+            ms_data_files = self.get_msruns(
+                sample_ids=list(sample_ids.keys()), as_df=False
             )
 
             for ms_data_file in ms_data_files:
