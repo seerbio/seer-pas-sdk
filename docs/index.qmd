@@ -316,14 +316,14 @@ log(sample_plate)
 
 <hr>
 
-### Get MS Data
-Fetches MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user. 
+### Get MS Runs
+Fetches information pertaining to MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user. 
 
 The function returns a dict containing `DataFrame` objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
 
 ###### <u>Params</u>
 * `sample_ids`: (`list`) List of unique sample IDs.
-* `df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+* `as_df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
 <br>
 
 ###### <u>Returns</u>
@@ -334,7 +334,7 @@ The function returns a dict containing `DataFrame` objects if the `df` flag is p
 ```{python}
 #| eval: false
 sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
-example = sdk.get_msdata(sample_ids)
+example = sdk.get_msruns(sample_ids)
 log(example)
 ```
 ```
@@ -344,7 +344,7 @@ log(example)
 There is also an option to return everything as a DataFrame instead:
 ```{python}
 #| eval: false
-example = sdk.get_msdata(sample_ids, df=True)
+example = sdk.get_msruns(sample_ids, as_df=True)
 log(example)
 ```
 ```
