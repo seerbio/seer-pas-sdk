@@ -237,7 +237,7 @@ class SeerSDK:
                 )
             return spaces.json()
 
-    def get_plate_metadata(self, plate_id: str = None, df: bool = False):
+    def get_plates(self, plate_id: str = None, as_df: bool = False):
         """
         Fetches a list of plates for the authenticated user. If no `plate_id` is provided, returns all plates for the authenticated user. If `plate_id` is provided, returns the plate with the given `plate_id`, provided it exists.
 
@@ -245,7 +245,7 @@ class SeerSDK:
         ----------
         plate_id : str, optional
             ID of the plate to be fetched, defaulted to None.
-        df: bool
+        as_df: bool
             Boolean denoting whether the user wants the response back in JSON or a DataFrame object
 
         Returns
@@ -257,13 +257,13 @@ class SeerSDK:
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.get_plate_metadata()
+        >>> seer_sdk.get_plates()
         >>> [
                 { "id": ... },
                 { "id": ... },
                 ...
             ]
-        >>> seer_sdk.get_plate_metadata(df=True)
+        >>> seer_sdk.get_plates(as_df=True)
         >>>                                        id  ... user_group
             0    a7c12190-15da-11ee-bdf1-bbaa73585acf  ...       None
             1    8c3b1480-15da-11ee-bdf1-bbaa73585acf  ...       None
@@ -302,9 +302,9 @@ class SeerSDK:
             for entry in res:
                 del entry["tenant_id"]
 
-        return res if not df else dict_to_df(res)
+        return res if not as_df else dict_to_df(res)
 
-    def get_project_metadata(self, project_id: str = None, df: bool = False):
+    def get_projects(self, project_id: str = None, as_df: bool = False):
         """
         Fetches a list of projects for the authenticated user. If no `project_id` is provided, returns all projects for the authenticated user. If `project_id` is provided, returns the project with the given `project_id`, provided it exists.
 
@@ -312,7 +312,7 @@ class SeerSDK:
         ----------
         project_id: str, optional
             Project ID of the project to be fetched, defaulted to None.
-        df: bool
+        as_df: bool
             Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
 
         Returns
@@ -324,14 +324,14 @@ class SeerSDK:
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.get_project_metadata()
+        >>> seer_sdk.get_projects()
         >>> [
                 { "project_name": ... },
                 { "project_name": ... },
                 ...
             ]
 
-        >>> seer_sdk.get_project_metadata(df=True)
+        >>> seer_sdk.get_projects(as_df=True)
         >>>                                        id  ... user_group
             0    a7c12190-15da-11ee-bdf1-bbaa73585acf  ...       None
             1    8c3b1480-15da-11ee-bdf1-bbaa73585acf  ...       None
@@ -345,7 +345,7 @@ class SeerSDK:
             938  5b05d440-6610-11ea-96e3-d5a4dab4ebf6  ...       None
             939  9872e3f0-544e-11ea-ad9e-1991e0725494  ...       None
 
-        >>> seer_sdk.get_project_metadata(id="YOUR_PROJECT_ID_HERE")
+        >>> seer_sdk.get_projects(id="YOUR_PROJECT_ID_HERE")
         >>> [{ "project_name": ... }]
         """
 
@@ -379,15 +379,18 @@ class SeerSDK:
                 entry["raw_file_path"] = entry["raw_file_path"][
                     location(entry["raw_file_path"]) :
                 ]
-        return res if not df else dict_to_df(res)
+        return res if not as_df else dict_to_df(res)
 
-    def get_samples_metadata(
-        self, plate_id: str = None, project_id: str = None, df: bool = False
+    def get_samples(
+        self,
+        plate_id: str = None,
+        project_id: str = None,
+        analysis_id: str = None,
+        analysis_name: str = None,
+        as_df: bool = False,
     ):
         """
-        Fetches a list of samples for the authenticated user, filtered by `plate_id`. Returns all samples for the plate with the given `plate_id`, provided it exists.
-
-        If both `plate_id` and `project_id` are passed in, only the `plate_id` is validated first.
+        Fetches a list of samples for the authenticated user with relation to a specified plate, project, or analysis. If no parameters are provided, returns all samples for the authenticated user. If `plate_id` or `project_id` is provided, returns samples associated with that plate or project. If `analysis_id` or `analysis_name` is provided, returns samples associated with that analysis.
 
         Parameters
         ----------
@@ -395,7 +398,11 @@ class SeerSDK:
             ID of the plate for which samples are to be fetched, defaulted to None.
         project_id : str, optional
             ID of the project for which samples are to be fetched, defaulted to None.
-        df: bool
+        analysis_id : str, optional
+            ID of the analysis for which samples are to be fetched, defaulted to None.
+        analysis_name : str, optional
+            Name of the analysis for which samples are to be fetched, defaulted to None.
+        as_df: bool
             Boolean denoting whether the user wants the response back in JSON or a DataFrame object
 
         Returns
@@ -408,14 +415,14 @@ class SeerSDK:
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
 
-        >>> seer_sdk.get_samples_metadata(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
+        >>> seer_sdk.get_samples(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
         >>> [
                 { "id": ... },
                 { "id": ... },
                 ...
             ]
 
-        >>> seer_sdk.get_samples_metadata(df=True)
+        >>> seer_sdk.get_samples(as_df=True)
         >>>                                     id  ...      control
         0     812139c0-15e0-11ee-bdf1-bbaa73585acf  ...
         1     803e05b0-15e0-11ee-bdf1-bbaa73585acf  ...  MPE Control
@@ -430,29 +437,40 @@ class SeerSDK:
         3628  dd607ef0-654c-11ea-8eb2-25a1cfd1163c  ...         C132
         """
 
-        if not plate_id and not project_id:
-            raise ValueError("You must pass in plate ID or project ID.")
+        # Raise an error if none or more than one of the primary key parameters are passed in.
+        if (
+            sum(
+                [
+                    True if x else False
+                    for x in [plate_id, project_id, analysis_id, analysis_name]
+                ]
+            )
+            != 1
+        ):
+            raise ValueError(
+                "You must pass in exactly one of plate_id, project_id, analysis_id, analysis_name."
+            )
 
         res = []
         URL = f"{self._auth.url}api/v1/samples"
         sample_params = {"all": "true"}
 
-        with self._get_auth_session() as s:
+        if project_id or plate_id:
+            with self._get_auth_session() as s:
+                if plate_id:
+                    try:
+                        self.get_plates(plate_id)
+                    except:
+                        raise ValueError("Plate ID is invalid.")
+                    sample_params["plateId"] = plate_id
 
-            if plate_id:
-                try:
-                    self.get_plate_metadata(plate_id)
-                except:
-                    raise ValueError("Plate ID is invalid.")
-                sample_params["plateId"] = plate_id
+                else:
+                    try:
+                        self.get_projects(project_id)
+                    except:
+                        raise ValueError("Project ID is invalid.")
 
-            elif project_id:
-                try:
-                    self.get_project_metadata(project_id)
-                except:
-                    raise ValueError("Project ID is invalid.")
-
-                sample_params["projectId"] = project_id
+                    sample_params["projectId"] = project_id
 
             samples = s.get(URL, params=sample_params)
             if samples.status_code != 200:
@@ -460,14 +478,19 @@ class SeerSDK:
                     f"Failed to fetch sample data for plate ID: {plate_id}."
                 )
             res = samples.json()["data"]
+            res_df = dict_to_df(res)
 
-            for entry in res:
-                del entry["tenant_id"]
+        else:
+            analysis_identifier = analysis_id or analysis_name
+            res_df = self._get_analysis_samples(
+                analysis_identifier, as_df=as_df
+            )
 
-        # Exclude custom fields that don't belong to the tenant
-        res_df = dict_to_df(res)
+        # apply post processing
+        res_df.drop(["tenant_id"], axis=1, inplace=True)
+
         custom_columns = [
-            x["field_name"] for x in self.get_sample_custom_fields()
+            x["field_name"] for x in self._get_sample_custom_fields()
         ]
         res_df = res_df[
             [
@@ -480,7 +503,7 @@ class SeerSDK:
         # API returns empty strings if not a control, replace with None for filtering purposes
         res_df["control"] = res_df["control"].apply(lambda x: x if x else None)
 
-        return res_df.to_dict(orient="records") if not df else res_df
+        return res_df.to_dict(orient="records") if not as_df else res_df
 
     def _filter_samples_metadata(
         self,
@@ -533,7 +556,7 @@ class SeerSDK:
                 "Invalid filter. Please choose between 'control' or 'sample'."
             )
 
-        df = self.get_samples_metadata(project_id=project_id, df=True)
+        df = self.get_samples(project_id=project_id, as_df=True)
 
         if filter == "control":
             df = df[~df["control"].isna()]
@@ -546,7 +569,7 @@ class SeerSDK:
 
         return valid_samples
 
-    def get_sample_custom_fields(self):
+    def _get_sample_custom_fields(self):
         """
         Fetches a list of custom fields defined for the authenticated user.
         """
@@ -633,7 +656,7 @@ class SeerSDK:
                 ]
         return res if not df else dict_to_df(res)
 
-    def get_plate(self, plate_id: str, df: bool = False):
+    def get_plate(self, plate_id: str, as_df: bool = False):
         """
         Fetches MS data files for a `plate_id` (provided that the `plate_id` is valid and has samples associated with it) for an authenticated user.
 
@@ -670,7 +693,7 @@ class SeerSDK:
 
             [2 rows x 26 columns]
         """
-        plate_samples = self.get_samples_metadata(plate_id=plate_id)
+        plate_samples = self.get_samples(plate_id=plate_id)
         sample_ids = [sample["id"] for sample in plate_samples]
         return self.get_msdata(sample_ids, df)
 
@@ -678,7 +701,7 @@ class SeerSDK:
         self,
         project_id: str,
         msdata: bool = False,
-        df: bool = False,
+        as_df: bool = False,
         flat: bool = False,
     ):
         """
@@ -694,7 +717,7 @@ class SeerSDK:
             ID of the project for which samples are to be fetched.
         msdata: bool, optional
             Boolean flag denoting whether the user wants relevant MS data files associated with the samples.
-        df: bool, optional
+        as_df: bool, optional
             Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
 
         Returns
@@ -1983,8 +2006,8 @@ class SeerSDK:
 
             protein_peptide_gene_map = builder.protein_gene_map
 
-            # API call 2 - get analysis samples metadata to get condition
-            samples_metadata = self.get_analysis_samples(analysis_id)
+            # API call 2 - get analysis samples to get condition
+            samples_metadata = self._get_analysis_samples(analysis_id)
 
             json = {"analysisId": analysis_id}
             if feature_ids:
@@ -2021,7 +2044,7 @@ class SeerSDK:
                 if x[feature_type_index] in protein_peptide_gene_map
             ]
             sample_id_condition = {
-                x["id"]: x["condition"] for x in samples_metadata[0]["samples"]
+                x["id"]: x["condition"] for x in samples_metadata
             }
 
             if show_significant_only:
@@ -2521,29 +2544,55 @@ class SeerSDK:
             else:
                 return obj.volcano_plot
 
-    def get_analysis_samples(self, analysis_id: str):
+    def _get_analysis_samples(self, analysis: str, as_df=False):
         """
-        Get the samples associated with a given analysis ID.
+        Get the samples associated with a given analysis.
 
         Args:
-            analysis_id (str): The analysis ID.
+            analysis_id (str): The analysis identifier. Accepts an analysis ID or an analysis name.
 
         Raises:
             ServerError - could not retrieve samples for analysis.
         Returns:
-            dict: A dictionary containing the samples associated with the analysis.
+            list[dict] : a list of samples associated with the analysis.
         """
-        if not analysis_id:
-            raise ValueError("Analysis ID cannot be empty.")
 
-        URL = f"{self._auth.url}api/v1/analyses/samples/{analysis_id}"
-        with self._get_auth_session() as s:
-            samples = s.get(URL)
+        if not analysis:
+            raise ValueError("Analysis cannot be empty.")
 
-            if samples.status_code != 200:
-                raise ServerError("Could not retrieve samples for analysis.")
+        user_analyses = self.get_analysis()
 
-            return samples.json()
+        rows = [
+            x
+            for x in user_analyses
+            if x["id"] == analysis or x["analysis_name"] == analysis
+        ]
+
+        # fetch custom columns associated to tenant
+        custom_columns = [
+            x["field_name"] for x in self._get_sample_custom_fields()
+        ]
+
+        resp = []
+        for row in rows:
+            URL = f"{self._auth.url}api/v1/analyses/samples/{row['id']}"
+            with self._get_auth_session() as s:
+                samples = s.get(URL)
+                try:
+                    samples.raise_for_status()
+                    obj = samples.json()[0]
+                    resp += obj["samples"]
+                except:
+                    continue
+
+        if not resp:
+            raise ServerError(
+                f"Could not retrieve samples for analysis {analysis}."
+            )
+
+        resp = pd.DataFrame(resp)
+        resp.drop_duplicates(subset=["id"], inplace=True)
+        return resp if as_df else resp.to_dict(orient="records")
 
     def get_analysis_protocol_fasta(self, analysis_id, download_path=None):
         if not analysis_id:
