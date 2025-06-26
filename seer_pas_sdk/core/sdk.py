@@ -672,7 +672,7 @@ class SeerSDK:
         """
         plate_samples = self.get_samples_metadata(plate_id=plate_id)
         sample_ids = [sample["id"] for sample in plate_samples]
-        return self.get_msdata(sample_ids, df)
+        return self.get_msruns(sample_ids, df)
 
     def get_project(
         self,
