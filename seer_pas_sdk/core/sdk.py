@@ -1,5 +1,6 @@
 from tqdm import tqdm
 
+import deprecation
 import os
 import jwt
 import requests
@@ -589,7 +590,7 @@ class SeerSDK:
                 del entry["tenant_id"]
             return res
 
-    def get_msdata(self, sample_ids: list, df: bool = False):
+    def get_msruns(self, sample_ids: list, as_df: bool = False):
         """
         Fetches MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user.
 
@@ -613,13 +614,13 @@ class SeerSDK:
         >>> seer_sdk = SeerSDK()
         >>> sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
 
-        >>> seer_sdk.get_msdata(sample_ids)
+        >>> seer_sdk.get_runs(sample_ids)
         >>> [
             {"id": "SAMPLE_ID_1_HERE" ... },
             {"id": "SAMPLE_ID_2_HERE" ... }
         ]
 
-        >>> seer_sdk.get_msdata(sample_ids, df=True)
+        >>> seer_sdk.get_msruns(sample_ids, as_df=True)
         >>>                                      id  ... gradient
             0  81c6a180-15e0-11ee-bdf1-bbaa73585acf  ...     None
             1  816a9ed0-15e0-11ee-bdf1-bbaa73585acf  ...     None
@@ -654,7 +655,7 @@ class SeerSDK:
                 entry["raw_file_path"] = entry["raw_file_path"][
                     location(entry["raw_file_path"]) :
                 ]
-        return res if not df else dict_to_df(res)
+        return res if not as_df else dict_to_df(res)
 
     def get_plate(self, plate_id: str, as_df: bool = False):
         """
@@ -695,7 +696,7 @@ class SeerSDK:
         """
         plate_samples = self.get_samples(plate_id=plate_id)
         sample_ids = [sample["id"] for sample in plate_samples]
-        return self.get_msdata(sample_ids, df)
+        return self.get_msruns(sample_ids, df)
 
     def get_project(
         self,
@@ -817,8 +818,8 @@ class SeerSDK:
             sample_ids = {
                 sample["id"]: i for i, sample in enumerate(project_samples)
             }  # will always contain unique values
-            ms_data_files = self.get_msdata(
-                sample_ids=list(sample_ids.keys()), df=False
+            ms_data_files = self.get_msruns(
+                sample_ids=list(sample_ids.keys()), as_df=False
             )
 
             for ms_data_file in ms_data_files:
@@ -1105,6 +1106,7 @@ class SeerSDK:
                 ]
             return res
 
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result_protein_data(
         self, analysis_id: str, link: bool = False, pg: str = None
     ):
@@ -1177,6 +1179,7 @@ class SeerSDK:
                         "protein_panel": protein_panel,
                     }
 
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result_peptide_data(
         self, analysis_id: str, link: bool = False, peptide: str = None
     ):
@@ -1252,7 +1255,92 @@ class SeerSDK:
                         "peptide_panel": peptide_panel,
                     }
 
-    def list_analysis_result_files(self, analysis_id: str):
+    def _get_search_result_protein_data(self, analysis_id: str):
+        """
+        Given an analysis id, this function returns the protein data for the analysis.
+
+        Parameters
+        ----------
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+        """
+        with self._get_auth_session() as s:
+            URL = f"{self._auth.url}api/v1/data"
+            response = s.get(
+                f"{URL}/protein?analysisId={analysis_id}&retry=false"
+            )
+
+            if response.status_code != 200:
+                raise ValueError(
+                    "Could not fetch protein data. Please verify that your analysis completed."
+                )
+            response = response.json()
+
+            protein_data = {}
+            for row in response:
+                if row.get("name") == "npLink":
+                    protein_data["npLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+                if row.get("name") == "panelLink":
+                    protein_data["panelLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+            if not protein_data:
+                raise ValueError("No protein result files found.")
+            if not "panelLink" in protein_data.keys():
+                protein_data["panelLink"] = {"url": ""}
+
+            return protein_data
+
+    def _get_search_result_peptide_data(self, analysis_id: str):
+        """
+        Given an analysis id, this function returns the peptide data for the analysis.
+
+        Parameters
+        ----------
+
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+
+        Returns
+        -------
+        peptide_data : dict
+            Dictionary containing URLs for npLink and panelLink peptide data.
+
+        """
+
+        with self._get_auth_session() as s:
+            URL = f"{self._auth.url}api/v1/data"
+            response = s.get(
+                f"{URL}/peptide?analysisId={analysis_id}&retry=false"
+            )
+
+            if response.status_code != 200:
+                raise ValueError(
+                    "Could not fetch peptide data. Please verify that your analysis completed."
+                )
+
+            response = response.json()
+
+            peptide_data = {}
+            for row in response:
+                if row.get("name") == "npLink":
+                    peptide_data["npLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+                if row.get("name") == "panelLink":
+                    peptide_data["panelLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+            if not peptide_data:
+                raise ValueError("No peptide result files found.")
+            if not "panelLink" in peptide_data.keys():
+                peptide_data["panelLink"] = {"url": ""}
+
+            return peptide_data
+
+    def list_search_result_files(self, analysis_id: str):
         """
         Given an analysis id, this function returns a list of files associated with the analysis.
 
@@ -1289,7 +1377,113 @@ class SeerSDK:
                 files.append(row["filename"])
             return files
 
-    def get_analysis_result_file_url(self, analysis_id: str, filename: str):
+    def get_search_result(
+        self, analysis_id: str, analyte_type: str, rollup: str
+    ):
+        """
+        Load one of the files available via the "Download result files" button on the PAS UI.
+
+        Args:
+            analysis_id (str): id of the analysis
+            analyte_type (str): type of the data. Acceptable options are one of ['protein', 'peptide', 'precursor'].
+            rollup (str): the desired file. Acceptable options are one of ['np', 'panel'].
+        Returns:
+            pd.DataFrame: the requested file as a pandas DataFrame
+
+        """
+        if not analysis_id:
+            raise ValueError("Analysis ID cannot be empty.")
+
+        if analyte_type not in ["protein", "peptide", "precursor"]:
+            raise ValueError(
+                "Invalid data type. Please choose between 'protein', 'peptide', or 'precursor'."
+            )
+
+        if rollup not in ["np", "panel"]:
+            raise ValueError(
+                "Invalid file. Please choose between 'np', 'panel'."
+            )
+
+        if analyte_type == "precursor" and rollup == "panel":
+            raise ValueError(
+                "Precursor data is not available for panel rollup, please select np rollup."
+            )
+
+        if analyte_type == "protein":
+            if rollup == "np":
+                return url_to_df(
+                    self._get_search_result_protein_data(analysis_id)[
+                        "npLink"
+                    ]["url"]
+                )
+            elif rollup == "panel":
+                return url_to_df(
+                    self._get_search_result_protein_data(analysis_id)[
+                        "panelLink"
+                    ]["url"]
+                )
+        elif analyte_type == "peptide":
+            if rollup == "np":
+                return url_to_df(
+                    self._get_search_result_peptide_data(analysis_id)[
+                        "npLink"
+                    ]["url"]
+                )
+            elif rollup == "panel":
+                return url_to_df(
+                    self._get_search_result_peptide_data(analysis_id)[
+                        "panelLink"
+                    ]["url"]
+                )
+        else:
+            return url_to_df(
+                self.get_search_result_file_url(
+                    analysis_id, filename="report.tsv"
+                )
+            )
+
+    def download_search_output_file(
+        self, analysis_id: str, filename: str, download_path: str
+    ):
+        """
+        Given an analysis id and a analysis result filename, this function downloads the file to the specified path.
+
+        Parameters
+        ----------
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+
+        filename : str
+            Name of the file to be fetched.
+
+        download_path : str
+            String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid.
+
+        Returns
+        -------
+        None
+            Downloads the file to the specified path.
+        """
+
+        if not analysis_id:
+            raise ValueError("Analysis ID cannot be empty.")
+
+        if not os.path.exists(download_path):
+            raise ValueError(
+                "Please specify a valid folder path as download path."
+            )
+
+        file_url = self.get_search_result_file_url(analysis_id, filename)
+
+        with self._get_auth_session() as s:
+            response = s.get(file_url["url"], stream=True)
+            if response.status_code != 200:
+                raise ServerError(f"File {filename} not found.")
+            with open(os.path.join(download_path, filename), "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+    def get_search_result_file_url(self, analysis_id: str, filename: str):
         """
         Given an analysis id and a analysis result filename, this function returns the signed URL for the file.
 
@@ -1306,18 +1500,26 @@ class SeerSDK:
         file_url: dict
             Response object containing the url for the file.
         """
+        if "." in filename:
+            filename = ".".join(filename.split(".")[:-1])
+        filename = filename.casefold()
 
         # Allow user to pass in filenames without an extension.
-        analysis_result_files = self.list_analysis_result_files(analysis_id)
+        analysis_result_files = self.list_search_result_files(analysis_id)
         analysis_result_files_prefix_mapper = {
-            ".".join(x.split(".")[:-1]): x for x in analysis_result_files
+            (".".join(x.split(".")[:-1])).casefold(): x
+            for x in analysis_result_files
         }
         if filename in analysis_result_files_prefix_mapper:
             filename = analysis_result_files_prefix_mapper[filename]
+        else:
+            raise ValueError(
+                f"Filename {filename} not among the available analysis result files. Please use SeerSDK.list_search_result_files('{analysis_id}') to see available files for this analysis."
+            )
 
         analysis_metadata = self.get_analysis(analysis_id)[0]
         if analysis_metadata.get("status") in ["Failed", None]:
-            raise ValueError("Cannot generate links for failed analyses.")
+            raise ValueError("Cannot generate links for failed searches.")
         with self._get_auth_session() as s:
             file_url = s.post(
                 f"{self._auth.url}api/v1/analysisResultFiles/getUrl",
@@ -1332,6 +1534,7 @@ class SeerSDK:
             raise ValueError(f"File {filename} not found.")
         return response
 
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result_files(
         self,
         analysis_id: str,
@@ -1412,7 +1615,7 @@ class SeerSDK:
 
         filenames = set(filenames)
         # Allow user to pass in filenames without an extension.
-        analysis_result_files = self.list_analysis_result_files(analysis_id)
+        analysis_result_files = self.list_search_result_files(analysis_id)
         analysis_result_files_prefix_mapper = {
             ".".join(x.split(".")[:-1]): x for x in analysis_result_files
         }
@@ -1449,7 +1652,7 @@ class SeerSDK:
                 links["peptide_panel.tsv"] = peptide_data["panelLink"]["url"]
             else:
                 try:
-                    links[filename] = self.get_analysis_result_file_url(
+                    links[filename] = self._get_search_result_file_url(
                         analysis_id, filename
                     )["url"]
                 except Exception as e:
@@ -1474,6 +1677,7 @@ class SeerSDK:
 
         return links
 
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result(
         self,
         analysis_id: str,
@@ -1545,7 +1749,7 @@ class SeerSDK:
         }
 
         if diann_report:
-            diann_report_url = self.get_analysis_result_file_url(
+            diann_report_url = self._get_search_result_file_url(
                 analysis_id, "report.tsv"
             )
             links["diann_report"] = url_to_df(diann_report_url["url"])
