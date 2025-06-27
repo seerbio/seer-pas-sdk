@@ -276,7 +276,7 @@ log(sample_plate)
 ### Get MS Runs
 Fetches information pertaining to MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user. 
 
-The function returns a dict containing `DataFrame` objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
+The function returns a dict containing `DataFrame` objects if the `as_df` flag is passed in as True, otherwise a nested dict object is returned instead.
 
 ###### <u>Params</u>
 * `sample_ids`: (`list`) List of unique sample IDs.

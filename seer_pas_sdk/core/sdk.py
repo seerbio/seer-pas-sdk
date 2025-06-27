@@ -616,7 +616,7 @@ class SeerSDK:
         ----------
         sample_ids : list
             List of unique sample IDs.
-        df: bool
+        as_df: bool
             Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
 
         Returns
@@ -1253,7 +1253,7 @@ class SeerSDK:
             return url_to_df(
                 self.get_search_result_file_url(
                     analysis_id, filename="report.tsv"
-                )
+                )["url"]
             )
 
     def download_search_output_file(
