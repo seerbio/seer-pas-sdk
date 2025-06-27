@@ -396,7 +396,29 @@ log(sample_analysis_protocol)
 
 <hr>
 
+### Get Samples 
+Fetches a list of samples for the authenticated user. Samples can be fetched with respect to a `plate_id`, `project_id`, `analysis_id`, `analysis_name`. 
 
+###### <u>Params</u>
+* `plate_id`: (`str`, optional) Unique ID of the plate to fetch samples from, defaulted to None.
+* `project_id`: (`str`, optional) Unique ID of the project to fetch samples from, defaulted to None.
+* `analysis_id`: (`str`, optional) Unique ID of the analysis to fetch samples from, defaulted to None.
+* `analysis_name`: (`str`, optional) Name of the analysis to fetch samples from, defaulted to None.
+* `as_df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+<br>
+###### <u>Returns</u>
+`samples`: (`list` or `DataFrame`) List or DataFrame of sample objects for the authenticated user.
+###### <u>Example</u>
+```{python}
+#| eval: false
+samples = sdk.get_samples(plate_id="303bfc20-87d7-11ee-b03f-27a54e8c1798")
+log(samples)
+```
+
+```
+[{'id': 'b632546f-d91f-11ef-85ce-51d48ea13827', 'user_group': None, 'plate_id': 'b50768f0-d91f-11ef-8371-dd35d1cfc768', 'sample_name': 'process control', 'sample_id': 'CPRO', 'sample_type': 'Plasma', 'species': 'Human', 'description': 'Digestion Control S-538-7239/S-431-7226 Lyo PC10 Controls Rep1', 'notes': None, 'created_by': '7485f2ae-9a12-4cc3-8605-98d10e624937', 'created_timestamp': '2025-01-23T00:19:29.584Z', 'last_modified_by': 'c71f7f48-e7f8-4a5f-91f8-8bcdaff4aa82', 'last_modified_timestamp': '2025-06-25T22:54:09.374Z', 'sample_receipt_date': None, 'sample_collection_date': None, 'condition': 'B', 'plate_name': 'NoEdit_Biscayne_Plate_MS1048', 'custom_test': None, 'biological_replicate': None, 'technical_replicate': None, 'custom_new_field': None, 'custom_long_field_1234567890_123456890_1234567890_1234567890_63': None, 'custom_filed': None, 'custom_main_field': None, 'custom_letters_digits_anerscore': None, 'custom_test123': None, 'custom_sample_attribute_for_grouping': None, 'custom_custom_nita_01': None, 'custom_nitafield2': None, 'custom_by_demo_user': None, 'custom_seer_main_staging': None, 'custom_fix_713': None, 'custom_newcustomfield12345': None, 'custom_mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm': None, 'custom_reskin': None, 'custom_newaddedcolumn': None, 'custom_myfirsttestcustomcolumn0817': None, 'custom_sdk_test': None, 'custom_rsun_test_admin_custom_field': None, 'custom_age': None, 'custom_gender': None, 'custom_country': None, 'custom_res2': None, 'custom_region': None, 'custom_nation': None, 'custom_homer_field': None, 'custom_condition_1': None, 'well_location': 'B11', 'control': 'CPRO'}, 
+{'id': 'b6325471-d91f-11ef-85ce-51d48ea13827', 'user_group': None, 'plate_id': 'b50768f0-d91f-11ef-8371-dd35d1cfc768', 'sample_name': 'cleanup control', 'sample_id': 'CCLN', 'sample_type': 'Peptide', 'species': 'Human', 'description': 'NONE Lyo PC10 Peptides Controls Rep1', 'notes': None, 'created_by': '7485f2ae-9a12-4cc3-8605-98d10e624937', 'created_timestamp': '2025-01-23T00:19:29.584Z', 'last_modified_by': '7485f2ae-9a12-4cc3-8605-98d10e624937', 'last_modified_timestamp': '2025-01-23T00:19:29.852Z', 'sample_receipt_date': None, 'sample_collection_date': None, 'condition': 'B', 'plate_name': 'NoEdit_Biscayne_Plate_MS1048', 'custom_test': None, 'biological_replicate': None, 'technical_replicate': None, 'custom_new_field': None, 'custom_long_field_1234567890_123456890_1234567890_1234567890_63': None, 'custom_filed': None, 'custom_main_field': None, 'custom_letters_digits_anerscore': None, 'custom_test123': None, 'custom_sample_attribute_for_grouping': None, 'custom_custom_nita_01': None, 'custom_nitafield2': None, 'custom_by_demo_user': None, 'custom_seer_main_staging': None, 'custom_fix_713': None, 'custom_newcustomfield12345': None, 'custom_mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm': None, 'custom_reskin': None, 'custom_newaddedcolumn': None, 'custom_myfirsttestcustomcolumn0817': None, 'custom_sdk_test': None, 'custom_rsun_test_admin_custom_field': None, 'custom_age': None, 'custom_gender': None, 'custom_country': None, 'custom_res2': None, 'custom_region': None, 'custom_nation': None, 'custom_homer_field': None, 'custom_condition_1': None, 'well_location': 'D11', 'control': 'cleanup control'}]
+```
 
 
 ### Get Analysis
