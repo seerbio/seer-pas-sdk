@@ -481,11 +481,17 @@ class SeerSDK:
             res = samples.json()["data"]
             res_df = dict_to_df(res)
 
-        else:
-            analysis_identifier = analysis_id or analysis_name
-            res_df = self._get_analysis_samples(
-                analysis_identifier, as_df=as_df
+            # API returns empty strings if not a control, replace with None for filtering purposes
+            res_df["control"] = res_df["control"].apply(
+                lambda x: x if x else None
             )
+        else:
+            if analysis_id:
+                res_df = self._get_analysis_samples(analysis_id, as_df=True)
+            else:
+                res_df = self._get_analysis_samples(
+                    analysis_name, as_df=True, is_name=True
+                )
 
         # apply post processing
         res_df.drop(["tenant_id"], axis=1, inplace=True)
@@ -500,9 +506,6 @@ class SeerSDK:
                 if not x.startswith("custom_") or x in custom_columns
             ]
         ]
-
-        # API returns empty strings if not a control, replace with None for filtering purposes
-        res_df["control"] = res_df["control"].apply(lambda x: x if x else None)
 
         return res_df.to_dict(orient="records") if not as_df else res_df
 
@@ -656,208 +659,6 @@ class SeerSDK:
                     location(entry["raw_file_path"]) :
                 ]
         return res if not as_df else dict_to_df(res)
-
-    def get_plate(self, plate_id: str, as_df: bool = False):
-        """
-        Fetches MS data files for a `plate_id` (provided that the `plate_id` is valid and has samples associated with it) for an authenticated user.
-
-        The function returns a dict containing DataFrame objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
-
-        Parameters
-        ----------
-        plate_id : str, optional
-            ID of the plate for which samples are to be fetched, defaulted to None.
-        df: bool
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object
-
-        Returns
-        -------
-        res: list or DataFrame
-            List/DataFrame of MS data file objects for the authenticated user.
-
-        Examples
-        -------
-        >>> from seer_pas_sdk import SeerSDK
-        >>> seer_sdk = SeerSDK()
-        >>> plate_id = "7ec8cad0-15e0-11ee-bdf1-bbaa73585acf"
-
-        >>> seer_sdk.get_plate(plate_id)
-        >>> [
-            {"id": "PLATE_ID_1_HERE" ... },
-            {"id": "PLATE_ID_2_HERE" ... }
-        ]
-
-        >>> seer_sdk.get_plate(plate_id, df=True)
-        >>>                 id  ...   volume
-            0  PLATE_ID_1_HERE  ...     None
-            1  PLATE_ID_2_HERE  ...     None
-
-            [2 rows x 26 columns]
-        """
-        plate_samples = self.get_samples(plate_id=plate_id)
-        sample_ids = [sample["id"] for sample in plate_samples]
-        return self.get_msruns(sample_ids, df)
-
-    def get_project(
-        self,
-        project_id: str,
-        msdata: bool = False,
-        as_df: bool = False,
-        flat: bool = False,
-    ):
-        """
-        Fetches samples (and MS data files) for a `project_id` (provided that the `project_id` is valid and has samples associated with it) for an authenticated user.
-
-        The function returns a DataFrame object if the `df` flag is passed in as True, otherwise a nested dict object is returned instead. If the both the `df` and `msdata` flags are passed in as True, then a nested DataFrame object is returned instead.
-
-        If the `flat` flag is passed in as True, then the nested dict object is returned as an array of dict objects and the nested df object is returned as a single df object.
-
-        Parameters
-        ----------
-        project_id : str
-            ID of the project for which samples are to be fetched.
-        msdata: bool, optional
-            Boolean flag denoting whether the user wants relevant MS data files associated with the samples.
-        as_df: bool, optional
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
-
-        Returns
-        -------
-        res: list or DataFrame
-            List/DataFrame of plate objects for the authenticated user.
-
-        Examples
-        -------
-        >>> from seer_pas_sdk import SeerSDK
-        >>> seer_sdk = SeerSDK()
-        >>> project_id = "7e48e150-8a47-11ed-b382-bf440acece26"
-
-        >>> seer_sdk.get_project(project_id=project_id, msdata=False, df=False)
-        >>> {
-            "project_samples": [
-                {
-                    "id": "SAMPLE_ID_1_HERE",
-                    "sample_type": "Plasma",
-                    ...
-                    ...
-                },
-                {
-                    "id": "SAMPLE_ID_2_HERE",
-                    "sample_type": "Plasma",
-                    ...
-                    ...
-                }
-            ]
-        }
-
-        >>> seer_sdk.get_project(project_id=project_id, msdata=True, df=False)
-        >>> [
-                {
-                    "id": "SAMPLE_ID_1_HERE",
-                    "sample_type": "Plasma",
-                    ...
-                    ...
-                    "ms_data_files": [
-                        {
-                            "id": MS_DATA_FILE_ID_1_HERE,
-                            "tenant_id": "TENANT_ID_HERE",
-                            ...
-                            ...
-                        },
-                        {
-                            "id": MS_DATA_FILE_ID_1_HERE,
-                            "tenant_id": "TENANT_ID_HERE",
-                            ...
-                            ...
-                        }
-                    ]
-                },
-                {
-                    "id": "SAMPLE_ID_2_HERE",
-                    "sample_type": "Plasma",
-                    ...
-                    ...
-                    "ms_data_files": [
-                        {
-                            "id": MS_DATA_FILE_ID_2_HERE,
-                            "tenant_id": "TENANT_ID_HERE",
-                            ...
-                            ...
-                        },
-                        {
-                            "id": MS_DATA_FILE_ID_2_HERE,
-                            "tenant_id": "TENANT_ID_HERE",
-                            ...
-                            ...
-                        }
-                    ]
-                }
-            ]
-
-        >>> seer_sdk.get_project(project_id=project_id, msdata=True, df=True)
-        >>> id  ...                                                                           ms_data_files
-            0  829509f0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
-            1  828d41c0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
-            2  8294e2e0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
-            3  8285eec0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
-
-            [4 rows x 60 columns]
-        """
-        if not project_id:
-            return ValueError("No project ID specified.")
-
-        sample_ids = []
-        project_samples = self.get_samples_metadata(
-            project_id=project_id, df=False
-        )
-        flat_result = []
-
-        if msdata:
-
-            # construct map for quick index reference of sample in project_samples
-            sample_ids = {
-                sample["id"]: i for i, sample in enumerate(project_samples)
-            }  # will always contain unique values
-            ms_data_files = self.get_msruns(
-                sample_ids=list(sample_ids.keys()), as_df=False
-            )
-
-            for ms_data_file in ms_data_files:
-                index = sample_ids.get(ms_data_file["sample_id"], None)
-                if not index:
-                    continue
-
-                if not flat:
-                    if "ms_data_file" not in project_samples[index]:
-                        project_samples[index]["ms_data_files"] = [
-                            ms_data_file
-                        ]
-                    else:
-                        project_samples[index]["ms_data_files"].append(
-                            ms_data_file
-                        )
-                else:
-                    flat_result.append(project_samples[index] | ms_data_file)
-
-        # return flat result if results were added to the flat object
-        if flat and flat_result:
-            project_samples = flat_result
-
-        if df:
-            if flat:
-                return pd.DataFrame(project_samples)
-            else:
-                for sample_index in range(len(project_samples)):
-                    if "ms_data_files" in project_samples[sample_index]:
-                        project_samples[sample_index]["ms_data_files"] = (
-                            dict_to_df(
-                                project_samples[sample_index]["ms_data_files"]
-                            )
-                        )
-
-            project_samples = dict_to_df(project_samples)
-
-        return project_samples
 
     def get_analysis_protocols(
         self,
@@ -2748,12 +2549,16 @@ class SeerSDK:
             else:
                 return obj.volcano_plot
 
-    def _get_analysis_samples(self, analysis: str, as_df=False):
+    def _get_analysis_samples(
+        self, analysis: str, is_name: bool = False, as_df=False
+    ):
         """
         Get the samples associated with a given analysis.
 
         Args:
-            analysis_id (str): The analysis identifier. Accepts an analysis ID or an analysis name.
+            analysis (str): The analysis identifier. Accepts an analysis ID or an analysis name.
+            is_name (bool) : Mark true if analysis is an analysis name
+            as_df (bool) : Mark true if the return object should be a pandas DataFrame. Defaults to False.
 
         Raises:
             ServerError - could not retrieve samples for analysis.
@@ -2764,18 +2569,10 @@ class SeerSDK:
         if not analysis:
             raise ValueError("Analysis cannot be empty.")
 
-        user_analyses = self.get_analysis()
-
-        rows = [
-            x
-            for x in user_analyses
-            if x["id"] == analysis or x["analysis_name"] == analysis
-        ]
-
-        # fetch custom columns associated to tenant
-        custom_columns = [
-            x["field_name"] for x in self._get_sample_custom_fields()
-        ]
+        if is_name:
+            rows = self.get_analysis(analysis_name=analysis)
+        else:
+            rows = [{"id": analysis}]
 
         resp = []
         for row in rows:
