@@ -90,9 +90,9 @@ class SeerSDK:
 
             response = response.json()
             if index:
-                mapper = {}
+                mapper = dict()
                 for x in response:
-                    if x["institution"] in mapper:
+                    if x["institution"] not in mapper:
                         mapper[x["institution"]] = [x]
                     else:
                         mapper[x["institution"]].append(x)
@@ -135,12 +135,14 @@ class SeerSDK:
             Returns the value of the active tenant id after the operation.
         """
         map = self.get_user_tenant_metadata()
-        tenant_ids = [x["tenantId"] for x in map.values()]
+        tenant_id_match = [
+            y for x in map.values() for y in x if y["tenantId"] == identifier
+        ]
         institution_names = map.keys()
 
-        if identifier in tenant_ids:
+        if tenant_id_match:
             tenant_id = identifier
-            row = [x for x in map.values() if x["tenantId"] == tenant_id]
+            row = tenant_id_match
             if row:
                 row = row[0]
             else:
@@ -1255,7 +1257,7 @@ class SeerSDK:
             )
 
     def download_search_output_file(
-        self, analysis_id: str, filename: str, download_path: str
+        self, analysis_id: str, filename: str, download_path: str = ""
     ):
         """
         Given an analysis id and a analysis result filename, this function downloads the file to the specified path.
@@ -1277,6 +1279,9 @@ class SeerSDK:
             Downloads the file to the specified path.
         """
 
+        if not download_path:
+            download_path = os.getcwd()
+
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
 
@@ -1285,15 +1290,40 @@ class SeerSDK:
                 "Please specify a valid folder path as download path."
             )
 
-        file_url = self.get_search_result_file_url(analysis_id, filename)
+        file = self.get_search_result_file_url(analysis_id, filename)
+        file_url = file["url"]
+        filename = file["filename"]
 
-        with self._get_auth_session() as s:
-            response = s.get(file_url["url"], stream=True)
-            if response.status_code != 200:
-                raise ServerError(f"File {filename} not found.")
-            with open(os.path.join(download_path, filename), "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
+        print("Downloading file:", filename)
+        for _ in range(2):
+            try:
+                with tqdm(
+                    unit="B",
+                    unit_scale=True,
+                    unit_divisor=1024,
+                    miniters=1,
+                    desc=f"Progress",
+                ) as t:
+                    ssl._create_default_https_context = (
+                        ssl._create_unverified_context
+                    )
+                    urllib.request.urlretrieve(
+                        file_url,
+                        f"{download_path}/{filename}",
+                        reporthook=download_hook(t),
+                        data=None,
+                    )
+                    break
+            except:
+                filename = filename.split("/")
+                name += "/" + "/".join(
+                    [filename[i] for i in range(len(filename) - 1)]
+                )
+                filename = filename[-1]
+                if not os.path.isdir(f"{name}/{filename}"):
+                    os.makedirs(f"{name}/")
+        print(f"File {filename} downloaded successfully to {download_path}.")
+        return
 
     def get_search_result_file_url(self, analysis_id: str, filename: str):
         """
@@ -1344,6 +1374,8 @@ class SeerSDK:
         response = file_url.json()
         if not response.get("url"):
             raise ValueError(f"File {filename} not found.")
+
+        response["filename"] = filename
         return response
 
     @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")

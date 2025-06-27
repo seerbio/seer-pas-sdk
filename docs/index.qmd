@@ -228,7 +228,7 @@ log(spaces)
 <hr>
 
 
-### Get Plate
+### Get Plates
 Fetches a list of plates for the authenticated user. If no `plate_id` is provided, returns all plates for the authenticated user. If `plate_id` is provided, returns the plate with the given `plate_id`, provided it exists. 
 
 ###### <u>Params</u>
@@ -313,7 +313,7 @@ log(example)
 <hr>
 
 
-### Get Project
+### Get Projects
 Fetches a list of projects for the authenticated user. If no `project_id` is provided, returns all projects for the authenticated user. If `project_id` is provided, returns the project with the given `project_id`, provided it exists.
 
 The function returns a dict containing `DataFrame` objects if the `as_df` flag is passed in as True, otherwise a nested dict object is returned instead.
@@ -405,9 +405,10 @@ Fetches a list of samples for the authenticated user. Samples can be fetched wit
 * `analysis_id`: (`str`, optional) Unique ID of the analysis to fetch samples from, defaulted to None.
 * `analysis_name`: (`str`, optional) Name of the analysis to fetch samples from, defaulted to None.
 * `as_df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
-<br>
+
 ###### <u>Returns</u>
 `samples`: (`list` or `DataFrame`) List or DataFrame of sample objects for the authenticated user.
+
 ###### <u>Example</u>
 ```{python}
 #| eval: false
@@ -482,7 +483,7 @@ The following files are available:
 ###### <u>Example</u>
 If you want the result as `DataFrame` objects:
 ```{python}
-#| eval: true
+#| eval: false
 analysis_id = "ddff8c40-0493-11ee-bd19-a77197cd1a6b"
 analysis_data = sdk.get_search_result(analysis_id, analyte_type='protein', rollup='np')
 log_df(analysis_data)
@@ -541,14 +542,17 @@ print(search_output_files)
 ['protein_group_np.tsv', 'protein_group_panel.tsv', 'peptide_np.tsv', 'peptide_panel.tsv', 'report.tsv', 'rollup/', 'rmbatch/']
 ```
 
-#### Get Search Output File URL
+<br>
+
+### Get Search Output File URL
 Returns a pre-signed URL for downloading a search output file for the given `analysis_id` and `filename`.
 
 If the `analysis_id` or `filename` is invalid, an error is raised.
 
 ###### <u>Params</u>
-`analysis_id`: (`str`) Unique ID of the analysis for which the data is to be fetched.
-`filename`: (`str`) Name of the file to be fetched.
+* `analysis_id`: (`str`) Unique ID of the analysis for which the data is to be fetched.
+* `filename`: (`str`) Name of the file to be fetched.
+
 ###### <u>Returns</u>
 `url`: (`str`) A pre-signed URL for downloading the search output file.
 
