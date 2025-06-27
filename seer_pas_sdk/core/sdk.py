@@ -89,7 +89,13 @@ class SeerSDK:
 
             response = response.json()
             if index:
-                return {x["institution"]: x for x in response}
+                mapper = {}
+                for x in response:
+                    if x["institution"] in mapper:
+                        mapper[x["institution"]] = [x]
+                    else:
+                        mapper[x["institution"]].append(x)
+                return mapper
             else:
                 return response
 
@@ -141,7 +147,12 @@ class SeerSDK:
                     "Invalid tenant identifier. Tenant was not switched."
                 )
         elif identifier in institution_names:
-            row = map[identifier]
+            results = map[identifier]
+            if len(results) > 1:
+                raise ValueError(
+                    "Multiple tenants found for the given institution name. Please specify a tenant ID."
+                )
+            row = results[0]
             tenant_id = row["tenantId"]
         else:
             raise ValueError(
