@@ -1268,7 +1268,7 @@ class SeerSDK:
             ID of the analysis for which the data is to be fetched.
 
         filename : str
-            Name of the file to be fetched.
+            Name of the file to be fetched. Files can be case insensitive and without file extensions.
 
         download_path : str
             String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid.

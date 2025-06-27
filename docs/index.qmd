@@ -502,7 +502,7 @@ Downloads an indicated search output files for the given `analysis_id` to the sp
 
 ###### <u>Params</u>
 * `analysis_id`: (`str`) Unique ID of the analysis for which the data is to be downloaded.
-* `filename`: (`str`) Name of the file to be downloaded.
+* `filename`: (`str`) Name of the file to be downloaded. Filename can be case insensitive and file extension optional.
 * `download_path`: (`str`) Path to download the analysis file to, defaulted to current working directory.
 
 ###### <u>Returns</u>
@@ -513,11 +513,12 @@ None
 #| eval: false
 analysis_id = "ddff8c40-0493-11ee-bd19-a77197cd1a6b"
 filename = "protein_group_np.tsv"
+Progress: 59.0MB [00:02, 21.5MB/s] 
 sdk.download_search_output_file(analysis_id, filename, download_path="testing/")
 ```
 ```
-Start download to path testing/protein_group_np.tsv
-Download complete
+Downloading file: Protein_Group_NP.tsv
+File Protein_Group_NP.tsv downloaded successfully to testing/Protein_Group_NP.tsv
 ```
 
 #### List Search Output Files
