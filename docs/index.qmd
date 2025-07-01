@@ -324,7 +324,7 @@ The function returns a dict containing `DataFrame` objects if the `as_df` flag i
 <br>
 
 ###### <u>Returns</u>
-`projects`: (`list` or `DataFrame`) `list` or `DataFrame` of project objects for the authenticated user.
+`projects`: (`list[dict]` or `DataFrame`) `list[dict]` or `DataFrame` of project objects for the authenticated user.
 
 ###### <u>Example</u>
 ```{python}
@@ -360,7 +360,7 @@ Fetches a list of analysis protocols for the authenticated user. If no analysis_
 <br>
 
 ###### <u>Returns</u>
-`protocols`: (`list`) List of analysis protocol objects for the authenticated user.
+`protocols`: (`list[dict]`) List of analysis protocol objects for the authenticated user.
 
 ###### <u>Example</u>
 ```{python}
@@ -407,7 +407,7 @@ Fetches a list of samples for the authenticated user. Samples can be fetched wit
 * `as_df`: (`bool`, optional) whether the result should be converted to a DataFrame, defaulted to False.
 
 ###### <u>Returns</u>
-`samples`: (`list` or `DataFrame`) List or DataFrame of sample objects for the authenticated user.
+`samples`: (`list[dict]` or `DataFrame`) List or DataFrame of sample objects for the authenticated user.
 
 ###### <u>Example</u>
 ```{python}
@@ -530,7 +530,7 @@ If the `analysis_id` is invalid or the search has not been completed, an error i
 `analysis_id`: (`str`) Unique ID of the analysis for which the data is to be listed.
 
 ###### <u>Returns</u>
-`files`: (`list`) A list of search output files for the given `analysis_id`.
+`files`: (`list[dict]`) A list of search output files for the given `analysis_id`.
 
 ###### <u>Example</u>
 ```{python}
@@ -599,7 +599,7 @@ Lists all the MS data files in the given folder as long as the folder path passe
 * `space` : (`str`, optional) ID of the user group to which the files belong, defaulted to None.
 
 ###### <u>Returns</u>
-(`list`) Contains the list of files in the folder.
+(`list[str]`) Contains the list of files in the folder.
 
 ###### <u>Example</u>
 ```{python}
@@ -634,7 +634,7 @@ If no `download_path` is specified or the `download_path` is invalid, the file w
 * `space` : (`str`, optional) ID of the user group to which the file belongs, defaulted to None.
 
 ###### <u>Returns</u>
-(`dict`) Message containing whether the file was downloaded or not.
+(`dict[str, str]`) Message containing whether the file was downloaded or not.
 
 ###### <u>Example</u>
 ```{python}
@@ -665,7 +665,7 @@ Returns the group analysis data for given `analysis_id` (provided it is valid an
 * `box_plot`: (`dict`) The box plot configuration needed for the analysis, defaulted to `None`. Contains `feature_type` ("protein" or "peptide") and `feature_ids` (comma separated list of feature IDs) keys.
 
 ###### <u>Returns</u>
-* res: (`dict`) A dictionary containing the group analysis data.
+* res: (`dict[str, list]`) A dictionary containing the group analysis data.
 
 ###### <u>Example</u>
 

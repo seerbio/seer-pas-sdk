@@ -111,7 +111,7 @@ class SeerSDK:
 
         Returns
         -------
-        tenants : dict
+        tenants : dict[dict]
             A dictionary containing the institution names and tenant ids for the authenticated user.
         """
         tenants = self.get_user_tenant()
@@ -186,7 +186,7 @@ class SeerSDK:
 
         Returns
         -------
-        tenant: dict
+        tenant: dict[dict]
             Tenant metadata for the authenticated user containing "institution" and "tenantId" keys.
         """
         tenants = self.get_user_tenant(index=False)
@@ -264,7 +264,7 @@ class SeerSDK:
 
         Returns
         -------
-        plates: list or DataFrame
+        plates: list[dict] or DataFrame
             List/DataFrame of plate objects for the authenticated user.
 
         Examples
@@ -331,7 +331,7 @@ class SeerSDK:
 
         Returns
         -------
-        projects: list or DataFrame
+        projects: list[dict] or DataFrame
             DataFrame or list of project objects for the authenticated user.
 
         Examples
@@ -421,7 +421,7 @@ class SeerSDK:
 
         Returns
         -------
-        samples: list or DataFrame
+        samples: list[dict] or DataFrame
             List/DataFrame of samples for the authenticated user.
 
         Examples
@@ -547,7 +547,7 @@ class SeerSDK:
 
         Returns
         -------
-        res : list
+        res : list[str]
             A list of sample ids
 
         Examples
@@ -623,7 +623,7 @@ class SeerSDK:
 
         Returns
         -------
-        res: list or DataFrame
+        res: list[dict] or DataFrame
             List/DataFrame of plate objects for the authenticated user.
 
         Examples
@@ -693,7 +693,7 @@ class SeerSDK:
 
         Returns
         -------
-        protocols: list
+        protocols: list[dict]
             List of analysis protocol objects for the authenticated user.
 
         Examples
@@ -802,7 +802,7 @@ class SeerSDK:
 
         Returns
         -------
-        analyses: dict
+        analyses: list[dict]
             Contains a list of analyses objects for the authenticated user.
 
         Examples
@@ -1670,7 +1670,7 @@ class SeerSDK:
 
         Returns
         -------
-        list
+        list[str]
             Contains the list of files in the folder.
 
         Examples
