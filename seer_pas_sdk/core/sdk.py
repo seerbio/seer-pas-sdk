@@ -77,8 +77,8 @@ class SeerSDK:
 
         Returns
         -------
-        response : dict
-            A dictionary containing the tenant metadata for the authenticated user.
+        response : list[dict]
+            A list of tenant objects pertaining to the user.
         """
         with self._get_auth_session() as s:
             response = s.get(f"{self._auth.url}api/v1/usertenants")
@@ -111,7 +111,7 @@ class SeerSDK:
 
         Returns
         -------
-        tenants : dict[dict]
+        tenants : dict[str, str]
             A dictionary containing the institution names and tenant ids for the authenticated user.
         """
         tenants = self.get_user_tenant()
@@ -186,7 +186,7 @@ class SeerSDK:
 
         Returns
         -------
-        tenant: dict[dict]
+        tenant: dict[str, str]
             Tenant metadata for the authenticated user containing "institution" and "tenantId" keys.
         """
         tenants = self.get_user_tenant(index=False)
@@ -225,7 +225,7 @@ class SeerSDK:
 
         Returns
         -------
-        spaces: list
+        spaces: list[dict]
             List of space objects for the authenticated user.
 
         Examples
@@ -1121,7 +1121,7 @@ class SeerSDK:
 
         Returns
         -------
-        peptide_data : dict
+        peptide_data : dict[str, str]
             Dictionary containing URLs for npLink and panelLink peptide data.
 
         """
@@ -1167,7 +1167,7 @@ class SeerSDK:
 
         Returns
         -------
-        files: list
+        files: list[str]
             List of files associated with the analysis.
         """
         try:
@@ -1341,8 +1341,8 @@ class SeerSDK:
 
         Returns
         -------
-        file_url: dict
-            Response object containing the url for the file.
+        file_url: dict[str, str]
+            Dictionary containing the 'url' and 'filename' of the file.
         """
         if "." in filename:
             filename = ".".join(filename.split(".")[:-1])
@@ -1411,7 +1411,7 @@ class SeerSDK:
 
         Returns
         -------
-        links: dict
+        links: dict[str, pd.DataFrame]
             Contains dataframe objects for the requested files. If a filename is not found, it is skipped.
 
 
@@ -1725,8 +1725,8 @@ class SeerSDK:
 
         Returns
         -------
-        message: dict
-            Contains the message whether the files were downloaded or not.
+        message: dict[str, str]
+            Contains the 'message' whether the files were downloaded or not.
         """
 
         urls = []
@@ -1829,6 +1829,11 @@ class SeerSDK:
         **kwargs : dict, optional
             Search keyword parameters to be passed in. Acceptable values are 'name' or 'description'.
 
+        Returns
+        -------
+        res : list[dict]
+            A list of dictionaries containing the group analysis objects.
+
         """
         params = {"analysisid": analysis_id}
         if kwargs and not group_analysis_id:
@@ -1880,7 +1885,7 @@ class SeerSDK:
         Returns
         -------
         res : dict
-            A dictionary containing the group analysis data.
+            A dictionary containing the group analysis object.
 
         Examples
         -------
@@ -2137,7 +2142,7 @@ class SeerSDK:
             box_plot (bool, optional): Mark true to include box plot data in the return object. Defaults to False.
 
         Returns:
-            dict: A dictionary containing the volcano plot and optionally box plot data for each group analysis.
+            dict[str, pd.DataFrame]: A dictionary containing the volcano plot and optionally box plot data for each group analysis.
         """
         group_analysis_ids = [
             x["id"]
@@ -2193,8 +2198,8 @@ class SeerSDK:
             ValueError: Invalid type provided.
             ServerError: Could not fetch PCA data.
         Returns:
-            dict
-                Pure response from the API.
+            dict[str, list|float]
+                Returns response object containing 'xContributionRatio' (float), 'yContributionRatio' (float), 'samples' (list[dict]), and 'points' (list[float]).
         """
         if not analysis_ids:
             raise ValueError("Analysis IDs cannot be empty.")

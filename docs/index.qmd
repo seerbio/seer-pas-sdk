@@ -213,7 +213,7 @@ None.
 <br>
 
 ###### <u>Returns</u>
-`spaces`: (`list`) List of space objects for the authenticated user.
+`spaces`: (`list[dict]`) List of space objects for the authenticated user.
 
 ###### <u>Example</u>
 ```{python}
@@ -237,7 +237,7 @@ Fetches a list of plates for the authenticated user. If no `plate_id` is provide
 <br>
 
 ###### <u>Returns</u>
-`plates`: (`list` or `DataFrame`) `list` or `DataFrame` of plate objects for the authenticated user.
+`plates`: (`list[dict]` or `DataFrame`) `list` or `DataFrame` of plate objects for the authenticated user.
 
 ###### <u>Example</u>
 ```{python}
@@ -274,7 +274,7 @@ log(sample_plate)
 <hr>
 
 ### Get MS Runs
-Fetches information pertaining to MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user. 
+Fetches information pertaining to MS runs for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user. 
 
 The function returns a dict containing `DataFrame` objects if the `as_df` flag is passed in as True, otherwise a nested dict object is returned instead.
 
@@ -284,7 +284,7 @@ The function returns a dict containing `DataFrame` objects if the `as_df` flag i
 <br>
 
 ###### <u>Returns</u>
-`res`: (`DataFrame`) `List` or `DataFrame` of MS data file objects for the authenticated user.
+`res`: (`list[dict]` or `DataFrame`) `List` or `DataFrame` of MS run objects for the authenticated user.
 
 ###### <u>Example</u>
 
@@ -530,7 +530,7 @@ If the `analysis_id` is invalid or the search has not been completed, an error i
 `analysis_id`: (`str`) Unique ID of the analysis for which the data is to be listed.
 
 ###### <u>Returns</u>
-`files`: (`list[dict]`) A list of search output files for the given `analysis_id`.
+`files`: (`list[str]`) A list of search output files for the given `analysis_id`.
 
 ###### <u>Example</u>
 ```{python}
