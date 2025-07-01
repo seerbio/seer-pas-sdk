@@ -500,10 +500,12 @@ class SeerSDK:
             )
         else:
             if analysis_id:
-                res_df = self._get_analysis_samples(analysis_id, as_df=True)
+                res_df = self._get_analysis_samples(
+                    analysis_id=analysis_id, as_df=True
+                )
             else:
                 res_df = self._get_analysis_samples(
-                    analysis_name, as_df=True, is_name=True
+                    analysis_name=analysis_name, as_df=True, is_name=True
                 )
 
         # apply post processing
@@ -2055,7 +2057,9 @@ class SeerSDK:
             protein_peptide_gene_map = builder.protein_gene_map
 
             # API call 2 - get analysis samples to get condition
-            samples_metadata = self._get_analysis_samples(analysis_id)
+            samples_metadata = self._get_analysis_samples(
+                analysis_id=analysis_id
+            )
 
             json = {"analysisId": analysis_id}
             if feature_ids:
@@ -2593,14 +2597,14 @@ class SeerSDK:
                 return obj.volcano_plot
 
     def _get_analysis_samples(
-        self, analysis: str, is_name: bool = False, as_df=False
+        self, analysis_id: str = None, analysis_name: str = None, as_df=False
     ):
         """
         Get the samples associated with a given analysis.
 
         Args:
-            analysis (str): The analysis identifier. Accepts an analysis ID or an analysis name.
-            is_name (bool) : Mark true if analysis is an analysis name
+            analysis_id (str): UUID identifier of the analysis. Defaults to None.
+            analysis_name (str): Name of the analysis. Defaults to None.
             as_df (bool) : Mark true if the return object should be a pandas DataFrame. Defaults to False.
 
         Raises:
@@ -2609,13 +2613,13 @@ class SeerSDK:
             list[dict] : a list of samples associated with the analysis.
         """
 
-        if not analysis:
+        if not analysis_id and not analysis_name:
             raise ValueError("Analysis cannot be empty.")
 
-        if is_name:
-            rows = self.get_analysis(analysis_name=analysis)
+        if analysis_id:
+            rows = [{"id": analysis_id}]
         else:
-            rows = [{"id": analysis}]
+            rows = self.get_analysis(analysis_name=analysis_name)
 
         resp = []
         for row in rows:
@@ -2631,7 +2635,7 @@ class SeerSDK:
 
         if not resp:
             raise ServerError(
-                f"Could not retrieve samples for analysis {analysis}."
+                f"Could not retrieve samples for analysis {analysis_id or analysis_name}."
             )
 
         resp = pd.DataFrame(resp)
