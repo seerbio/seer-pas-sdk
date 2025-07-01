@@ -71,7 +71,7 @@ class SeerSDK:
 
         return sess
 
-    def get_user_tenant_metadata(self, index=True):
+    def get_user_tenant(self, index=True):
         """
         Fetches the tenant metadata for the authenticated user.
 
@@ -114,7 +114,7 @@ class SeerSDK:
         tenants : dict
             A dictionary containing the institution names and tenant ids for the authenticated user.
         """
-        tenants = self.get_user_tenant_metadata()
+        tenants = self.get_user_tenant()
         if reverse:
             return {x["tenantId"]: x["institution"] for x in tenants.values()}
         else:
@@ -134,7 +134,7 @@ class SeerSDK:
         tenant_id: str
             Returns the value of the active tenant id after the operation.
         """
-        map = self.get_user_tenant_metadata()
+        map = self.get_user_tenant()
         tenant_id_match = [
             y for x in map.values() for y in x if y["tenantId"] == identifier
         ]
@@ -189,7 +189,7 @@ class SeerSDK:
         tenant: dict
             Tenant metadata for the authenticated user containing "institution" and "tenantId" keys.
         """
-        tenants = self.get_user_tenant_metadata(index=False)
+        tenants = self.get_user_tenant(index=False)
         row = [
             x for x in tenants if x["tenantId"] == self._auth.active_tenant_id
         ]
