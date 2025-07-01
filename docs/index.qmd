@@ -233,7 +233,7 @@ Fetches a list of plates for the authenticated user. If no `plate_id` is provide
 
 ###### <u>Params</u>
 * `plate_id`: (`str`, optional) Unique ID of the plate to be fetched, defaulted to `None`.
-* `as_df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+* `as_df`: (`bool`, optional) whether the result should be converted to a DataFrame
 <br>
 
 ###### <u>Returns</u>
@@ -280,7 +280,7 @@ The function returns a dict containing `DataFrame` objects if the `as_df` flag i
 
 ###### <u>Params</u>
 * `sample_ids`: (`list`) List of unique sample IDs.
-* `as_df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+* `as_df`: (`bool`, optional) whether the result should be converted to a DataFrame, defaulted to False.
 <br>
 
 ###### <u>Returns</u>
@@ -320,7 +320,7 @@ The function returns a dict containing `DataFrame` objects if the `as_df` flag i
 
 ###### <u>Params</u>
 * `project_id`: (`str`, optional) Unique ID of the project to be fetched, defaulted to `None`.
-* `as_df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+* `as_df`: (`bool`, optional) whether the result should be converted to a DataFrame, defaulted to False.
 <br>
 
 ###### <u>Returns</u>
@@ -404,7 +404,7 @@ Fetches a list of samples for the authenticated user. Samples can be fetched wit
 * `project_id`: (`str`, optional) Unique ID of the project to fetch samples from, defaulted to None.
 * `analysis_id`: (`str`, optional) Unique ID of the analysis to fetch samples from, defaulted to None.
 * `analysis_name`: (`str`, optional) Name of the analysis to fetch samples from, defaulted to None.
-* `as_df`: (`bool`, optional) Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+* `as_df`: (`bool`, optional) whether the result should be converted to a DataFrame, defaulted to False.
 
 ###### <u>Returns</u>
 `samples`: (`list` or `DataFrame`) List or DataFrame of sample objects for the authenticated user.

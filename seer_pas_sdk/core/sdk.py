@@ -260,7 +260,7 @@ class SeerSDK:
         plate_id : str, optional
             ID of the plate to be fetched, defaulted to None.
         as_df: bool
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object
+            whether the result should be converted to a DataFrame, defaulted to None.
 
         Returns
         -------
@@ -327,7 +327,7 @@ class SeerSDK:
         project_id: str, optional
             Project ID of the project to be fetched, defaulted to None.
         as_df: bool
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+            whether the result should be converted to a DataFrame, defaulted to False.
 
         Returns
         -------
@@ -417,7 +417,7 @@ class SeerSDK:
         analysis_name : str, optional
             Name of the analysis for which samples are to be fetched, defaulted to None.
         as_df: bool
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object
+            whether the result should be converted to a DataFrame, defaulted to False.
 
         Returns
         -------
@@ -619,7 +619,7 @@ class SeerSDK:
         sample_ids : list
             List of unique sample IDs.
         as_df: bool
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+            whether the result should be converted to a DataFrame, defaulted to False.
 
         Returns
         -------
@@ -2034,7 +2034,7 @@ class SeerSDK:
             analysis_id (str): ID of the analysis.
             feature_ids (list[str], optional): Filter result object to a set of ids. Defaults to [].
             show_significant_only (bool, optional): Mark true if only significant results are to be returned. Defaults to False.
-            as_df (bool, optional): Mark true if return object should be a pandas DataFrame. Defaults to False.
+            as_df (bool, optional): whether the result should be converted to a DataFrame. Defaults to False.
             volcano_plot (bool, optional): Mark true to include the volcano plot data in the return object. Defaults to False.
             cached (bool, optional): Mark true to return volcano plot data as a VolcanoPlotBuilder object. No effect if volcano_plot flag is marked false. Defaults to False.
 
@@ -2239,7 +2239,7 @@ class SeerSDK:
             type (str): Type of data to be fetched. Must be either 'protein' or 'peptide'.
             sample_ids (list[str], optional): IDs of the samples of interest.
             hide_control (bool, optional): Mark true if controls are to be excluded. Defaults to False.
-            as_df (bool, optional): Mark true if the data should be returned as a pandas DataFrame. Defaults to False.
+            as_df (bool, optional): whether the result should be converted to a DataFrame. Defaults to False.
         Raises:
             ValueError: No analysis IDs provided.
             ValueError: No sample IDs provided.
@@ -2566,7 +2566,7 @@ class SeerSDK:
             fold_change_threshold (float, optional): Cutoff value for the fold change to determine significance. Defaults to 1.
             label_by (str, optional): Metric to sort result data. Defaults to "fold_change".
             cached (bool, optional): Return a VolcanoPlotBuilder object for calculation reuse. Defaults to False.
-            as_df (bool, optional): Return data as a pandas DataFrame. Defaults to False.
+            as_df (bool, optional): whether the result should be converted to a DataFrame. Defaults to False.
 
         Raises:
             ServerError - could not fetch group analysis results.
@@ -2605,7 +2605,7 @@ class SeerSDK:
         Args:
             analysis_id (str): UUID identifier of the analysis. Defaults to None.
             analysis_name (str): Name of the analysis. Defaults to None.
-            as_df (bool) : Mark true if the return object should be a pandas DataFrame. Defaults to False.
+            as_df (bool) : whether the result should be converted to a DataFrame. Defaults to False.
 
         Raises:
             ServerError - could not retrieve samples for analysis.
