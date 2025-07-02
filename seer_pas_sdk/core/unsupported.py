@@ -1166,7 +1166,7 @@ class _UnsupportedSDK(_SeerSDK):
             raise ValueError("Analysis ID cannot be empty.")
 
         try:
-            valid_analysis = self.get_analysis(analysis_id)[0]
+            valid_analysis = self.get_analyses(analysis_id)[0]
         except:
             raise ValueError(
                 "Invalid analysis ID. Please check if the analysis ID is valid or the backend is running."

@@ -435,7 +435,7 @@ Returns a list of analyses objects for the authenticated user. If no `analysis_i
 ###### <u>Example</u>
 ```{python}
 #| eval: false
-analyses = sdk.get_analysis()
+analyses = sdk.get_analyses()
 log(analyses)
 ```
 ```
@@ -446,7 +446,7 @@ You can also pass in a specific `analysis_id` to specifically fetch an analysis.
 ```{python}
 #| eval: false
 analysis_id = "00425a60-a850-11ea-b3d7-0171d11d0807"
-sample_analysis = sdk.get_analysis(analysis_id)
+sample_analysis = sdk.get_analyses(analysis_id)
 log(sample_analysis)
 ```
 ```
