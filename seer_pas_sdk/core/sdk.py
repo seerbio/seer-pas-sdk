@@ -632,7 +632,7 @@ class SeerSDK:
         >>> seer_sdk = SeerSDK()
         >>> sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
 
-        >>> seer_sdk.get_runs(sample_ids)
+        >>> seer_sdk.get_msruns(sample_ids)
         >>> [
             {"id": "SAMPLE_ID_1_HERE" ... },
             {"id": "SAMPLE_ID_2_HERE" ... }
@@ -760,7 +760,7 @@ class SeerSDK:
 
             return res
 
-    def get_analysis(
+    def get_analyses(
         self,
         analysis_id: str = None,
         folder_id: str = None,
@@ -809,23 +809,23 @@ class SeerSDK:
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.get_analysis()
+        >>> seer_sdk.get_analyses()
         >>> [
                 {id: "YOUR_ANALYSIS_ID_HERE", ...},
                 {id: "YOUR_ANALYSIS_ID_HERE", ...},
                 {id: "YOUR_ANALYSIS_ID_HERE", ...}
             ]
 
-        >>> seer_sdk.get_analysis("YOUR_ANALYSIS_ID_HERE")
+        >>> seer_sdk.get_analyses("YOUR_ANALYSIS_ID_HERE")
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
 
-        >>> seer_sdk.get_analysis(folder_name="YOUR_FOLDER_NAME_HERE")
+        >>> seer_sdk.get_analyses(folder_name="YOUR_FOLDER_NAME_HERE")
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
 
-        >>> seer_sdk.get_analysis(analysis_name="YOUR_ANALYSIS")
+        >>> seer_sdk.get_analyses(analysis_name="YOUR_ANALYSIS")
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
 
-        >>> seer_sdk.get_analysis(description="YOUR_DESCRIPTION")
+        >>> seer_sdk.get_analyses(description="YOUR_DESCRIPTION")
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
         """
 
@@ -914,7 +914,7 @@ class SeerSDK:
 
             # recursive solution to get analyses in folders
             for folder in folders:
-                res += self.get_analysis(folder_id=folder)
+                res += self.get_analyses(folder_id=folder)
 
             if analysis_only:
                 res = [
@@ -1171,7 +1171,7 @@ class SeerSDK:
             List of files associated with the analysis.
         """
         try:
-            analysis_metadata = self.get_analysis(analysis_id)[0]
+            analysis_metadata = self.get_analyses(analysis_id)[0]
         except (IndexError, ServerError):
             raise ValueError("Invalid analysis ID.")
         except:
@@ -1361,7 +1361,7 @@ class SeerSDK:
                 f"Filename {filename} not among the available analysis result files. Please use SeerSDK.list_search_result_files('{analysis_id}') to see available files for this analysis."
             )
 
-        analysis_metadata = self.get_analysis(analysis_id)[0]
+        analysis_metadata = self.get_analyses(analysis_id)[0]
         if analysis_metadata.get("status") in ["Failed", None]:
             raise ValueError("Cannot generate links for failed searches.")
         with self._get_auth_session() as s:
@@ -1651,7 +1651,7 @@ class SeerSDK:
             raise ValueError("Analysis id cannot be empty.")
 
         try:
-            res = self.get_analysis(analysis_id)
+            res = self.get_analyses(analysis_id)
         except ValueError:
             return ValueError("Analysis not found. Your ID could be incorrect")
 
@@ -2624,7 +2624,7 @@ class SeerSDK:
         if analysis_id:
             rows = [{"id": analysis_id}]
         else:
-            rows = self.get_analysis(analysis_name=analysis_name)
+            rows = self.get_analyses(analysis_name=analysis_name)
 
         resp = []
         for row in rows:
@@ -2655,7 +2655,7 @@ class SeerSDK:
             download_path = os.getcwd()
 
         try:
-            analysis_protocol_id = self.get_analysis(analysis_id)[0][
+            analysis_protocol_id = self.get_analyses(analysis_id)[0][
                 "analysis_protocol_id"
             ]
         except (IndexError, KeyError):
