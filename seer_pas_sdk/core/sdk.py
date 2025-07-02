@@ -1,5 +1,6 @@
 from tqdm import tqdm
 
+import deprecation
 import os
 import jwt
 import requests
@@ -70,14 +71,14 @@ class SeerSDK:
 
         return sess
 
-    def get_user_tenant_metadata(self, index=True):
+    def get_user_tenant(self, index=True):
         """
         Fetches the tenant metadata for the authenticated user.
 
         Returns
         -------
-        response : dict
-            A dictionary containing the tenant metadata for the authenticated user.
+        response : list[dict]
+            A list of tenant objects pertaining to the user.
         """
         with self._get_auth_session() as s:
             response = s.get(f"{self._auth.url}api/v1/usertenants")
@@ -89,7 +90,13 @@ class SeerSDK:
 
             response = response.json()
             if index:
-                return {x["institution"]: x for x in response}
+                mapper = dict()
+                for x in response:
+                    if x["institution"] not in mapper:
+                        mapper[x["institution"]] = [x]
+                    else:
+                        mapper[x["institution"]].append(x)
+                return mapper
             else:
                 return response
 
@@ -104,10 +111,10 @@ class SeerSDK:
 
         Returns
         -------
-        tenants : dict
+        tenants : dict[str, str]
             A dictionary containing the institution names and tenant ids for the authenticated user.
         """
-        tenants = self.get_user_tenant_metadata()
+        tenants = self.get_user_tenant()
         if reverse:
             return {x["tenantId"]: x["institution"] for x in tenants.values()}
         else:
@@ -127,13 +134,15 @@ class SeerSDK:
         tenant_id: str
             Returns the value of the active tenant id after the operation.
         """
-        map = self.get_user_tenant_metadata()
-        tenant_ids = [x["tenantId"] for x in map.values()]
+        map = self.get_user_tenant()
+        tenant_id_match = [
+            y for x in map.values() for y in x if y["tenantId"] == identifier
+        ]
         institution_names = map.keys()
 
-        if identifier in tenant_ids:
+        if tenant_id_match:
             tenant_id = identifier
-            row = [x for x in map.values() if x["tenantId"] == tenant_id]
+            row = tenant_id_match
             if row:
                 row = row[0]
             else:
@@ -141,7 +150,12 @@ class SeerSDK:
                     "Invalid tenant identifier. Tenant was not switched."
                 )
         elif identifier in institution_names:
-            row = map[identifier]
+            results = map[identifier]
+            if len(results) > 1:
+                raise ValueError(
+                    "Multiple tenants found for the given institution name. Please specify a tenant ID."
+                )
+            row = results[0]
             tenant_id = row["tenantId"]
         else:
             raise ValueError(
@@ -172,10 +186,10 @@ class SeerSDK:
 
         Returns
         -------
-        tenant: dict
+        tenant: dict[str, str]
             Tenant metadata for the authenticated user containing "institution" and "tenantId" keys.
         """
-        tenants = self.get_user_tenant_metadata(index=False)
+        tenants = self.get_user_tenant(index=False)
         row = [
             x for x in tenants if x["tenantId"] == self._auth.active_tenant_id
         ]
@@ -211,7 +225,7 @@ class SeerSDK:
 
         Returns
         -------
-        spaces: list
+        spaces: list[dict]
             List of space objects for the authenticated user.
 
         Examples
@@ -237,7 +251,7 @@ class SeerSDK:
                 )
             return spaces.json()
 
-    def get_plate_metadata(self, plate_id: str = None, df: bool = False):
+    def get_plates(self, plate_id: str = None, as_df: bool = False):
         """
         Fetches a list of plates for the authenticated user. If no `plate_id` is provided, returns all plates for the authenticated user. If `plate_id` is provided, returns the plate with the given `plate_id`, provided it exists.
 
@@ -245,25 +259,25 @@ class SeerSDK:
         ----------
         plate_id : str, optional
             ID of the plate to be fetched, defaulted to None.
-        df: bool
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object
+        as_df: bool
+            whether the result should be converted to a DataFrame, defaulted to None.
 
         Returns
         -------
-        plates: list or DataFrame
+        plates: list[dict] or DataFrame
             List/DataFrame of plate objects for the authenticated user.
 
         Examples
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.get_plate_metadata()
+        >>> seer_sdk.get_plates()
         >>> [
                 { "id": ... },
                 { "id": ... },
                 ...
             ]
-        >>> seer_sdk.get_plate_metadata(df=True)
+        >>> seer_sdk.get_plates(as_df=True)
         >>>                                        id  ... user_group
             0    a7c12190-15da-11ee-bdf1-bbaa73585acf  ...       None
             1    8c3b1480-15da-11ee-bdf1-bbaa73585acf  ...       None
@@ -302,9 +316,9 @@ class SeerSDK:
             for entry in res:
                 del entry["tenant_id"]
 
-        return res if not df else dict_to_df(res)
+        return res if not as_df else dict_to_df(res)
 
-    def get_project_metadata(self, project_id: str = None, df: bool = False):
+    def get_projects(self, project_id: str = None, as_df: bool = False):
         """
         Fetches a list of projects for the authenticated user. If no `project_id` is provided, returns all projects for the authenticated user. If `project_id` is provided, returns the project with the given `project_id`, provided it exists.
 
@@ -312,26 +326,26 @@ class SeerSDK:
         ----------
         project_id: str, optional
             Project ID of the project to be fetched, defaulted to None.
-        df: bool
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+        as_df: bool
+            whether the result should be converted to a DataFrame, defaulted to False.
 
         Returns
         -------
-        projects: list or DataFrame
+        projects: list[dict] or DataFrame
             DataFrame or list of project objects for the authenticated user.
 
         Examples
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.get_project_metadata()
+        >>> seer_sdk.get_projects()
         >>> [
                 { "project_name": ... },
                 { "project_name": ... },
                 ...
             ]
 
-        >>> seer_sdk.get_project_metadata(df=True)
+        >>> seer_sdk.get_projects(as_df=True)
         >>>                                        id  ... user_group
             0    a7c12190-15da-11ee-bdf1-bbaa73585acf  ...       None
             1    8c3b1480-15da-11ee-bdf1-bbaa73585acf  ...       None
@@ -345,7 +359,7 @@ class SeerSDK:
             938  5b05d440-6610-11ea-96e3-d5a4dab4ebf6  ...       None
             939  9872e3f0-544e-11ea-ad9e-1991e0725494  ...       None
 
-        >>> seer_sdk.get_project_metadata(id="YOUR_PROJECT_ID_HERE")
+        >>> seer_sdk.get_projects(id="YOUR_PROJECT_ID_HERE")
         >>> [{ "project_name": ... }]
         """
 
@@ -379,15 +393,18 @@ class SeerSDK:
                 entry["raw_file_path"] = entry["raw_file_path"][
                     location(entry["raw_file_path"]) :
                 ]
-        return res if not df else dict_to_df(res)
+        return res if not as_df else dict_to_df(res)
 
-    def get_samples_metadata(
-        self, plate_id: str = None, project_id: str = None, df: bool = False
+    def get_samples(
+        self,
+        plate_id: str = None,
+        project_id: str = None,
+        analysis_id: str = None,
+        analysis_name: str = None,
+        as_df: bool = False,
     ):
         """
-        Fetches a list of samples for the authenticated user, filtered by `plate_id`. Returns all samples for the plate with the given `plate_id`, provided it exists.
-
-        If both `plate_id` and `project_id` are passed in, only the `plate_id` is validated first.
+        Fetches a list of samples for the authenticated user with relation to a specified plate, project, or analysis. If no parameters are provided, returns all samples for the authenticated user. If `plate_id` or `project_id` is provided, returns samples associated with that plate or project. If `analysis_id` or `analysis_name` is provided, returns samples associated with that analysis.
 
         Parameters
         ----------
@@ -395,12 +412,16 @@ class SeerSDK:
             ID of the plate for which samples are to be fetched, defaulted to None.
         project_id : str, optional
             ID of the project for which samples are to be fetched, defaulted to None.
-        df: bool
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object
+        analysis_id : str, optional
+            ID of the analysis for which samples are to be fetched, defaulted to None.
+        analysis_name : str, optional
+            Name of the analysis for which samples are to be fetched, defaulted to None.
+        as_df: bool
+            whether the result should be converted to a DataFrame, defaulted to False.
 
         Returns
         -------
-        samples: list or DataFrame
+        samples: list[dict] or DataFrame
             List/DataFrame of samples for the authenticated user.
 
         Examples
@@ -408,14 +429,14 @@ class SeerSDK:
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
 
-        >>> seer_sdk.get_samples_metadata(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
+        >>> seer_sdk.get_samples(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
         >>> [
                 { "id": ... },
                 { "id": ... },
                 ...
             ]
 
-        >>> seer_sdk.get_samples_metadata(df=True)
+        >>> seer_sdk.get_samples(as_df=True)
         >>>                                     id  ...      control
         0     812139c0-15e0-11ee-bdf1-bbaa73585acf  ...
         1     803e05b0-15e0-11ee-bdf1-bbaa73585acf  ...  MPE Control
@@ -430,29 +451,40 @@ class SeerSDK:
         3628  dd607ef0-654c-11ea-8eb2-25a1cfd1163c  ...         C132
         """
 
-        if not plate_id and not project_id:
-            raise ValueError("You must pass in plate ID or project ID.")
+        # Raise an error if none or more than one of the primary key parameters are passed in.
+        if (
+            sum(
+                [
+                    True if x else False
+                    for x in [plate_id, project_id, analysis_id, analysis_name]
+                ]
+            )
+            != 1
+        ):
+            raise ValueError(
+                "You must pass in exactly one of plate_id, project_id, analysis_id, analysis_name."
+            )
 
         res = []
         URL = f"{self._auth.url}api/v1/samples"
         sample_params = {"all": "true"}
 
-        with self._get_auth_session() as s:
+        if project_id or plate_id:
+            with self._get_auth_session() as s:
+                if plate_id:
+                    try:
+                        self.get_plates(plate_id)
+                    except:
+                        raise ValueError("Plate ID is invalid.")
+                    sample_params["plateId"] = plate_id
 
-            if plate_id:
-                try:
-                    self.get_plate_metadata(plate_id)
-                except:
-                    raise ValueError("Plate ID is invalid.")
-                sample_params["plateId"] = plate_id
+                else:
+                    try:
+                        self.get_projects(project_id)
+                    except:
+                        raise ValueError("Project ID is invalid.")
 
-            elif project_id:
-                try:
-                    self.get_project_metadata(project_id)
-                except:
-                    raise ValueError("Project ID is invalid.")
-
-                sample_params["projectId"] = project_id
+                    sample_params["projectId"] = project_id
 
             samples = s.get(URL, params=sample_params)
             if samples.status_code != 200:
@@ -460,14 +492,27 @@ class SeerSDK:
                     f"Failed to fetch sample data for plate ID: {plate_id}."
                 )
             res = samples.json()["data"]
+            res_df = dict_to_df(res)
 
-            for entry in res:
-                del entry["tenant_id"]
+            # API returns empty strings if not a control, replace with None for filtering purposes
+            res_df["control"] = res_df["control"].apply(
+                lambda x: x if x else None
+            )
+        else:
+            if analysis_id:
+                res_df = self._get_analysis_samples(
+                    analysis_id=analysis_id, as_df=True
+                )
+            else:
+                res_df = self._get_analysis_samples(
+                    analysis_name=analysis_name, as_df=True, is_name=True
+                )
 
-        # Exclude custom fields that don't belong to the tenant
-        res_df = dict_to_df(res)
+        # apply post processing
+        res_df.drop(["tenant_id"], axis=1, inplace=True)
+
         custom_columns = [
-            x["field_name"] for x in self.get_sample_custom_fields()
+            x["field_name"] for x in self._get_sample_custom_fields()
         ]
         res_df = res_df[
             [
@@ -477,10 +522,7 @@ class SeerSDK:
             ]
         ]
 
-        # API returns empty strings if not a control, replace with None for filtering purposes
-        res_df["control"] = res_df["control"].apply(lambda x: x if x else None)
-
-        return res_df.to_dict(orient="records") if not df else res_df
+        return res_df.to_dict(orient="records") if not as_df else res_df
 
     def _filter_samples_metadata(
         self,
@@ -505,7 +547,7 @@ class SeerSDK:
 
         Returns
         -------
-        res : list
+        res : list[str]
             A list of sample ids
 
         Examples
@@ -533,7 +575,7 @@ class SeerSDK:
                 "Invalid filter. Please choose between 'control' or 'sample'."
             )
 
-        df = self.get_samples_metadata(project_id=project_id, df=True)
+        df = self.get_samples(project_id=project_id, as_df=True)
 
         if filter == "control":
             df = df[~df["control"].isna()]
@@ -546,7 +588,7 @@ class SeerSDK:
 
         return valid_samples
 
-    def get_sample_custom_fields(self):
+    def _get_sample_custom_fields(self):
         """
         Fetches a list of custom fields defined for the authenticated user.
         """
@@ -566,7 +608,7 @@ class SeerSDK:
                 del entry["tenant_id"]
             return res
 
-    def get_msdata(self, sample_ids: list, df: bool = False):
+    def get_msruns(self, sample_ids: list, as_df: bool = False):
         """
         Fetches MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user.
 
@@ -576,12 +618,12 @@ class SeerSDK:
         ----------
         sample_ids : list
             List of unique sample IDs.
-        df: bool
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
+        as_df: bool
+            whether the result should be converted to a DataFrame, defaulted to False.
 
         Returns
         -------
-        res: list or DataFrame
+        res: list[dict] or DataFrame
             List/DataFrame of plate objects for the authenticated user.
 
         Examples
@@ -590,13 +632,13 @@ class SeerSDK:
         >>> seer_sdk = SeerSDK()
         >>> sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
 
-        >>> seer_sdk.get_msdata(sample_ids)
+        >>> seer_sdk.get_runs(sample_ids)
         >>> [
             {"id": "SAMPLE_ID_1_HERE" ... },
             {"id": "SAMPLE_ID_2_HERE" ... }
         ]
 
-        >>> seer_sdk.get_msdata(sample_ids, df=True)
+        >>> seer_sdk.get_msruns(sample_ids, as_df=True)
         >>>                                      id  ... gradient
             0  81c6a180-15e0-11ee-bdf1-bbaa73585acf  ...     None
             1  816a9ed0-15e0-11ee-bdf1-bbaa73585acf  ...     None
@@ -631,209 +673,7 @@ class SeerSDK:
                 entry["raw_file_path"] = entry["raw_file_path"][
                     location(entry["raw_file_path"]) :
                 ]
-        return res if not df else dict_to_df(res)
-
-    def get_plate(self, plate_id: str, df: bool = False):
-        """
-        Fetches MS data files for a `plate_id` (provided that the `plate_id` is valid and has samples associated with it) for an authenticated user.
-
-        The function returns a dict containing DataFrame objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
-
-        Parameters
-        ----------
-        plate_id : str, optional
-            ID of the plate for which samples are to be fetched, defaulted to None.
-        df: bool
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object
-
-        Returns
-        -------
-        res: list or DataFrame
-            List/DataFrame of MS data file objects for the authenticated user.
-
-        Examples
-        -------
-        >>> from seer_pas_sdk import SeerSDK
-        >>> seer_sdk = SeerSDK()
-        >>> plate_id = "7ec8cad0-15e0-11ee-bdf1-bbaa73585acf"
-
-        >>> seer_sdk.get_plate(plate_id)
-        >>> [
-            {"id": "PLATE_ID_1_HERE" ... },
-            {"id": "PLATE_ID_2_HERE" ... }
-        ]
-
-        >>> seer_sdk.get_plate(plate_id, df=True)
-        >>>                 id  ...   volume
-            0  PLATE_ID_1_HERE  ...     None
-            1  PLATE_ID_2_HERE  ...     None
-
-            [2 rows x 26 columns]
-        """
-        plate_samples = self.get_samples_metadata(plate_id=plate_id)
-        sample_ids = [sample["id"] for sample in plate_samples]
-        return self.get_msdata(sample_ids, df)
-
-    def get_project(
-        self,
-        project_id: str,
-        msdata: bool = False,
-        df: bool = False,
-        flat: bool = False,
-    ):
-        """
-        Fetches samples (and MS data files) for a `project_id` (provided that the `project_id` is valid and has samples associated with it) for an authenticated user.
-
-        The function returns a DataFrame object if the `df` flag is passed in as True, otherwise a nested dict object is returned instead. If the both the `df` and `msdata` flags are passed in as True, then a nested DataFrame object is returned instead.
-
-        If the `flat` flag is passed in as True, then the nested dict object is returned as an array of dict objects and the nested df object is returned as a single df object.
-
-        Parameters
-        ----------
-        project_id : str
-            ID of the project for which samples are to be fetched.
-        msdata: bool, optional
-            Boolean flag denoting whether the user wants relevant MS data files associated with the samples.
-        df: bool, optional
-            Boolean denoting whether the user wants the response back in JSON or a DataFrame object.
-
-        Returns
-        -------
-        res: list or DataFrame
-            List/DataFrame of plate objects for the authenticated user.
-
-        Examples
-        -------
-        >>> from seer_pas_sdk import SeerSDK
-        >>> seer_sdk = SeerSDK()
-        >>> project_id = "7e48e150-8a47-11ed-b382-bf440acece26"
-
-        >>> seer_sdk.get_project(project_id=project_id, msdata=False, df=False)
-        >>> {
-            "project_samples": [
-                {
-                    "id": "SAMPLE_ID_1_HERE",
-                    "sample_type": "Plasma",
-                    ...
-                    ...
-                },
-                {
-                    "id": "SAMPLE_ID_2_HERE",
-                    "sample_type": "Plasma",
-                    ...
-                    ...
-                }
-            ]
-        }
-
-        >>> seer_sdk.get_project(project_id=project_id, msdata=True, df=False)
-        >>> [
-                {
-                    "id": "SAMPLE_ID_1_HERE",
-                    "sample_type": "Plasma",
-                    ...
-                    ...
-                    "ms_data_files": [
-                        {
-                            "id": MS_DATA_FILE_ID_1_HERE,
-                            "tenant_id": "TENANT_ID_HERE",
-                            ...
-                            ...
-                        },
-                        {
-                            "id": MS_DATA_FILE_ID_1_HERE,
-                            "tenant_id": "TENANT_ID_HERE",
-                            ...
-                            ...
-                        }
-                    ]
-                },
-                {
-                    "id": "SAMPLE_ID_2_HERE",
-                    "sample_type": "Plasma",
-                    ...
-                    ...
-                    "ms_data_files": [
-                        {
-                            "id": MS_DATA_FILE_ID_2_HERE,
-                            "tenant_id": "TENANT_ID_HERE",
-                            ...
-                            ...
-                        },
-                        {
-                            "id": MS_DATA_FILE_ID_2_HERE,
-                            "tenant_id": "TENANT_ID_HERE",
-                            ...
-                            ...
-                        }
-                    ]
-                }
-            ]
-
-        >>> seer_sdk.get_project(project_id=project_id, msdata=True, df=True)
-        >>> id  ...                                                                           ms_data_files
-            0  829509f0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
-            1  828d41c0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
-            2  8294e2e0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
-            3  8285eec0-8a47-11ed-b382-bf440acece26  ...                                       id  ... g...
-
-            [4 rows x 60 columns]
-        """
-        if not project_id:
-            return ValueError("No project ID specified.")
-
-        sample_ids = []
-        project_samples = self.get_samples_metadata(
-            project_id=project_id, df=False
-        )
-        flat_result = []
-
-        if msdata:
-
-            # construct map for quick index reference of sample in project_samples
-            sample_ids = {
-                sample["id"]: i for i, sample in enumerate(project_samples)
-            }  # will always contain unique values
-            ms_data_files = self.get_msdata(
-                sample_ids=list(sample_ids.keys()), df=False
-            )
-
-            for ms_data_file in ms_data_files:
-                index = sample_ids.get(ms_data_file["sample_id"], None)
-                if not index:
-                    continue
-
-                if not flat:
-                    if "ms_data_file" not in project_samples[index]:
-                        project_samples[index]["ms_data_files"] = [
-                            ms_data_file
-                        ]
-                    else:
-                        project_samples[index]["ms_data_files"].append(
-                            ms_data_file
-                        )
-                else:
-                    flat_result.append(project_samples[index] | ms_data_file)
-
-        # return flat result if results were added to the flat object
-        if flat and flat_result:
-            project_samples = flat_result
-
-        if df:
-            if flat:
-                return pd.DataFrame(project_samples)
-            else:
-                for sample_index in range(len(project_samples)):
-                    if "ms_data_files" in project_samples[sample_index]:
-                        project_samples[sample_index]["ms_data_files"] = (
-                            dict_to_df(
-                                project_samples[sample_index]["ms_data_files"]
-                            )
-                        )
-
-            project_samples = dict_to_df(project_samples)
-
-        return project_samples
+        return res if not as_df else dict_to_df(res)
 
     def get_analysis_protocols(
         self,
@@ -853,7 +693,7 @@ class SeerSDK:
 
         Returns
         -------
-        protocols: list
+        protocols: list[dict]
             List of analysis protocol objects for the authenticated user.
 
         Examples
@@ -962,7 +802,7 @@ class SeerSDK:
 
         Returns
         -------
-        analyses: dict
+        analyses: list[dict]
             Contains a list of analyses objects for the authenticated user.
 
         Examples
@@ -1082,6 +922,7 @@ class SeerSDK:
                 ]
             return res
 
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result_protein_data(
         self, analysis_id: str, link: bool = False, pg: str = None
     ):
@@ -1154,6 +995,7 @@ class SeerSDK:
                         "protein_panel": protein_panel,
                     }
 
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result_peptide_data(
         self, analysis_id: str, link: bool = False, peptide: str = None
     ):
@@ -1229,7 +1071,92 @@ class SeerSDK:
                         "peptide_panel": peptide_panel,
                     }
 
-    def list_analysis_result_files(self, analysis_id: str):
+    def _get_search_result_protein_data(self, analysis_id: str):
+        """
+        Given an analysis id, this function returns the protein data for the analysis.
+
+        Parameters
+        ----------
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+        """
+        with self._get_auth_session() as s:
+            URL = f"{self._auth.url}api/v1/data"
+            response = s.get(
+                f"{URL}/protein?analysisId={analysis_id}&retry=false"
+            )
+
+            if response.status_code != 200:
+                raise ValueError(
+                    "Could not fetch protein data. Please verify that your analysis completed."
+                )
+            response = response.json()
+
+            protein_data = {}
+            for row in response:
+                if row.get("name") == "npLink":
+                    protein_data["npLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+                if row.get("name") == "panelLink":
+                    protein_data["panelLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+            if not protein_data:
+                raise ValueError("No protein result files found.")
+            if not "panelLink" in protein_data.keys():
+                protein_data["panelLink"] = {"url": ""}
+
+            return protein_data
+
+    def _get_search_result_peptide_data(self, analysis_id: str):
+        """
+        Given an analysis id, this function returns the peptide data for the analysis.
+
+        Parameters
+        ----------
+
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+
+        Returns
+        -------
+        peptide_data : dict[str, str]
+            Dictionary containing URLs for npLink and panelLink peptide data.
+
+        """
+
+        with self._get_auth_session() as s:
+            URL = f"{self._auth.url}api/v1/data"
+            response = s.get(
+                f"{URL}/peptide?analysisId={analysis_id}&retry=false"
+            )
+
+            if response.status_code != 200:
+                raise ValueError(
+                    "Could not fetch peptide data. Please verify that your analysis completed."
+                )
+
+            response = response.json()
+
+            peptide_data = {}
+            for row in response:
+                if row.get("name") == "npLink":
+                    peptide_data["npLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+                if row.get("name") == "panelLink":
+                    peptide_data["panelLink"] = {
+                        "url": row.get("link", {}).get("url", "")
+                    }
+            if not peptide_data:
+                raise ValueError("No peptide result files found.")
+            if not "panelLink" in peptide_data.keys():
+                peptide_data["panelLink"] = {"url": ""}
+
+            return peptide_data
+
+    def list_search_result_files(self, analysis_id: str):
         """
         Given an analysis id, this function returns a list of files associated with the analysis.
 
@@ -1240,7 +1167,7 @@ class SeerSDK:
 
         Returns
         -------
-        files: list
+        files: list[str]
             List of files associated with the analysis.
         """
         try:
@@ -1266,7 +1193,141 @@ class SeerSDK:
                 files.append(row["filename"])
             return files
 
-    def get_analysis_result_file_url(self, analysis_id: str, filename: str):
+    def get_search_result(
+        self, analysis_id: str, analyte_type: str, rollup: str
+    ):
+        """
+        Load one of the files available via the "Download result files" button on the PAS UI.
+
+        Args:
+            analysis_id (str): id of the analysis
+            analyte_type (str): type of the data. Acceptable options are one of ['protein', 'peptide', 'precursor'].
+            rollup (str): the desired file. Acceptable options are one of ['np', 'panel'].
+        Returns:
+            pd.DataFrame: the requested file as a pandas DataFrame
+
+        """
+        if not analysis_id:
+            raise ValueError("Analysis ID cannot be empty.")
+
+        if analyte_type not in ["protein", "peptide", "precursor"]:
+            raise ValueError(
+                "Invalid data type. Please choose between 'protein', 'peptide', or 'precursor'."
+            )
+
+        if rollup not in ["np", "panel"]:
+            raise ValueError(
+                "Invalid file. Please choose between 'np', 'panel'."
+            )
+
+        if analyte_type == "precursor" and rollup == "panel":
+            raise ValueError(
+                "Precursor data is not available for panel rollup, please select np rollup."
+            )
+
+        if analyte_type == "protein":
+            if rollup == "np":
+                return url_to_df(
+                    self._get_search_result_protein_data(analysis_id)[
+                        "npLink"
+                    ]["url"]
+                )
+            elif rollup == "panel":
+                return url_to_df(
+                    self._get_search_result_protein_data(analysis_id)[
+                        "panelLink"
+                    ]["url"]
+                )
+        elif analyte_type == "peptide":
+            if rollup == "np":
+                return url_to_df(
+                    self._get_search_result_peptide_data(analysis_id)[
+                        "npLink"
+                    ]["url"]
+                )
+            elif rollup == "panel":
+                return url_to_df(
+                    self._get_search_result_peptide_data(analysis_id)[
+                        "panelLink"
+                    ]["url"]
+                )
+        else:
+            return url_to_df(
+                self.get_search_result_file_url(
+                    analysis_id, filename="report.tsv"
+                )["url"]
+            )
+
+    def download_search_output_file(
+        self, analysis_id: str, filename: str, download_path: str = ""
+    ):
+        """
+        Given an analysis id and a analysis result filename, this function downloads the file to the specified path.
+
+        Parameters
+        ----------
+        analysis_id : str
+            ID of the analysis for which the data is to be fetched.
+
+        filename : str
+            Name of the file to be fetched. Files can be case insensitive and without file extensions.
+
+        download_path : str
+            String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid.
+
+        Returns
+        -------
+        None
+            Downloads the file to the specified path.
+        """
+
+        if not download_path:
+            download_path = os.getcwd()
+
+        if not analysis_id:
+            raise ValueError("Analysis ID cannot be empty.")
+
+        if not os.path.exists(download_path):
+            raise ValueError(
+                "Please specify a valid folder path as download path."
+            )
+
+        file = self.get_search_result_file_url(analysis_id, filename)
+        file_url = file["url"]
+        filename = file["filename"]
+
+        print("Downloading file:", filename)
+        for _ in range(2):
+            try:
+                with tqdm(
+                    unit="B",
+                    unit_scale=True,
+                    unit_divisor=1024,
+                    miniters=1,
+                    desc=f"Progress",
+                ) as t:
+                    ssl._create_default_https_context = (
+                        ssl._create_unverified_context
+                    )
+                    urllib.request.urlretrieve(
+                        file_url,
+                        f"{download_path}/{filename}",
+                        reporthook=download_hook(t),
+                        data=None,
+                    )
+                    break
+            except:
+                filename = filename.split("/")
+                name += "/" + "/".join(
+                    [filename[i] for i in range(len(filename) - 1)]
+                )
+                filename = filename[-1]
+                if not os.path.isdir(f"{name}/{filename}"):
+                    os.makedirs(f"{name}/")
+        print(f"File {filename} downloaded successfully to {download_path}.")
+        return
+
+    def get_search_result_file_url(self, analysis_id: str, filename: str):
         """
         Given an analysis id and a analysis result filename, this function returns the signed URL for the file.
 
@@ -1280,21 +1341,29 @@ class SeerSDK:
 
         Returns
         -------
-        file_url: dict
-            Response object containing the url for the file.
+        file_url: dict[str, str]
+            Dictionary containing the 'url' and 'filename' of the file.
         """
+        if "." in filename:
+            filename = ".".join(filename.split(".")[:-1])
+        filename = filename.casefold()
 
         # Allow user to pass in filenames without an extension.
-        analysis_result_files = self.list_analysis_result_files(analysis_id)
+        analysis_result_files = self.list_search_result_files(analysis_id)
         analysis_result_files_prefix_mapper = {
-            ".".join(x.split(".")[:-1]): x for x in analysis_result_files
+            (".".join(x.split(".")[:-1])).casefold(): x
+            for x in analysis_result_files
         }
         if filename in analysis_result_files_prefix_mapper:
             filename = analysis_result_files_prefix_mapper[filename]
+        else:
+            raise ValueError(
+                f"Filename {filename} not among the available analysis result files. Please use SeerSDK.list_search_result_files('{analysis_id}') to see available files for this analysis."
+            )
 
         analysis_metadata = self.get_analysis(analysis_id)[0]
         if analysis_metadata.get("status") in ["Failed", None]:
-            raise ValueError("Cannot generate links for failed analyses.")
+            raise ValueError("Cannot generate links for failed searches.")
         with self._get_auth_session() as s:
             file_url = s.post(
                 f"{self._auth.url}api/v1/analysisResultFiles/getUrl",
@@ -1307,8 +1376,11 @@ class SeerSDK:
         response = file_url.json()
         if not response.get("url"):
             raise ValueError(f"File {filename} not found.")
+
+        response["filename"] = filename
         return response
 
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result_files(
         self,
         analysis_id: str,
@@ -1339,7 +1411,7 @@ class SeerSDK:
 
         Returns
         -------
-        links: dict
+        links: dict[str, pd.DataFrame]
             Contains dataframe objects for the requested files. If a filename is not found, it is skipped.
 
 
@@ -1389,7 +1461,7 @@ class SeerSDK:
 
         filenames = set(filenames)
         # Allow user to pass in filenames without an extension.
-        analysis_result_files = self.list_analysis_result_files(analysis_id)
+        analysis_result_files = self.list_search_result_files(analysis_id)
         analysis_result_files_prefix_mapper = {
             ".".join(x.split(".")[:-1]): x for x in analysis_result_files
         }
@@ -1426,7 +1498,7 @@ class SeerSDK:
                 links["peptide_panel.tsv"] = peptide_data["panelLink"]["url"]
             else:
                 try:
-                    links[filename] = self.get_analysis_result_file_url(
+                    links[filename] = self._get_search_result_file_url(
                         analysis_id, filename
                     )["url"]
                 except Exception as e:
@@ -1451,6 +1523,7 @@ class SeerSDK:
 
         return links
 
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result(
         self,
         analysis_id: str,
@@ -1522,7 +1595,7 @@ class SeerSDK:
         }
 
         if diann_report:
-            diann_report_url = self.get_analysis_result_file_url(
+            diann_report_url = self._get_search_result_file_url(
                 analysis_id, "report.tsv"
             )
             links["diann_report"] = url_to_df(diann_report_url["url"])
@@ -1597,7 +1670,7 @@ class SeerSDK:
 
         Returns
         -------
-        list
+        list[str]
             Contains the list of files in the folder.
 
         Examples
@@ -1652,8 +1725,8 @@ class SeerSDK:
 
         Returns
         -------
-        message: dict
-            Contains the message whether the files were downloaded or not.
+        message: dict[str, str]
+            Contains the 'message' whether the files were downloaded or not.
         """
 
         urls = []
@@ -1756,6 +1829,11 @@ class SeerSDK:
         **kwargs : dict, optional
             Search keyword parameters to be passed in. Acceptable values are 'name' or 'description'.
 
+        Returns
+        -------
+        res : list[dict]
+            A list of dictionaries containing the group analysis objects.
+
         """
         params = {"analysisid": analysis_id}
         if kwargs and not group_analysis_id:
@@ -1807,7 +1885,7 @@ class SeerSDK:
         Returns
         -------
         res : dict
-            A dictionary containing the group analysis data.
+            A dictionary containing the group analysis object.
 
         Examples
         -------
@@ -1961,7 +2039,7 @@ class SeerSDK:
             analysis_id (str): ID of the analysis.
             feature_ids (list[str], optional): Filter result object to a set of ids. Defaults to [].
             show_significant_only (bool, optional): Mark true if only significant results are to be returned. Defaults to False.
-            as_df (bool, optional): Mark true if return object should be a pandas DataFrame. Defaults to False.
+            as_df (bool, optional): whether the result should be converted to a DataFrame. Defaults to False.
             volcano_plot (bool, optional): Mark true to include the volcano plot data in the return object. Defaults to False.
             cached (bool, optional): Mark true to return volcano plot data as a VolcanoPlotBuilder object. No effect if volcano_plot flag is marked false. Defaults to False.
 
@@ -1983,8 +2061,10 @@ class SeerSDK:
 
             protein_peptide_gene_map = builder.protein_gene_map
 
-            # API call 2 - get analysis samples metadata to get condition
-            samples_metadata = self.get_analysis_samples(analysis_id)
+            # API call 2 - get analysis samples to get condition
+            samples_metadata = self._get_analysis_samples(
+                analysis_id=analysis_id
+            )
 
             json = {"analysisId": analysis_id}
             if feature_ids:
@@ -2021,7 +2101,7 @@ class SeerSDK:
                 if x[feature_type_index] in protein_peptide_gene_map
             ]
             sample_id_condition = {
-                x["id"]: x["condition"] for x in samples_metadata[0]["samples"]
+                x["id"]: x["condition"] for x in samples_metadata
             }
 
             if show_significant_only:
@@ -2062,7 +2142,7 @@ class SeerSDK:
             box_plot (bool, optional): Mark true to include box plot data in the return object. Defaults to False.
 
         Returns:
-            dict: A dictionary containing the volcano plot and optionally box plot data for each group analysis.
+            dict[str, pd.DataFrame]: A dictionary containing the volcano plot and optionally box plot data for each group analysis.
         """
         group_analysis_ids = [
             x["id"]
@@ -2118,8 +2198,8 @@ class SeerSDK:
             ValueError: Invalid type provided.
             ServerError: Could not fetch PCA data.
         Returns:
-            dict
-                Pure response from the API.
+            dict[str, list|float]
+                Returns response object containing 'xContributionRatio' (float), 'yContributionRatio' (float), 'samples' (list[dict]), and 'points' (list[float]).
         """
         if not analysis_ids:
             raise ValueError("Analysis IDs cannot be empty.")
@@ -2164,7 +2244,7 @@ class SeerSDK:
             type (str): Type of data to be fetched. Must be either 'protein' or 'peptide'.
             sample_ids (list[str], optional): IDs of the samples of interest.
             hide_control (bool, optional): Mark true if controls are to be excluded. Defaults to False.
-            as_df (bool, optional): Mark true if the data should be returned as a pandas DataFrame. Defaults to False.
+            as_df (bool, optional): whether the result should be converted to a DataFrame. Defaults to False.
         Raises:
             ValueError: No analysis IDs provided.
             ValueError: No sample IDs provided.
@@ -2491,7 +2571,7 @@ class SeerSDK:
             fold_change_threshold (float, optional): Cutoff value for the fold change to determine significance. Defaults to 1.
             label_by (str, optional): Metric to sort result data. Defaults to "fold_change".
             cached (bool, optional): Return a VolcanoPlotBuilder object for calculation reuse. Defaults to False.
-            as_df (bool, optional): Return data as a pandas DataFrame. Defaults to False.
+            as_df (bool, optional): whether the result should be converted to a DataFrame. Defaults to False.
 
         Raises:
             ServerError - could not fetch group analysis results.
@@ -2521,29 +2601,51 @@ class SeerSDK:
             else:
                 return obj.volcano_plot
 
-    def get_analysis_samples(self, analysis_id: str):
+    def _get_analysis_samples(
+        self, analysis_id: str = None, analysis_name: str = None, as_df=False
+    ):
         """
-        Get the samples associated with a given analysis ID.
+        Get the samples associated with a given analysis.
 
         Args:
-            analysis_id (str): The analysis ID.
+            analysis_id (str): UUID identifier of the analysis. Defaults to None.
+            analysis_name (str): Name of the analysis. Defaults to None.
+            as_df (bool) : whether the result should be converted to a DataFrame. Defaults to False.
 
         Raises:
             ServerError - could not retrieve samples for analysis.
         Returns:
-            dict: A dictionary containing the samples associated with the analysis.
+            list[dict] : a list of samples associated with the analysis.
         """
-        if not analysis_id:
-            raise ValueError("Analysis ID cannot be empty.")
 
-        URL = f"{self._auth.url}api/v1/analyses/samples/{analysis_id}"
-        with self._get_auth_session() as s:
-            samples = s.get(URL)
+        if not analysis_id and not analysis_name:
+            raise ValueError("Analysis cannot be empty.")
 
-            if samples.status_code != 200:
-                raise ServerError("Could not retrieve samples for analysis.")
+        if analysis_id:
+            rows = [{"id": analysis_id}]
+        else:
+            rows = self.get_analysis(analysis_name=analysis_name)
 
-            return samples.json()
+        resp = []
+        for row in rows:
+            URL = f"{self._auth.url}api/v1/analyses/samples/{row['id']}"
+            with self._get_auth_session() as s:
+                samples = s.get(URL)
+                try:
+                    samples.raise_for_status()
+                    obj = samples.json()[0]
+                    resp += obj["samples"]
+                except:
+                    continue
+
+        if not resp:
+            raise ServerError(
+                f"Could not retrieve samples for analysis {analysis_id or analysis_name}."
+            )
+
+        resp = pd.DataFrame(resp)
+        resp.drop_duplicates(subset=["id"], inplace=True)
+        return resp if as_df else resp.to_dict(orient="records")
 
     def get_analysis_protocol_fasta(self, analysis_id, download_path=None):
         if not analysis_id:
