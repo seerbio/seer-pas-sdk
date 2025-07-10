@@ -776,6 +776,15 @@ class SeerSDK:
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
 
+                if "can_edit" in res[entry]:
+                    del res[entry]["can_edit"]
+
+                if "can_delete" in res[entry]:
+                    del res[entry]["can_delete"]
+
+                if "scope" in res[entry]:
+                    del res[entry]["scope"]
+
                 if "parameter_file_path" in res[entry]:
                     # Simple lambda function to find the third occurrence of '/' in the raw file path
                     location = lambda s: len(s) - len(s.split("/", 3)[-1])
@@ -784,7 +793,7 @@ class SeerSDK:
                         "parameter_file_path"
                     ][location(res[entry]["parameter_file_path"]) :]
 
-            return res
+            return res if not as_df else dict_to_df(res)
 
     def get_analyses(
         self,
