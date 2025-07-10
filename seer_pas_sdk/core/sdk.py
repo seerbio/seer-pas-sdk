@@ -114,11 +114,11 @@ class SeerSDK:
         tenants : dict[str, str]
             A dictionary containing the institution names and tenant ids for the authenticated user.
         """
-        tenants = self.get_user_tenant()
+        tenants = self.get_user_tenant(index=False)
         if reverse:
-            return {x["tenantId"]: x["institution"] for x in tenants.values()}
+            return {x["tenantId"]: x["institution"] for x in tenants}
         else:
-            return {x["institution"]: x["tenantId"] for x in tenants.values()}
+            return {x["institution"]: x["tenantId"] for x in tenants}
 
     def switch_tenant(self, identifier: str):
         """
@@ -251,7 +251,9 @@ class SeerSDK:
                 )
             return spaces.json()
 
-    def get_plates(self, plate_id: str = None, as_df: bool = False):
+    def get_plates(
+        self, plate_id: str = None, plate_name: str = None, as_df: bool = False
+    ):
         """
         Fetches a list of plates for the authenticated user. If no `plate_id` is provided, returns all plates for the authenticated user. If `plate_id` is provided, returns the plate with the given `plate_id`, provided it exists.
 
@@ -298,11 +300,18 @@ class SeerSDK:
         URL = f"{self._auth.url}api/v1/plates"
         res = []
 
+        if not plate_id and not plate_name:
+            params = {"all": "true"}
+        elif plate_name:
+            params = {"searchFields": "plate_name", "searchItem": plate_name}
+        else:
+            params = dict()
+
         with self._get_auth_session() as s:
 
             plates = s.get(
                 f"{URL}/{plate_id}" if plate_id else URL,
-                params={"all": "true"},
+                params=params,
             )
             if plates.status_code != 200:
                 raise ValueError(
@@ -318,7 +327,12 @@ class SeerSDK:
 
         return res if not as_df else dict_to_df(res)
 
-    def get_projects(self, project_id: str = None, as_df: bool = False):
+    def get_projects(
+        self,
+        project_id: str = None,
+        project_name: str = None,
+        as_df: bool = False,
+    ):
         """
         Fetches a list of projects for the authenticated user. If no `project_id` is provided, returns all projects for the authenticated user. If `project_id` is provided, returns the project with the given `project_id`, provided it exists.
 
@@ -369,10 +383,19 @@ class SeerSDK:
             else f"{self._auth.url}api/v1/projects/{project_id}"
         )
         res = []
+        if not project_id and not project_name:
+            params = {"all": "true"}
+        elif project_name:
+            params = {
+                "searchFields": "project_name",
+                "searchItem": project_name,
+            }
+        else:
+            params = dict()
 
         with self._get_auth_session() as s:
 
-            projects = s.get(URL, params={"all": "true"})
+            projects = s.get(URL, params=params)
             if projects.status_code != 200:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
@@ -679,6 +702,7 @@ class SeerSDK:
         self,
         analysis_protocol_name: str = None,
         analysis_protocol_id: str = None,
+        as_df: bool = False,
     ):
         """
         Fetches a list of analysis protocols for the authenticated user. If no `analysis_protocol_id` is provided, returns all analysis protocols for the authenticated user. If `analysis_protocol_name` (and no `analysis_protocol_id`) is provided, returns the analysis protocol with the given name, provided it exists.
@@ -691,6 +715,8 @@ class SeerSDK:
         analysis_protocol_name : str, optional
             Name of the analysis protocol to be fetched, defaulted to None.
 
+        as_df : bool, optional
+            whether the result should be converted to a DataFrame, defaulted to False.
         Returns
         -------
         protocols: list[dict]
@@ -724,31 +750,40 @@ class SeerSDK:
             else f"{self._auth.url}api/v1/analysisProtocols/{analysis_protocol_id}"
         )
         res = []
+        params = {"all": "true"}
+
+        if analysis_protocol_name:
+            params.update(
+                {
+                    "searchFields": "analysis_protocol_name,offering_name",
+                    "searchItem": analysis_protocol_name,
+                }
+            )
 
         with self._get_auth_session() as s:
 
-            protocols = s.get(URL, params={"all": "true"})
+            protocols = s.get(URL, params=params)
             if protocols.status_code != 200:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
                 )
-            if not analysis_protocol_id and not analysis_protocol_name:
-                res = protocols.json()["data"]
-
-            if analysis_protocol_id and not analysis_protocol_name:
+            if analysis_protocol_id:
                 res = [protocols.json()]
-
-            if not analysis_protocol_id and analysis_protocol_name:
-                res = [
-                    protocol
-                    for protocol in protocols.json()["data"]
-                    if protocol["analysis_protocol_name"]
-                    == analysis_protocol_name
-                ]
+            else:
+                res = protocols.json()["data"]
 
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
+
+                if "can_edit" in res[entry]:
+                    del res[entry]["can_edit"]
+
+                if "can_delete" in res[entry]:
+                    del res[entry]["can_delete"]
+
+                if "scope" in res[entry]:
+                    del res[entry]["scope"]
 
                 if "parameter_file_path" in res[entry]:
                     # Simple lambda function to find the third occurrence of '/' in the raw file path
@@ -758,7 +793,7 @@ class SeerSDK:
                         "parameter_file_path"
                     ][location(res[entry]["parameter_file_path"]) :]
 
-            return res
+            return res if not as_df else dict_to_df(res)
 
     def get_analyses(
         self,
