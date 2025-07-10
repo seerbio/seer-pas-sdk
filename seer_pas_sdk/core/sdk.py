@@ -702,6 +702,7 @@ class SeerSDK:
         self,
         analysis_protocol_name: str = None,
         analysis_protocol_id: str = None,
+        as_df: bool = False,
     ):
         """
         Fetches a list of analysis protocols for the authenticated user. If no `analysis_protocol_id` is provided, returns all analysis protocols for the authenticated user. If `analysis_protocol_name` (and no `analysis_protocol_id`) is provided, returns the analysis protocol with the given name, provided it exists.
@@ -714,6 +715,8 @@ class SeerSDK:
         analysis_protocol_name : str, optional
             Name of the analysis protocol to be fetched, defaulted to None.
 
+        as_df : bool, optional
+            whether the result should be converted to a DataFrame, defaulted to False.
         Returns
         -------
         protocols: list[dict]
@@ -747,27 +750,27 @@ class SeerSDK:
             else f"{self._auth.url}api/v1/analysisProtocols/{analysis_protocol_id}"
         )
         res = []
+        params = {"all": "true"}
+
+        if analysis_protocol_name:
+            params.update(
+                {
+                    "searchFields": "analysis_protocol_name,offering_name",
+                    "searchItem": analysis_protocol_name,
+                }
+            )
 
         with self._get_auth_session() as s:
 
-            protocols = s.get(URL, params={"all": "true"})
+            protocols = s.get(URL, params=params)
             if protocols.status_code != 200:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
                 )
-            if not analysis_protocol_id and not analysis_protocol_name:
-                res = protocols.json()["data"]
-
-            if analysis_protocol_id and not analysis_protocol_name:
+            if analysis_protocol_id:
                 res = [protocols.json()]
-
-            if not analysis_protocol_id and analysis_protocol_name:
-                res = [
-                    protocol
-                    for protocol in protocols.json()["data"]
-                    if protocol["analysis_protocol_name"]
-                    == analysis_protocol_name
-                ]
+            else:
+                res = protocols.json()["data"]
 
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
