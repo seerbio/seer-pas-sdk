@@ -379,8 +379,8 @@ class SeerSDK:
 
         URL = (
             f"{self._auth.url}api/v1/projects"
-            if not project_id
-            else f"{self._auth.url}api/v1/projects/{project_id}"
+            # if not project_id
+            # else f"{self._auth.url}api/v1/projects/{project_id}"
         )
         res = []
         if not project_id and not project_name:
@@ -391,7 +391,7 @@ class SeerSDK:
                 "searchItem": project_name,
             }
         else:
-            params = dict()
+            params = {"searchFields": "id", "searchItem": project_id}
 
         with self._get_auth_session() as s:
 
@@ -400,10 +400,10 @@ class SeerSDK:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
                 )
-            if not project_id:
-                res = projects.json()["data"]
-            else:
-                res = [projects.json()]
+            res = projects.json()["data"]
+
+            if project_id and not res:
+                raise ValueError("Project ID is invalid.")
 
         for entry in res:
             if "tenant_id" in entry:
