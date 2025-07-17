@@ -803,6 +803,7 @@ class SeerSDK:
         analysis_only: bool = True,
         project_id: str = None,
         plate_name: str = None,
+        as_df=False,
         **kwargs,
     ):
         """
@@ -955,7 +956,7 @@ class SeerSDK:
                 res = [
                     analysis for analysis in res if not analysis["is_folder"]
                 ]
-            return res
+            return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result_protein_data(
