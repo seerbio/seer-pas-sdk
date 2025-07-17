@@ -379,8 +379,8 @@ class SeerSDK:
 
         URL = (
             f"{self._auth.url}api/v1/projects"
-            if not project_id
-            else f"{self._auth.url}api/v1/projects/{project_id}"
+            # if not project_id
+            # else f"{self._auth.url}api/v1/projects/{project_id}"
         )
         res = []
         if not project_id and not project_name:
@@ -391,7 +391,7 @@ class SeerSDK:
                 "searchItem": project_name,
             }
         else:
-            params = dict()
+            params = {"searchFields": "id", "searchItem": project_id}
 
         with self._get_auth_session() as s:
 
@@ -400,10 +400,10 @@ class SeerSDK:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
                 )
-            if not project_id:
-                res = projects.json()["data"]
-            else:
-                res = [projects.json()]
+            res = projects.json()["data"]
+
+            if project_id and not res:
+                raise ValueError("Project ID is invalid.")
 
         for entry in res:
             if "tenant_id" in entry:
@@ -803,6 +803,7 @@ class SeerSDK:
         analysis_only: bool = True,
         project_id: str = None,
         plate_name: str = None,
+        as_df=False,
         **kwargs,
     ):
         """
@@ -831,6 +832,9 @@ class SeerSDK:
 
         plate_name : str, optional
             Name of the plate to be fetched, defaulted to None.
+
+        as_df : bool, optional
+            whether the result should be converted to a DataFrame, defaulted to False.
 
         **kwargs : dict, optional
             Search keyword parameters to be passed in. Acceptable values are 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'.
@@ -955,7 +959,7 @@ class SeerSDK:
                 res = [
                     analysis for analysis in res if not analysis["is_folder"]
                 ]
-            return res
+            return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
     def get_analysis_result_protein_data(
@@ -1691,6 +1695,93 @@ class SeerSDK:
             return ValueError("Analysis not found. Your ID could be incorrect")
 
         return {"status": res[0]["status"]}
+
+    def get_protein_results_table(
+        self,
+        analysis_id: str = None,
+        analysis_name: str = None,
+        grouping: str = "condition",
+        as_df=False,
+    ):
+        """Fetches the protein results table for a given analysis ID or analysis name.
+
+        Args:
+            analysis_id (str, optional): id of the analysis. Defaults to None.
+            analysis_name (str, optional): name of the analysis. Defaults to None.
+            grouping (str, optional): group criteria of table result. Defaults to "condition".
+            as_df (bool, optional): . Defaults to False.
+
+        Raises:
+            ValueError: neither name or id were provided for an analysis.
+            ServerError: the request to the server was not successful.
+
+        Returns:
+            list[dict] | pd.DataFrame: data from the protein results table.
+        """
+        if not analysis_name and not analysis_id:
+            raise ValueError(
+                "Please provide either analysis name or analysis id."
+            )
+
+        if not analysis_id and analysis_name:
+            analysis_id = self.get_analyses(analysis_name=analysis_name)[0][
+                "id"
+            ]
+
+        URL = self._auth.url + "api/v2/groupanalysis/protein"
+        with self._get_auth_session() as s:
+            res = s.post(
+                URL, json={"analysisId": analysis_id, "grouping": grouping}
+            )
+            if res.status_code != 200:
+                raise ServerError(
+                    "Could not fetch protein results table. Please verify that your analysis completed."
+                )
+            return dict_to_df(res.json()) if as_df else res.json()
+
+    def get_peptide_results_table(
+        self,
+        analysis_id: str = None,
+        analysis_name: str = None,
+        grouping: str = "condition",
+        as_df=False,
+    ):
+        """Fetches the peptide results table for a given analysis ID or analysis name.
+
+        Args:
+            analysis_id (str, optional): id of the analysis. Defaults to None.
+            analysis_name (str, optional): name of the analysis. Defaults to None.
+            grouping (str, optional): group criteria of table results. Defaults to "condition".
+            as_df (bool, optional): whether the result should be converted to a DataFrame, defaulted to False.
+
+
+        Raises:
+            ValueError: neither name or id were provided for an analysis.
+            ServerError: the request to the server was not successful.
+
+        Returns:
+           list[dict] | pd.DataFrame: data from the peptide results table.
+        """
+        if not analysis_name and not analysis_id:
+            raise ValueError(
+                "Please provide either analysis name or analysis id."
+            )
+
+        if not analysis_id and analysis_name:
+            analysis_id = self.get_analyses(analysis_name=analysis_name)[0][
+                "id"
+            ]
+
+        URL = self._auth.url + "api/v2/groupanalysis/peptide"
+        with self._get_auth_session() as s:
+            res = s.post(
+                URL, json={"analysisId": analysis_id, "grouping": grouping}
+            )
+            if res.status_code != 200:
+                raise ServerError(
+                    "Could not fetch protein results table. Please verify that your analysis completed."
+                )
+            return dict_to_df(res.json()) if as_df else res.json()
 
     def list_ms_data_files(self, folder="", space=None):
         """
