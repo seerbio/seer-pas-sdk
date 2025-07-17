@@ -833,6 +833,9 @@ class SeerSDK:
         plate_name : str, optional
             Name of the plate to be fetched, defaulted to None.
 
+        as_df : bool, optional
+            whether the result should be converted to a DataFrame, defaulted to False.
+
         **kwargs : dict, optional
             Search keyword parameters to be passed in. Acceptable values are 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'.
 
@@ -1692,6 +1695,93 @@ class SeerSDK:
             return ValueError("Analysis not found. Your ID could be incorrect")
 
         return {"status": res[0]["status"]}
+
+    def get_protein_results_table(
+        self,
+        analysis_id: str = None,
+        analysis_name: str = None,
+        grouping: str = "condition",
+        as_df=False,
+    ):
+        """Fetches the protein results table for a given analysis ID or analysis name.
+
+        Args:
+            analysis_id (str, optional): id of the analysis. Defaults to None.
+            analysis_name (str, optional): name of the analysis. Defaults to None.
+            grouping (str, optional): group criteria of table result. Defaults to "condition".
+            as_df (bool, optional): . Defaults to False.
+
+        Raises:
+            ValueError: neither name or id were provided for an analysis.
+            ServerError: the request to the server was not successful.
+
+        Returns:
+            list[dict] | pd.DataFrame: data from the protein results table.
+        """
+        if not analysis_name and not analysis_id:
+            raise ValueError(
+                "Please provide either analysis name or analysis id."
+            )
+
+        if not analysis_id and analysis_name:
+            analysis_id = self.get_analyses(analysis_name=analysis_name)[0][
+                "id"
+            ]
+
+        URL = self._auth.url + "api/v2/groupanalysis/protein"
+        with self._get_auth_session() as s:
+            res = s.post(
+                URL, json={"analysisId": analysis_id, "grouping": grouping}
+            )
+            if res.status_code != 200:
+                raise ServerError(
+                    "Could not fetch protein results table. Please verify that your analysis completed."
+                )
+            return dict_to_df(res.json()) if as_df else res.json()
+
+    def get_peptide_results_table(
+        self,
+        analysis_id: str = None,
+        analysis_name: str = None,
+        grouping: str = "condition",
+        as_df=False,
+    ):
+        """Fetches the peptide results table for a given analysis ID or analysis name.
+
+        Args:
+            analysis_id (str, optional): id of the analysis. Defaults to None.
+            analysis_name (str, optional): name of the analysis. Defaults to None.
+            grouping (str, optional): group criteria of table results. Defaults to "condition".
+            as_df (bool, optional): whether the result should be converted to a DataFrame, defaulted to False.
+
+
+        Raises:
+            ValueError: neither name or id were provided for an analysis.
+            ServerError: the request to the server was not successful.
+
+        Returns:
+           list[dict] | pd.DataFrame: data from the peptide results table.
+        """
+        if not analysis_name and not analysis_id:
+            raise ValueError(
+                "Please provide either analysis name or analysis id."
+            )
+
+        if not analysis_id and analysis_name:
+            analysis_id = self.get_analyses(analysis_name=analysis_name)[0][
+                "id"
+            ]
+
+        URL = self._auth.url + "api/v2/groupanalysis/peptide"
+        with self._get_auth_session() as s:
+            res = s.post(
+                URL, json={"analysisId": analysis_id, "grouping": grouping}
+            )
+            if res.status_code != 200:
+                raise ServerError(
+                    "Could not fetch protein results table. Please verify that your analysis completed."
+                )
+            return dict_to_df(res.json()) if as_df else res.json()
 
     def list_ms_data_files(self, folder="", space=None):
         """
