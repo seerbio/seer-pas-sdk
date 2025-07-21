@@ -1738,25 +1738,30 @@ class SeerSDK:
                     "Could not fetch protein results table. Please verify that your analysis completed."
                 )
             res = dict_to_df(res.json())
-            res["uniprot_id"] = res["proteinId"]
-            res["n_samples"] = res["n"]
-            res["biological_process"] = res["bp"]
-            res["molecular_function"] = res["mf"]
-            res["cellular_component"] = res["cc"]
-            res["fraction_samples"] = res["nFrac"]
-            res["protein_name"] = res["proteinNames"]
+            res.rename(
+                columns={
+                    "proteinId": "uniprot_id",
+                    "n": "n_samples",
+                    "bp": "biological_process",
+                    "mf": "molecular_function",
+                    "cc": "cellular_component",
+                    "nFrac": "fraction_samples",
+                    "proteinNames": "protein_name",
+                    "geneName": "gene_name",
+                },
+                inplace=True,
+            )
 
-            columns_to_drop = [
-                "n",
-                "bp",
-                "mf",
-                "cc",
-                "proteinNames",
-                "proteinId",
-                "nFrac",
-            ]
-            res.drop(columns=columns_to_drop, inplace=True, errors="ignore")
-
+            res.drop(
+                columns=[
+                    "median_undefined",
+                    "n_undefined",
+                    "n_null",
+                    "median_null",
+                ],
+                inplace=True,
+                errors="ignore",
+            )
             return res if as_df else res.to_dict(orient="records")
 
     def get_peptide_results_table(
@@ -1802,25 +1807,24 @@ class SeerSDK:
                     "Could not fetch peptide results table. Please verify that your analysis completed."
                 )
             res = dict_to_df(res.json())
-            res["uniprot_id"] = res["proteinId"]
-            res["n_samples"] = res["n"]
-            res["biological_process"] = res["bp"]
-            res["molecular_function"] = res["mf"]
-            res["cellular_component"] = res["cc"]
-            res["fraction_samples"] = res["nFrac"]
-            res["peptide_name"] = res["proteinNames"]
+            res.rename(
+                columns={
+                    "proteinId": "uniprot_id",
+                    "n": "n_samples",
+                    "bp": "biological_process",
+                    "mf": "molecular_function",
+                    "cc": "cellular_component",
+                    "nFrac": "fraction_samples",
+                    "proteinNames": "protein_name",
+                    "geneName": "gene_name",
+                },
+                inplace=True,
+            )
 
-            columns_to_drop = [
-                "n",
-                "bp",
-                "mf",
-                "cc",
-                "proteinNames",
-                "proteinId",
-                "nFrac",
-            ]
-            res.drop(columns=columns_to_drop, inplace=True, errors="ignore")
-
+            res.drop(columns=["n_undefined"], inplace=True, errors="ignore")
+            res.drop(
+                columns=["median_undefined"], inplace=True, errors="ignore"
+            )
             return res if as_df else res.to_dict(orient="records")
 
     def list_ms_data_files(self, folder="", space=None):
