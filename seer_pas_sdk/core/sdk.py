@@ -1737,7 +1737,32 @@ class SeerSDK:
                 raise ServerError(
                     "Could not fetch protein results table. Please verify that your analysis completed."
                 )
-            return dict_to_df(res.json()) if as_df else res.json()
+            res = dict_to_df(res.json())
+            res.rename(
+                columns={
+                    "proteinId": "uniprot_id",
+                    "n": "n_samples",
+                    "bp": "biological_process",
+                    "mf": "molecular_function",
+                    "cc": "cellular_component",
+                    "nFrac": "fraction_samples",
+                    "proteinNames": "protein_name",
+                    "geneName": "gene_name",
+                },
+                inplace=True,
+            )
+
+            res.drop(
+                columns=[
+                    "median_undefined",
+                    "n_undefined",
+                    "n_null",
+                    "median_null",
+                ],
+                inplace=True,
+                errors="ignore",
+            )
+            return res if as_df else res.to_dict(orient="records")
 
     def get_peptide_results_table(
         self,
@@ -1779,9 +1804,28 @@ class SeerSDK:
             )
             if res.status_code != 200:
                 raise ServerError(
-                    "Could not fetch protein results table. Please verify that your analysis completed."
+                    "Could not fetch peptide results table. Please verify that your analysis completed."
                 )
-            return dict_to_df(res.json()) if as_df else res.json()
+            res = dict_to_df(res.json())
+            res.rename(
+                columns={
+                    "proteinId": "uniprot_id",
+                    "n": "n_samples",
+                    "bp": "biological_process",
+                    "mf": "molecular_function",
+                    "cc": "cellular_component",
+                    "nFrac": "fraction_samples",
+                    "proteinNames": "protein_name",
+                    "geneName": "gene_name",
+                },
+                inplace=True,
+            )
+
+            res.drop(columns=["n_undefined"], inplace=True, errors="ignore")
+            res.drop(
+                columns=["median_undefined"], inplace=True, errors="ignore"
+            )
+            return res if as_df else res.to_dict(orient="records")
 
     def list_ms_data_files(self, folder="", space=None):
         """
