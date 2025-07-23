@@ -515,6 +515,8 @@ class SeerSDK:
                     f"Failed to fetch sample data for plate ID: {plate_id}."
                 )
             res = samples.json()["data"]
+            if not res:
+                return [] if not as_df else dict_to_df(res)
             res_df = dict_to_df(res)
 
             # API returns empty strings if not a control, replace with None for filtering purposes
@@ -1195,7 +1197,9 @@ class SeerSDK:
 
             return peptide_data
 
-    def list_search_result_files(self, analysis_id: str):
+    def list_search_result_files(
+        self, analysis_id: str, folder: str = None, recursive: bool = False
+    ):
         """
         Given an analysis id, this function returns a list of files associated with the analysis.
 
@@ -1203,6 +1207,12 @@ class SeerSDK:
         ----------
         analysis_id : str
             ID of the analysis for which the data is to be fetched.
+
+        folder : str, optional
+            Root folder key to list search result files from, defaulted to None.
+
+        recursive : bool, optional
+            Whether to list files recursively from subfolders, defaulted to False.
 
         Returns
         -------
@@ -1218,9 +1228,15 @@ class SeerSDK:
 
         if analysis_metadata.get("status") in ["Failed", None]:
             raise ValueError("Cannot find files for a failed analysis.")
+
+        params = {"all": "true"}
+        if folder:
+            params["folderKey"] = folder
+
         with self._get_auth_session() as s:
             response = s.get(
-                f"{self._auth.url}api/v2/analysisResultFiles/{analysis_id}"
+                f"{self._auth.url}api/v2/analysisResultFiles/{analysis_id}",
+                params=params,
             )
             if response.status_code != 200:
                 raise ServerError(
@@ -1228,8 +1244,25 @@ class SeerSDK:
                 )
             response = response.json()
             files = []
+            folders = []
             for row in response["data"]:
-                files.append(row["filename"])
+                if folder:
+                    row["filename"] = f"{folder}/{row['filename']}"
+                if row["isFolder"]:
+                    if recursive:
+                        folders.append(row["filename"])
+                    else:
+                        row["filename"] += "/"
+                        files.append(row["filename"])
+                else:
+                    files.append(row["filename"])
+
+            if recursive:
+                for subfolder in folders:
+                    files += self.list_search_result_files(
+                        analysis_id, folder=subfolder, recursive=recursive
+                    )
+
             return files
 
     def get_search_result(

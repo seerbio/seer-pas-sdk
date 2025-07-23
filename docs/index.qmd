@@ -529,6 +529,10 @@ If the `analysis_id` is invalid or the search has not been completed, an error i
 ###### <u>Params</u>
 `analysis_id`: (`str`) Unique ID of the analysis for which the data is to be listed.
 
+`folder`: (`str`, optional) Root folder key to list search result files from. Defaults to None and displays search output files from the top level. 
+
+`recursive`: (`bool`, optional) Whether to list files recursively from all subfolders. Defaults to False.
+
 ###### <u>Returns</u>
 `files`: (`list[str]`) A list of search output files for the given `analysis_id`.
 
@@ -538,9 +542,13 @@ If the `analysis_id` is invalid or the search has not been completed, an error i
 analysis_id = "ddff8c40-0493-11ee-bd19-a77197cd1a6b"
 search_output_files = sdk.list_search_output_files(analysis_id)
 print(search_output_files)
+search_output_files = sdk.list_search_output_files(analysis_id, folder='rollup')
+print(search_output_files)
 ```
 ```
 ['protein_group_np.tsv', 'protein_group_panel.tsv', 'peptide_np.tsv', 'peptide_panel.tsv', 'report.tsv', 'rollup/', 'rmbatch/']
+['rollup/seer_proteingroup.intensity.parquet', 'rollup/seer_proteingroup.median_normalized_intensity.parquet', 'rollup/seer_np_peptide.engine_normalized_intensity.parquet', 'rollup/seer_np_peptide.intensity.parquet', 'rollup/seer_np_peptide.median_normalized_intensity.parquet', 'rollup/seer_peptide.mediandense_normalized_intensity.parquet', 'rollup/seer_peptide.engine_normalized_intensity.parquet', 'rollup/seer_peptide.intensity.parquet', 'rollup/seer_peptide.median_normalized_intensity.parquet']
+
 ```
 
 <br>
@@ -656,6 +664,101 @@ Finished downloading AgamSDKTest2.raw
 ```
 
 <hr>
+
+### Protein Results Table
+Returns the protein results table for given `analysis_id` or `analysis_name`.
+
+#### <u>Params</u>
+* `analysis_id`: (`str`, optional) The analysis ID, defaulted to None.
+* `analysis_name`: (`str`, optional) The analysis name, defaulted to None.
+* `grouping`: ('str', optional): group criteria of table result. Defaults to "condition".
+* `as_df`: (`bool`, optional) Whether the result should be converted to a DataFrame, defaulted to False.
+
+#### <u>Returns</u>
+* res: (`list[dict]` or `DataFrame`) A list of dictionaries or DataFrame containing the protein results table.
+
+#### <u>Example</u>
+```{python}
+#| eval: false
+analysis_id = "c4089c00-16ab-11ec-b589-634014ca2005"
+print(sdk.get_protein_results_table(analysis_id))
+print(sdk.get_protein_results_table(analysis_id, as_df=True))
+```
+```
+[{'uniprot_id': 'Q9HD20',
+  'gene_name': 'ATP13A1',
+  'coverage': 0.04983388704318937,
+  'n_samples': 20,
+  'median': 5.2130235974326204,
+  'fraction_samples': 1.0,
+  'protein_name': 'Endoplasmic reticulum transmembrane helix translocase (EC 7.4.2.-) (Endoplasmic reticulum P5A-ATPase)',
+  'biological_process': 'extraction of mislocalized protein from ER membrane [GO:0140569]; intracellular calcium ion homeostasis [GO:0006874]; monoatomic ion transmembrane transport [GO:0034220]; protein transport [GO:0015031]; transmembrane transport [GO:0055085]',
+  'molecular_function': 'ABC-type manganese transporter activity [GO:0015410]; ATP binding [GO:0005524]; ATP hydrolysis activity [GO:0016887]; ATPase-coupled monoatomic cation transmembrane transporter activity [GO:0019829]; membrane protein dislocase activity [GO:0140567]; metal ion binding [GO:0046872]; P-type ion transporter activity [GO:0015662]',
+  'cellular_component': 'endoplasmic reticulum membrane [GO:0005789]; membrane [GO:0016020]'},
+ {'uniprot_id': 'Q9UL25',
+  'gene_name': 'RAB21',
+  'coverage': 0.4,
+  'n_samples': 20,
+  'median': 5.455800694428291,
+  'fraction_samples': 1.0,
+  'protein_name': 'Ras-related protein Rab-21 (EC 3.6.5.2)',
+  'biological_process': 'anterograde axonal transport [GO:0008089]; intracellular protein transport [GO:0006886]; positive regulation of dendrite morphogenesis [GO:0050775]; positive regulation of early endosome to late endosome transport [GO:2000643]; positive regulation of receptor-mediated endocytosis [GO:0048260]; protein stabilization [GO:0050821]; Rab protein signal transduction [GO:0032482]; regulation of axon extension [GO:0030516]; regulation of exocytosis [GO:0017157]',
+  'molecular_function': 'GDP binding [GO:0019003]; GTP binding [GO:0005525]; GTPase activity [GO:0003924]',
+  'cellular_component': 'axon cytoplasm [GO:1904115]; cleavage furrow [GO:0032154]; cytoplasmic side of early endosome membrane [GO:0098559]; cytoplasmic side of plasma membrane [GO:0009898]; cytosol [GO:0005829]; early endosome [GO:0005769]; early endosome membrane [GO:0031901]; endomembrane system [GO:0012505]; endoplasmic reticulum membrane [GO:0005789]; endosome [GO:0005768]; extracellular exosome [GO:0070062]; focal adhesion [GO:0005925]; Golgi cisterna membrane [GO:0032580]; Golgi membrane [GO:0000139]; synapse [GO:0045202]; trans-Golgi network [GO:0005802]; vesicle membrane [GO:0012506]'}]
+
+uniprot_id gene_name   coverage  n_samples     median  fraction_samples                                       protein_name                                     biological_process                                                                                                   molecular_function                                                                                                   cellular_component
+0     Q9HD20  ATP13A1  0.049834         20  5.213024            1.0  Endoplasmic reticulum transmembrane helix translocase (EC 7.4.2.-) (Endoplasmic reticulum P5A-ATPase)  extraction of mislocalized protein from ER membrane [GO:0140569]; intracellular calcium ion homeostasis [GO:0006874]; monoatomic ion transmembrane transport [GO:0034220]; protein transport [GO:0015031]; transmembrane transport [GO:0055085]  ABC-type manganese transporter activity [GO:0015410]; ATP binding [GO:0005524]; ATP hydrolysis activity [GO:0016887]; ATPase-coupled monoatomic cation transmembrane transporter activity [GO:0019829]; membrane protein dislocase activity [GO:0140567]; metal ion binding [GO:0046872]; P-type ion transporter activity [GO:0015662]  endoplasmic reticulum membrane [GO:0005789]; membrane [GO:0016020]
+1     Q9UL25      RAB21  0.400000         20  5.455801            1.0                          Ras-related protein Rab-21 (EC 3.6.5.2)  anterograde axonal transport [GO:0008089]; intracellular protein transport [GO:0006886]; positive regulation of dendrite morphogenesis [GO:0050775]; positive regulation of early endosome to late endosome transport [GO:2000643]; positive regulation of receptor-mediated endocytosis [GO:0048260]; protein stabilization [GO:0050821]; Rab protein signal transduction [GO:0032482]; regulation of axon extension [GO:0030516]; regulation of exocytosis [GO:0017157]  GDP binding [GO:0019003]; GTP binding [GO:0005525]; GTPase activity [GO:0003924]  axon cytoplasm [GO:1904115]; cleavage furrow [GO:0032154]; cytoplasmic side of early endosome membrane [GO:0098559]; cytoplasmic side of plasma membrane [GO:0009898]; cytosol [GO:0005829]; early endosome [GO:0005769]; early endosome membrane [GO:0031901]; endomembrane system [GO:0012505]; endoplasmic reticulum membrane [GO:0005789]; endosome [GO:0005768]; extracellular exosome [GO:0070062]; focal adhesion [GO:0005925]; Golgi cisterna membrane [GO:0032580]; Golgi membrane [GO:0000139]; synapse [GO:0045202]; trans-Golgi network [GO:0005802]; vesicle membrane [GO:0012506]
+
+```
+
+<hr>
+
+### Get Peptide Results Table
+Returns the peptide results table for given `analysis_id` or `analysis_name`.
+#### <u>Params</u>
+* `analysis_id`: (`str`, optional) The analysis ID, defaulted to None.
+* `analysis_name`: (`str`, optional) The analysis name, defaulted to None.
+* `grouping`: ('str', optional): group criteria of table result. Defaults to "condition".
+* `as_df`: (`bool`, optional) Whether the result should be converted to a DataFrame, defaulted to False.
+#### <u>Returns</u>
+* res: (`list[dict]` or `DataFrame`) A list of dictionaries or DataFrame containing the peptide results table.
+#### <u>Example</u>
+```{python}
+#| eval: false
+analysis_id = "c4089c00-16ab-11ec-b589-634014ca2005"
+print(sdk.get_peptide_results_table(analysis_id))
+print(sdk.get_peptide_results_table(analysis_id, as_df=True))
+```
+
+```
+[{'peptide': 'DTEEEDFHVDQATTVK',
+  'uniprot_id': 'A0A024R6I7;A0A0G2JRN3',
+  'gene_name': 'SERPINA1;SERPINA1',
+  'n_samples': 20,
+  'median': 6.7500568241225345,
+  'fraction_samples': 1.0,
+  'protein_name': 'deleted;Serpin family A member 1',
+  'biological_process': ';',
+  'molecular_function': ';serine-type endopeptidase inhibitor activity [GO:0004867]',
+  'cellular_component': ';extracellular space [GO:0005615]'},
+ {'peptide': 'EIVMTQSPPTLSLSPGER',
+  'uniprot_id': 'A0A075B6H7',
+  'gene_name': 'IGKV3',
+  'n_samples': 20,
+  'median': 6.257082970753563,
+  'fraction_samples': 1.0,
+  'protein_name': 'Probable non-functional immunoglobulin kappa variable 3-7',
+  'biological_process': 'adaptive immune response [GO:0002250]; immune response [GO:0006955]',
+  'molecular_function': '',
+  'cellular_component': 'extracellular region [GO:0005576]; immunoglobulin complex [GO:0019814]; plasma membrane [GO:0005886]'}]
+
+peptide               uniprot_id gene_name  n_samples     median  fraction_samples                                     protein_name                                 biological_process                                   molecular_function                                   cellular_component
+0  DTEEEDFHVDQATTVK  A0A024R6I7;A0A0G2JRN3  SERPINA1;SERPINA1         20  6.750057            1.0          deleted;Serpin family A member 1                                                  ;               ;serine-type endopeptidase inhibitor activity [GO:0004867]               ;extracellular space [GO:0005615]
+1  EIVMTQSPPTLSLSPGER          A0A075B6H7      IGKV3         20  6.257083            1.0  Probable non-functional immunoglobulin kappa variable 3-7  adaptive immune response [GO:0002250]; immune response [GO:0006955]                                                  ;  extracellular region [GO:0005576]; immunoglobulin complex [GO:0019814]; plasma membrane [GO:0005886]
+```
+
+
 
 ### Group Analysis Results
 Returns the group analysis data for given `analysis_id` (provided it is valid and the group analysis has been successful) and `box_plot` config info.
