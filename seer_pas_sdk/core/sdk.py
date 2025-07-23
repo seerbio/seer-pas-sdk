@@ -1212,7 +1212,7 @@ class SeerSDK:
             Root folder key to list search result files from, defaulted to None.
 
         recursive : bool, optional
-            Whether to list files recursively from subfolders, defaulted to True.
+            Whether to list files recursively from subfolders, defaulted to False.
 
         Returns
         -------
