@@ -1198,7 +1198,7 @@ class SeerSDK:
             return peptide_data
 
     def list_search_result_files(
-        self, analysis_id: str, folder: str = None, recursive: bool = True
+        self, analysis_id: str, folder: str = None, recursive: bool = False
     ):
         """
         Given an analysis id, this function returns a list of files associated with the analysis.
