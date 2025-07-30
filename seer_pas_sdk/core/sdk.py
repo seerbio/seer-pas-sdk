@@ -2850,19 +2850,28 @@ class SeerSDK:
         resp.drop_duplicates(subset=["id"], inplace=True)
         return resp if as_df else resp.to_dict(orient="records")
 
-    def get_analysis_protocol_fasta(self, analysis_id, download_path=None):
-        if not analysis_id:
-            raise ValueError("Analysis ID cannot be empty.")
+    def download_analysis_protocol_fasta(
+        self,
+        analysis_id=None,
+        analysis_protocol_id=None,
+        link=False,
+        download_path=None,
+    ):
+        if not analysis_id and not analysis_protocol_id:
+            raise ValueError(
+                "Please provide an analysis ID or analysis protocol ID."
+            )
 
         if not download_path:
             download_path = os.getcwd()
 
-        try:
-            analysis_protocol_id = self.get_analyses(analysis_id)[0][
-                "analysis_protocol_id"
-            ]
-        except (IndexError, KeyError):
-            raise ValueError(f"Could not parse server response.")
+        if analysis_id:
+            try:
+                analysis_protocol_id = self.get_analyses(analysis_id)[0][
+                    "analysis_protocol_id"
+                ]
+            except (IndexError, KeyError):
+                raise ValueError(f"Could not parse server response.")
 
         try:
             analysis_protocol_engine = self.get_analysis_protocols(
@@ -2903,12 +2912,18 @@ class SeerSDK:
                 raise ServerError("No fasta file name returned from server.")
 
         URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
+        links = []
         for file in fasta_filenames:
             with self._get_auth_session() as s:
                 response = s.post(URL, json={"filepath": file})
                 if response.status_code != 200:
                     raise ServerError("Request failed.")
                 url = response.json()["url"]
+                if link:
+                    links.append(
+                        {"filename": os.path.basename(file), "url": url}
+                    )
+                    continue
                 filename = os.path.basename(file)
                 print(f"Downloading {filename}")
                 for _ in range(2):
@@ -2935,3 +2950,5 @@ class SeerSDK:
                             os.makedirs(f"{download_path}")
 
                 print(f"Downloaded file to {download_path}/{file}")
+        if link:
+            return links
