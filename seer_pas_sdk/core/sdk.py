@@ -307,6 +307,7 @@ class SeerSDK:
         else:
             params = dict()
 
+        spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
         with self._get_auth_session() as s:
 
             plates = s.get(
@@ -324,6 +325,10 @@ class SeerSDK:
 
             for entry in res:
                 del entry["tenant_id"]
+
+                if "user_group" in entry:
+                    entry["space"] = spaces.get(entry["user_group"], "General")
+                    del entry["user_group"]
 
         return res if not as_df else dict_to_df(res)
 
@@ -405,6 +410,7 @@ class SeerSDK:
             if project_id and not res:
                 raise ValueError("Project ID is invalid.")
 
+        spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
         for entry in res:
             if "tenant_id" in entry:
                 del entry["tenant_id"]
@@ -416,6 +422,10 @@ class SeerSDK:
                 entry["raw_file_path"] = entry["raw_file_path"][
                     location(entry["raw_file_path"]) :
                 ]
+            if "user_group" in entry:
+                entry["space"] = spaces.get(entry["user_group"], "General")
+                del entry["user_group"]
+
         return res if not as_df else dict_to_df(res)
 
     def get_samples(
@@ -546,6 +556,13 @@ class SeerSDK:
                 if not x.startswith("custom_") or x in custom_columns
             ]
         ]
+
+        if "user_group" in res_df.columns:
+            spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+            res_df["space"] = res_df["user_group"].apply(
+                lambda x: spaces.get(x, "General")
+            )
+            res_df.drop(["user_group"], axis=1, inplace=True)
 
         return res_df.to_dict(orient="records") if not as_df else res_df
 
@@ -687,6 +704,7 @@ class SeerSDK:
 
                 res += [x for x in msdatas.json()["data"]]
 
+        spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
         for entry in res:
             if "tenant_id" in entry:
                 del entry["tenant_id"]
@@ -698,6 +716,9 @@ class SeerSDK:
                 entry["raw_file_path"] = entry["raw_file_path"][
                     location(entry["raw_file_path"]) :
                 ]
+            if "user_group" in entry:
+                entry["space"] = spaces.get(entry["user_group"], "General")
+                del entry["user_group"]
         return res if not as_df else dict_to_df(res)
 
     def get_analysis_protocols(
@@ -774,6 +795,7 @@ class SeerSDK:
             else:
                 res = protocols.json()["data"]
 
+            spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -794,6 +816,12 @@ class SeerSDK:
                     res[entry]["parameter_file_path"] = res[entry][
                         "parameter_file_path"
                     ][location(res[entry]["parameter_file_path"]) :]
+
+                if "user_group" in res[entry]:
+                    res[entry]["space"] = spaces.get(
+                        res[entry]["user_group"], "General"
+                    )
+                    del res[entry]["user_group"]
 
             return res if not as_df else dict_to_df(res)
 
@@ -933,6 +961,7 @@ class SeerSDK:
                 res = [analyses.json()["analysis"]]
 
             folders = []
+            spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -952,6 +981,12 @@ class SeerSDK:
                     and res[entry]["is_folder"]
                 ):
                     folders.append(res[entry]["id"])
+
+                if "user_group" in res[entry]:
+                    res[entry]["space"] = spaces.get(
+                        res[entry]["user_group"], "General"
+                    )
+                    del res[entry]["user_group"]
 
             # recursive solution to get analyses in folders
             for folder in folders:
@@ -2069,6 +2104,13 @@ class SeerSDK:
                     "Request failed. Please check your parameters."
                 )
             response = response.json()
+
+            spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+            for entry in response:
+                if "user_group" in entry:
+                    entry["space"] = spaces.get(entry["user_group"], None)
+                    del entry["user_group"]
+
             return response
 
     def group_analysis_results(self, analysis_id: str, group_analysis_id=None):
