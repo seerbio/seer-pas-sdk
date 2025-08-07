@@ -1,5 +1,6 @@
 import requests
 import jwt
+from ..common import get_auth_seer_id
 
 
 class Auth:
@@ -55,7 +56,11 @@ class Auth:
         dict
             A dictionary containing the login response from the PAS instance.
         """
-        response = requests.post(
+        s = requests.Session()
+        s.headers.update(
+            {"x-seer-source": "sdk", "x-seer-id": get_auth_seer_id("login")}
+        )
+        response = s.post(
             f"{self.url}auth/login",
             json={"username": self.username, "password": self.__password},
         )

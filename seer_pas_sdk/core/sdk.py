@@ -7,6 +7,7 @@ import requests
 import urllib.request
 import ssl
 
+
 from typing import List as _List, Tuple as _Tuple
 
 from ..common import *
@@ -50,11 +51,12 @@ class SeerSDK:
                 f"Could not log in.\nPlease check your credentials and/or instance: {e}."
             )
 
-    def _get_auth_headers(self, use_multi_tenant=True):
+    def _get_auth_headers(self, caller, use_multi_tenant=True):
         id_token, access_token = self._auth.get_token()
         header = {
             "Authorization": id_token,
             "Access-Token": access_token,
+            "x-seer-source": "sdk",
         }
         if use_multi_tenant:
             multi_tenant = {
@@ -64,10 +66,10 @@ class SeerSDK:
             header.update(multi_tenant)
         return header
 
-    def _get_auth_session(self, use_multi_tenant=True):
+    def _get_auth_session(self, caller, use_multi_tenant=True):
         sess = requests.Session()
 
-        sess.headers.update(self._get_auth_headers(use_multi_tenant))
+        sess.headers.update(self._get_auth_headers(caller, use_multi_tenant))
 
         return sess
 
@@ -80,7 +82,7 @@ class SeerSDK:
         response : list[dict]
             A list of tenant objects pertaining to the user.
         """
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getusertenant") as s:
             response = s.get(f"{self._auth.url}api/v1/usertenants")
 
             if response.status_code != 200:
@@ -162,7 +164,7 @@ class SeerSDK:
                 "Invalid tenant identifier. Tenant was not switched."
             )
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("switchtenant") as s:
             response = s.put(
                 self._auth.url + "api/v1/users/tenant",
                 json={
@@ -242,7 +244,7 @@ class SeerSDK:
 
         URL = f"{self._auth.url}api/v1/usergroups"
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getspaces") as s:
             spaces = s.get(URL)
 
             if spaces.status_code != 200:
