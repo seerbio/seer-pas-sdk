@@ -13,7 +13,8 @@ import json
 import zipfile
 import tempfile
 
-from ..auth.auth import Auth
+import subprocess
+from importlib.metadata import version, PackageNotFoundError
 
 from .groupanalysis import *
 
@@ -720,3 +721,27 @@ def rename_d_zip_file(source, destination):
                     zip_ref.write(file_path, arcname)
 
     print(f"Renamed {source} to {destination}")
+
+
+def get_auth_seer_id(caller):
+    """
+    Returns the seer id of the API call
+    """
+    v = ""
+    try:
+        v = version("seer-pas-sdk")
+        v = "v" + v
+        if ".dev" in v:
+            v = ""
+    except PackageNotFoundError as e:
+        pass
+
+    if not v:
+        try:
+            v = subprocess.check_output(
+                ["git", "describe", "--tags"], text=True
+            ).strip()
+            v += "-dev"
+        except subprocess.CalledProcessError:
+            v = "unknown"
+    return f"{v}/{caller}"
