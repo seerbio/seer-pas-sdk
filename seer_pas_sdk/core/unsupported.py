@@ -6,9 +6,6 @@ from tqdm import tqdm
 
 import os
 import jwt
-import requests
-import urllib.request
-import ssl
 import shutil
 
 from typing import List as _List
@@ -71,7 +68,7 @@ class _UnsupportedSDK(_SeerSDK):
 
         URL = f"{self._auth.url}api/v1/samples"
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("addsample") as s:
 
             response = s.post(URL, json=sample_entry)
 
@@ -112,7 +109,7 @@ class _UnsupportedSDK(_SeerSDK):
 
         URL = f"{self._auth.url}api/v1/samples/batch"
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("addsamples") as s:
             response = s.post(URL, json={"samples": sample_info})
 
             if response.status_code != 200:
@@ -176,7 +173,7 @@ class _UnsupportedSDK(_SeerSDK):
 
         URL = f"{self._auth.url}api/v1/projects"
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("addproject") as s:
 
             project = s.post(
                 URL,
@@ -233,7 +230,7 @@ class _UnsupportedSDK(_SeerSDK):
 
         URL = f"{self._auth.url}api/v1/addSamplesToProject/{project_id}"
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("addprojectsamples") as s:
 
             response = s.put(
                 URL,
@@ -375,7 +372,7 @@ class _UnsupportedSDK(_SeerSDK):
         validate_plate_map(plate_map_data, local_file_names)
 
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getplateids") as s:
             plate_response = s.get(f"{self._auth.url}api/v1/plateids")
 
             if plate_response.status_code != 200:
@@ -392,7 +389,7 @@ class _UnsupportedSDK(_SeerSDK):
 
         # Step 2: Fetch the UUID that needs to be passed into the backend from `/api/v1/plates` to fetch the AWS upload config and raw file path. This will sync the plates backend with samples when the user uploads later. This UUID will also be void of duplicates since duplication is handled by the backend.
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("addplate") as s:
             plate_response = s.post(
                 f"{self._auth.url}api/v1/plates",
                 json={
@@ -415,7 +412,7 @@ class _UnsupportedSDK(_SeerSDK):
                 )
 
         # Step 3: Fetch AWS upload config from the backend with the plateId we just generated. Populates `s3_upload_path` and `s3_bucket` global variables.
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getawsuploadconfig") as s:
             config_response = s.post(
                 f"{self._auth.url}api/v1/msdatas/getuploadconfig",
                 json={"plateId": id_uuid},
@@ -441,7 +438,7 @@ class _UnsupportedSDK(_SeerSDK):
             s3_bucket = config_response.json()["s3Bucket"]
             s3_upload_path = config_response.json()["s3UploadPath"]
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getawsuploadcredentials") as s:
             config_response = s.get(
                 f"{self._auth.url}auth/getawscredential",
             )
@@ -487,7 +484,7 @@ class _UnsupportedSDK(_SeerSDK):
                 "Failed to upload plate map to AWS. Please check your connection and reauthenticate."
             )
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("uploadplatemapfile") as s:
             plate_map_response = s.post(
                 f"{self._auth.url}api/v1/msdataindex/file",
                 json={
@@ -540,7 +537,7 @@ class _UnsupportedSDK(_SeerSDK):
                     "Failed to upload sample description file to AWS. Please check your connection and reauthenticate."
                 )
 
-            with self._get_auth_session() as s:
+            with self._get_auth_session("uploadsampledescriptionfile") as s:
                 sdf_response = s.post(
                     f"{self._auth.url}api/v1/msdataindex/file",
                     json={
@@ -573,7 +570,7 @@ class _UnsupportedSDK(_SeerSDK):
         )
 
         # Step 8: Make a request to `/api/v1/msdatas/batch` with the processed samples data.
-        with self._get_auth_session() as s:
+        with self._get_auth_session("addmsdatas") as s:
             ms_data_response = s.post(
                 f"{self._auth.url}api/v1/msdatas/batch",
                 json={"msdatas": plate_map_data},
@@ -584,7 +581,7 @@ class _UnsupportedSDK(_SeerSDK):
                 )
 
         # Step 9: Upload each msdata file to the S3 bucket.
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getawsuploadcredentials") as s:
             config_response = s.get(
                 f"{self._auth.url}auth/getawscredential",
             )
@@ -629,7 +626,7 @@ class _UnsupportedSDK(_SeerSDK):
             )
 
         # Step 10: Make a call to `api/v1/msdataindex/file` to sync with frontend. This should only be done after all files have finished uploading, simulating an async "promise"-like scenario in JavaScript.
-        with self._get_auth_session() as s:
+        with self._get_auth_session("addmsdataindex") as s:
             file_response = s.post(
                 f"{self._auth.url}api/v1/msdataindex/file",
                 json={"files": files},
@@ -758,7 +755,7 @@ class _UnsupportedSDK(_SeerSDK):
 
         URL = f"{self._auth.url}api/v1/analyze"
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("startanalysis") as s:
             req_payload = {
                 "analysisName": name,
                 "analysisProtocolId": analysis_protocol_id,
@@ -854,7 +851,7 @@ class _UnsupportedSDK(_SeerSDK):
         tenant_id = self.get_active_tenant_id()
 
         # Step 3: Fetch the S3 bucket name by making a call to `/api/v1/auth/getawscredential`
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getawsuploadcredentials") as s:
             config_response = s.get(
                 f"{self._auth.url}auth/getawscredential",
             )
@@ -905,7 +902,7 @@ class _UnsupportedSDK(_SeerSDK):
 
         # Step 5: Make a call to `/api/v1/msdataindex/file` to sync with frontend. This should only be done after all files have finished uploading, simulating an async "promise"-like scenario in JavaScript.
         result_files = None
-        with self._get_auth_session() as s:
+        with self._get_auth_session("addmsdataindex") as s:
             file_response = s.post(
                 f"{self._auth.url}api/v1/msdataindex/file",
                 json={"files": files},
@@ -1003,7 +1000,7 @@ class _UnsupportedSDK(_SeerSDK):
         target_folder_path = f"{tenant_id}/{target_folder_paths[0]}"
         # Retrieve msdatafileindex metadata to determine source space
         base_space = None
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getmsdataindex") as s:
             URL = self._auth.url + "api/v1/msdataindex/getmetadata"
             params = {"folderKey": folder_path}
             r = s.get(URL, params=params)
@@ -1046,7 +1043,7 @@ class _UnsupportedSDK(_SeerSDK):
         if target_space_id and base_space != target_space_id:
             json["targetUserGroupId"] = target_space_id
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("movemsdataindex") as s:
             URL = self._auth.url + "api/v1/msdataindex/move"
             json = json
             r = s.post(URL, json=json)
@@ -1098,167 +1095,6 @@ class _UnsupportedSDK(_SeerSDK):
             source_ms_data_files, target_ms_data_files
         )
 
-    def download_analysis_files(
-        self, analysis_id: str, download_path: str = "", file_name: str = ""
-    ):
-        """
-        Download a specific analysis file from the backend given an `analysis_id` to the specified `download_path`.
-
-        If no `download_path` is specified, the file will be downloaded to the current working directory.
-
-        If no `file_name` is specified, all files for the analysis will be downloaded.
-
-        Parameters
-        ----------
-        analysis_id : str
-            ID of the analysis to download.
-        download_path : str, optional
-            Path to download the analysis file to, defaulted to current working directory.
-        file_name : str, optional
-            Name of the analysis file to download, defaulted to None.
-
-        Returns
-        -------
-        dict
-            Message containing whether the file was downloaded or not.
-
-        Examples
-        -------
-        >>> from core import SeerSDK
-        >>> sdk = SeerSDK()
-        >>> sdk.download_analysis_files("analysis_id", "/path/to/download")
-        >>> Downloading EXP22006_2022ms0031bX25_B_BA4_1_4768/diann.log
-            Finished downloading EXP22006_2022ms0031bX25_B_BA4_1_4768/diann.log
-
-            Downloading EXP20004_2020ms0007X11_A.mzML.quant
-            Finished downloading EXP20004_2020ms0007X11_A.mzML.quant
-
-            Downloading EXP20004_2020ms0007X11_A/0714-diann181-libfree-mbr.json
-            Finished downloading EXP20004_2020ms0007X11_A/0714-diann181-libfree-mbr.json
-
-            Downloading EXP20004_2020ms0007X11_A/diann.log
-            Finished downloading EXP20004_2020ms0007X11_A/diann.log
-        >>> { "message": "File downloaded successfully." }
-        """
-
-        def get_url(analysis_id, file_name, project_id):
-            URL = f"{self._auth.url}api/v1/analysisResultFiles/getUrl"
-
-            with self._get_auth_session() as s:
-
-                download_url = s.post(
-                    URL,
-                    json={
-                        "analysisId": analysis_id,
-                        "filename": file_name,
-                        "projectId": project_id,
-                    },
-                )
-
-                if download_url.status_code != 200:
-                    raise ValueError(
-                        "Could not download file. Please check if the analysis ID is valid or the backend is running."
-                    )
-
-                return download_url.json()["url"]
-
-        if not analysis_id:
-            raise ValueError("Analysis ID cannot be empty.")
-
-        try:
-            valid_analysis = self.get_analyses(analysis_id)[0]
-        except:
-            raise ValueError(
-                "Invalid analysis ID. Please check if the analysis ID is valid or the backend is running."
-            )
-
-        project_id = valid_analysis["project_id"]
-
-        if not download_path:
-            download_path = os.getcwd()
-            print(f"\nDownload path not specified.\n")
-
-        if not os.path.isdir(download_path):
-            print(
-                f'\nThe path "{download_path}" you specified does not exist, was either invalid or not absolute.\n'
-            )
-            download_path = os.getcwd()
-
-        name = f"{download_path}/downloads/{analysis_id}"
-
-        if not os.path.exists(name):
-            os.makedirs(name)
-
-        URL = f"{self._auth.url}api/v1/analysisResultFiles"
-
-        with self._get_auth_session() as s:
-
-            analysis_files = s.get(f"{URL}/{analysis_id}")
-
-            if analysis_files.status_code != 200:
-                raise ValueError(
-                    "Invalid request. Please check if the analysis ID is valid or the backend is running."
-                )
-
-            res = analysis_files.json()
-
-        if file_name:
-            filenames = set([file["filename"] for file in res])
-
-            if file_name not in filenames:
-                raise ValueError(
-                    "Invalid file name. Please check if the file name is correct."
-                )
-
-            res = [file for file in res if file["filename"] == file_name]
-
-        print(f'Downloading files to "{name}"\n')
-
-        for file in res:
-            filename = file["filename"]
-            url = get_url(analysis_id, filename, project_id)
-
-            print(f"Downloading {filename}")
-
-            for _ in range(2):
-                try:
-                    with tqdm(
-                        unit="B",
-                        unit_scale=True,
-                        unit_divisor=1024,
-                        miniters=1,
-                        desc=f"Progress",
-                    ) as t:
-                        ssl._create_default_https_context = (
-                            ssl._create_unverified_context
-                        )
-                        urllib.request.urlretrieve(
-                            url,
-                            f"{name}/{filename}",
-                            reporthook=download_hook(t),
-                            data=None,
-                        )
-                        break
-                except:
-                    filename = filename.split("/")
-                    name += "/" + "/".join(
-                        [filename[i] for i in range(len(filename) - 1)]
-                    )
-                    filename = filename[-1]
-                    if not os.path.isdir(f"{name}/{filename}"):
-                        os.makedirs(f"{name}/")
-
-            else:
-                raise ValueError(
-                    "Your download failed. Please check if the backend is still running."
-                )
-
-            print(f"Finished downloading {filename}\n")
-
-        return {
-            "message": f"Files downloaded successfully to '{download_path}/downloads/{analysis_id}'"
-        }
-
     def link_plate(
         self,
         ms_data_files: _List[str],
@@ -1302,16 +1138,11 @@ class _UnsupportedSDK(_SeerSDK):
         plate_ids = (
             set()
         )  # contains all the plate_ids fetched from self.get_plate_metadata()
-        files = []  # to be uploaded to sync frontend
         samples = []  # list of all the sample responses from the backend
         id_uuid = ""  # uuid for the plate id
         raw_file_paths = {}  # list of all the AWS raw file paths
         s3_upload_path = None
         s3_bucket = ""
-        ms_data_file_names = []
-        dir_exists = (
-            True  # flag to check if the generated_files directory exists
-        )
 
         # Step 0: Check if the file paths exist in the S3 bucket.
         for file in ms_data_files:
@@ -1344,7 +1175,7 @@ class _UnsupportedSDK(_SeerSDK):
         validate_plate_map(plate_map_data, ms_data_files)
 
         # Step 1: Check for duplicates in the user-inputted plate id. Populates `plate_ids` set.
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getplateids") as s:
             plate_response = s.get(f"{self._auth.url}api/v1/plateids")
 
             if plate_response.status_code != 200:
@@ -1361,7 +1192,7 @@ class _UnsupportedSDK(_SeerSDK):
 
         # Step 2: Fetch the UUID that needs to be passed into the backend from `/api/v1/plates` to fetch the AWS upload config and raw file path. This will sync the plates backend with samples when the user uploads later. This UUID will also be void of duplicates since duplication is handled by the backend.
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("addplate") as s:
             plate_response = s.post(
                 f"{self._auth.url}api/v1/plates",
                 json={
@@ -1384,7 +1215,7 @@ class _UnsupportedSDK(_SeerSDK):
                 )
 
         # Step 3: Fetch AWS upload config from the backend with the plateId we just generated. Populates `s3_upload_path` and `s3_bucket` global variables.
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getawsuploadconfig") as s:
             config_response = s.post(
                 f"{self._auth.url}api/v1/msdatas/getuploadconfig",
                 json={"plateId": id_uuid},
@@ -1410,7 +1241,7 @@ class _UnsupportedSDK(_SeerSDK):
             s3_bucket = config_response.json()["s3Bucket"]
             s3_upload_path = config_response.json()["s3UploadPath"]
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getawsuploadcredentials") as s:
             config_response = s.get(
                 f"{self._auth.url}auth/getawscredential",
             )
@@ -1456,7 +1287,7 @@ class _UnsupportedSDK(_SeerSDK):
                 "Failed to upload plate map to AWS. Please check your connection and reauthenticate."
             )
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("uploadplatemap") as s:
             plate_map_response = s.post(
                 f"{self._auth.url}api/v1/msdataindex/file",
                 json={
@@ -1507,7 +1338,7 @@ class _UnsupportedSDK(_SeerSDK):
                     "Failed to upload sample description file to AWS. Please check your connection and reauthenticate."
                 )
 
-            with self._get_auth_session() as s:
+            with self._get_auth_session("uploadsampledescription") as s:
                 sdf_response = s.post(
                     f"{self._auth.url}api/v1/msdataindex/file",
                     json={
@@ -1542,7 +1373,7 @@ class _UnsupportedSDK(_SeerSDK):
         )
 
         # Step 8: Make a request to `/api/v1/msdatas/batch` with the processed samples data.
-        with self._get_auth_session() as s:
+        with self._get_auth_session("addmsdatas") as s:
             ms_data_response = s.post(
                 f"{self._auth.url}api/v1/msdatas/batch",
                 json={"msdatas": plate_map_data},
@@ -1555,7 +1386,7 @@ class _UnsupportedSDK(_SeerSDK):
         print(f"Plate generated with id: '{id_uuid}'")
         return id_uuid
 
-    def _get_msdataindex_metadata(self, folder=""):
+    def _get_msdataindex(self, folder=""):
         """
         Get metadata for a given file path.
 
@@ -1566,7 +1397,7 @@ class _UnsupportedSDK(_SeerSDK):
             dict: A dictionary containing the metadata for the file.
         """
         URL = f"{self._auth.url}api/v2/msdataindex/getmetadata"
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getmsdataindex") as s:
             params = {"all": "true"}
             if folder:
                 tenant_id = jwt.decode(
@@ -1574,12 +1405,10 @@ class _UnsupportedSDK(_SeerSDK):
                     options={"verify_signature": False},
                 )["custom:tenantId"]
                 params["folderKey"] = f"{tenant_id}/{folder}"
-                print(params["folderKey"])
 
             metadata = s.get(URL, params=params)
 
             if metadata.status_code != 200:
-                print(metadata.text)
                 raise ServerError("Could not fetch metadata for file.")
 
             return metadata.json()
@@ -1611,9 +1440,7 @@ class _UnsupportedSDK(_SeerSDK):
             try:
                 metadata = {
                     x["key"]: x["rawFilePath"]
-                    for x in self._get_msdataindex_metadata(
-                        folder=folder_path
-                    )["data"]
+                    for x in self._get_msdataindex(folder=folder_path)["data"]
                 }
             except:
                 # If the metadata fetch fails, skip the folder

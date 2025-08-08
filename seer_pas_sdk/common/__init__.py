@@ -731,7 +731,7 @@ def get_auth_seer_id(caller):
     try:
         v = version("seer-pas-sdk")
         v = "v" + v
-        if ".dev" in v:
+        if "dev" in v:
             v = ""
     except PackageNotFoundError as e:
         pass
@@ -741,6 +741,8 @@ def get_auth_seer_id(caller):
             v = subprocess.check_output(
                 ["git", "describe", "--tags"], text=True
             ).strip()
+            if "-" in v:
+                v = v.split("-")[0]
             v += "-dev"
         except subprocess.CalledProcessError:
             v = "unknown"
