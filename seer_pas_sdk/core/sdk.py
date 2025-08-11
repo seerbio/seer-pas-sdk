@@ -173,7 +173,6 @@ class SeerSDK:
                     "username": self._auth.username,
                 },
             )
-            print(s.headers)
             if response.status_code != 200:
                 raise ServerError(
                     "Could not update current tenant for user. Tenant was not switched."
@@ -873,12 +872,12 @@ class SeerSDK:
         >>> seer_sdk.get_analyses(description="YOUR_DESCRIPTION")
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
         """
-
         URL = f"{self._auth.url}api/v1/analyses"
         res = []
 
         search_field = None
         search_item = None
+        analysis_name = None
         if kwargs:
             if len(kwargs.keys()) > 1:
                 raise ValueError("Please include only one search parameter.")
@@ -889,6 +888,10 @@ class SeerSDK:
                 raise ValueError(
                     f"Please provide a non null value for {search_field}"
                 )
+
+            if search_field == "analysis_name" and " " in search_item:
+                analysis_name = search_item.casefold()
+                search_item = search_item.split(" ")[0]
 
         if search_field and search_field not in [
             "analysis_name",
@@ -964,6 +967,13 @@ class SeerSDK:
             if analysis_only:
                 res = [
                     analysis for analysis in res if not analysis["is_folder"]
+                ]
+
+            if analysis_name:
+                res = [
+                    analysis
+                    for analysis in res
+                    if analysis_name == analysis["analysis_name"].casefold()
                 ]
             return res if not as_df else dict_to_df(res)
 
