@@ -2,16 +2,12 @@
 seer_pas_sdk.core.unsupported -- in development
 """
 
-from tqdm import tqdm
-
 import os
-import jwt
 import shutil
 
 from typing import List as _List
 
 from ..common import *
-from ..auth import Auth
 from ..objects import PlateMap
 
 from .sdk import SeerSDK as _SeerSDK
@@ -1400,10 +1396,7 @@ class _UnsupportedSDK(_SeerSDK):
         with self._get_auth_session("getmsdataindex") as s:
             params = {"all": "true"}
             if folder:
-                tenant_id = jwt.decode(
-                    self._auth.get_token()[0],
-                    options={"verify_signature": False},
-                )["custom:tenantId"]
+                tenant_id = self.get_active_tenant_id()
                 params["folderKey"] = f"{tenant_id}/{folder}"
 
             metadata = s.get(URL, params=params)
@@ -1424,9 +1417,7 @@ class _UnsupportedSDK(_SeerSDK):
             dict: A dictionary mapping the display path to the raw file path.
         """
 
-        tenant_id = jwt.decode(
-            self._auth.get_token()[0], options={"verify_signature": False}
-        )["custom:tenantId"]
+        tenant_id = self.get_active_tenant_id()
         result = {}
         # partition by folder_path
         folder_partitions = {os.path.dirname(x): [] for x in display_path}

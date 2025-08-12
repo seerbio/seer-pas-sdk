@@ -2,7 +2,6 @@ from tqdm import tqdm
 
 import deprecation
 import os
-import jwt
 import requests
 import urllib.request
 import ssl
@@ -51,13 +50,20 @@ class SeerSDK:
                 f"Could not log in.\nPlease check your credentials and/or instance: {e}."
             )
 
+    def __del__(self):
+        """
+        Destructor for the SeerSDK class. Logs out the user when the object is deleted.
+        """
+        if self._auth.has_valid_refresh_token():
+            self._auth._logout()
+
     def _get_auth_headers(self, caller, use_multi_tenant=True):
         id_token, access_token = self._auth.get_token()
         header = {
             "Authorization": id_token,
             "Access-Token": access_token,
             "x-seer-source": "sdk",
-            "x-seer-id": get_auth_seer_id(caller),
+            "x-seer-id": f"{self._auth.version}/{caller}",
         }
         if use_multi_tenant:
             multi_tenant = {
@@ -173,7 +179,6 @@ class SeerSDK:
                     "username": self._auth.username,
                 },
             )
-            print(s.headers)
             if response.status_code != 200:
                 raise ServerError(
                     "Could not update current tenant for user. Tenant was not switched."

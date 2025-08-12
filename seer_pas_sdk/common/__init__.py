@@ -723,9 +723,9 @@ def rename_d_zip_file(source, destination):
     print(f"Renamed {source} to {destination}")
 
 
-def get_auth_seer_id(caller):
+def get_version():
     """
-    Returns the seer id of the API call
+    Returns the version of the seer-pas-sdk package.
     """
     v = ""
     try:
@@ -733,7 +733,7 @@ def get_auth_seer_id(caller):
         v = "v" + v
         if "dev" in v:
             v = ""
-    except PackageNotFoundError as e:
+    except Exception as e:
         pass
 
     if not v:
@@ -746,4 +746,4 @@ def get_auth_seer_id(caller):
             v += "-dev"
         except subprocess.CalledProcessError:
             v = "unknown"
-    return f"{v}/{caller}"
+    return f"{v}/"
