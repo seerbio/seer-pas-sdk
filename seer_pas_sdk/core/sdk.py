@@ -31,7 +31,7 @@ class SeerSDK:
         try:
             self._auth = Auth(username, password, instance)
 
-            self._auth.get_token()
+            self._auth._login()
             print(f"User '{username}' logged in.\n")
 
             if not tenant:
@@ -54,7 +54,7 @@ class SeerSDK:
         """
         Destructor for the SeerSDK class. Logs out the user when the object is deleted.
         """
-        if self._auth.has_valid_refresh_token():
+        if self._auth.has_valid_token():
             self._auth._logout()
 
     def _get_auth_headers(self, caller, use_multi_tenant=True):

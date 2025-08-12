@@ -41,6 +41,8 @@ class Auth:
         else:
             self.url = Auth._instances[instance]
         self.refresh_token = None
+        self.id_token = None
+        self.access_token = None
         self.refresh_token_expiry = 0
         self.instance = instance
 
@@ -77,8 +79,31 @@ class Auth:
                 "Check if the credentials are correct or if the backend is running or not."
             )
 
-        if response.status_code == 200:
-            return response.json()
+        try:
+            response.raise_for_status()
+        except Exception as e:
+            raise ServerError("Could not login to the PAS instance")
+
+        res = response.json()
+        decoded_token = jwt.decode(
+            res["id_token"], options={"verify_signature": False}
+        )
+        self.base_tenant_id = decoded_token["custom:tenantId"]
+        self.base_role = decoded_token["custom:role"]
+
+        if not self.active_tenant_id:
+            self.active_tenant_id = self.base_tenant_id
+
+        if not self.active_role:
+            self.active_role = self.base_role
+
+        self.id_token = res["id_token"]
+        self.access_token = res["access_token"]
+        self.refresh_token = res.get("refresh_token", None)
+        self.token_expiry = int(datetime.now().timestamp()) + res.get(
+            "expiresIn", 0
+        )
+        return res["id_token"], res["access_token"]
 
     def _logout(self):
         if not self.has_valid_refresh_token():
@@ -100,13 +125,21 @@ class Auth:
         except Exception as e:
             raise ServerError("Could not logout from the PAS instance")
         self.refresh_token = None
-        self.refresh_token_expiry = 0
+        self.token_expiry = 0
         print(
             f"User {self.username} logged out successfully. Thank you for using the PAS SDK."
         )
         return True
 
     def _get_refresh_token(self):
+        """Refreshes the refresh token using the current refresh token.
+
+        Raises:
+            ServerError: If the refresh token could not be refreshed.
+
+        Returns:
+            dict: The response from the server containing the new refresh token.
+        """
         s = requests.Session()
         s.headers.update(
             {
@@ -125,45 +158,35 @@ class Auth:
 
     def get_token(self):
         """
-        Refresh or login to the PAS instance to obtain a valid token.
+        Gets the current token. If the token is expired, it refreshes the token using the refresh token.
 
         Returns
         -------
         str
             The token from the login response.
         """
-        if self.has_valid_refresh_token():
-            res = self._get_refresh_token()
+        if self.has_valid_token():
+            return self.id_token, self.access_token
         else:
-            res = self._login()
+            res = self._get_refresh_token()
 
         if "id_token" not in res or "access_token" not in res:
             raise ValueError(
                 "Check if the credentials are correct or if the backend is running or not."
             )
 
-        # assign refresh token
         self.refresh_token = res.get("refresh_token", None)
-        self.refresh_token_expiry = int(datetime.now().timestamp()) + res.get(
+        self.token_expiry = int(datetime.now().timestamp()) + res.get(
             "expiresIn", 0
         )
-        decoded_token = jwt.decode(
-            res["id_token"], options={"verify_signature": False}
-        )
-        self.base_tenant_id = decoded_token["custom:tenantId"]
-        self.base_role = decoded_token["custom:role"]
 
-        if not self.active_tenant_id:
-            self.active_tenant_id = self.base_tenant_id
-
-        if not self.active_role:
-            self.active_role = self.base_role
-
+        self.id_token = res["id_token"]
+        self.access_token = res["access_token"]
         return res["id_token"], res["access_token"]
 
-    def has_valid_refresh_token(self):
+    def has_valid_token(self):
         """
-        Check if the refresh token is valid.
+        Check if the id and access tokens are valid.
 
         Returns
         -------
@@ -171,6 +194,7 @@ class Auth:
             True if the refresh token is valid, False otherwise.
         """
         return (
-            self.refresh_token is not None
-            and self.refresh_token_expiry > int(datetime.now().timestamp())
+            self.access_token is not None
+            and self.id_token is not None
+            and self.token_expiry > int(datetime.now().timestamp())
         )
