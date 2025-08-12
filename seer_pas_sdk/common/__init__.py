@@ -732,7 +732,8 @@ def get_version():
         v = version("seer-pas-sdk")
         v = "v" + v
         if "dev" in v:
-            v = ""
+            v = v[: v.index("dev") - 1].strip()
+            v += "-dev"
     except Exception as e:
         pass
 
@@ -746,4 +747,4 @@ def get_version():
             v += "-dev"
         except subprocess.CalledProcessError:
             v = "unknown"
-    return f"{v}/"
+    return f"{v}"

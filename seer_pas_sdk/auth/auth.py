@@ -81,6 +81,9 @@ class Auth:
             return response.json()
 
     def _logout(self):
+        if not self.has_valid_refresh_token():
+            print("No valid refresh token found. Skipping logout")
+            return True
         s = requests.Session()
         s.headers.update(
             {"x-seer-source": "sdk", "x-seer-id": f"{self.version}/logout"}
