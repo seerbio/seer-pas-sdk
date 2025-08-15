@@ -264,7 +264,6 @@ class SeerSDK:
         deprecated_in="1.1.0",
         removed_in="2.0.0",
         details="This method is deprecated and will be removed in a future release. Use `find_plates` instead.",
-    )
     def find_plates(
         self, plate_id: str = None, plate_name: str = None, as_df: bool = False
     ):
