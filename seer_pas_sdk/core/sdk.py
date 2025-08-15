@@ -3012,7 +3012,7 @@ class SeerSDK:
             if response.status_code != 200:
                 raise ServerError("Request failed.")
             response = response.json()
-            if type(response) == dict:
+            if isinstance(response, dict):
                 response = response["editableParameters"]
             fasta_filenames = [
                 x["Value"]
@@ -3060,6 +3060,6 @@ class SeerSDK:
                         if not os.path.isdir(f"{download_path}"):
                             os.makedirs(f"{download_path}")
 
-                print(f"Downloaded file to {download_path}/{file}")
+                print(f"Downloaded file to {download_path}/{filename}")
         if link:
             return links
