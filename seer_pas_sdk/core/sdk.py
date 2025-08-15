@@ -2,10 +2,10 @@ from tqdm import tqdm
 
 import deprecation
 import os
-import jwt
 import requests
 import urllib.request
 import ssl
+
 
 from typing import List as _List, Tuple as _Tuple
 
@@ -31,7 +31,7 @@ class SeerSDK:
         try:
             self._auth = Auth(username, password, instance)
 
-            self._auth.get_token()
+            self._auth._login()
             print(f"User '{username}' logged in.\n")
 
             if not tenant:
@@ -50,11 +50,20 @@ class SeerSDK:
                 f"Could not log in.\nPlease check your credentials and/or instance: {e}."
             )
 
-    def _get_auth_headers(self, use_multi_tenant=True):
+    def __del__(self):
+        """
+        Destructor for the SeerSDK class. Logs out the user when the object is deleted.
+        """
+        if self._auth.has_valid_token():
+            self._auth._logout()
+
+    def _get_auth_headers(self, caller, use_multi_tenant=True):
         id_token, access_token = self._auth.get_token()
         header = {
             "Authorization": id_token,
             "Access-Token": access_token,
+            "x-seer-source": "sdk",
+            "x-seer-id": f"{self._auth.version}/{caller}",
         }
         if use_multi_tenant:
             multi_tenant = {
@@ -64,10 +73,10 @@ class SeerSDK:
             header.update(multi_tenant)
         return header
 
-    def _get_auth_session(self, use_multi_tenant=True):
+    def _get_auth_session(self, caller, use_multi_tenant=True):
         sess = requests.Session()
 
-        sess.headers.update(self._get_auth_headers(use_multi_tenant))
+        sess.headers.update(self._get_auth_headers(caller, use_multi_tenant))
 
         return sess
 
@@ -80,7 +89,7 @@ class SeerSDK:
         response : list[dict]
             A list of tenant objects pertaining to the user.
         """
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getusertenants") as s:
             response = s.get(f"{self._auth.url}api/v1/usertenants")
 
             if response.status_code != 200:
@@ -162,7 +171,7 @@ class SeerSDK:
                 "Invalid tenant identifier. Tenant was not switched."
             )
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("switchtenant") as s:
             response = s.put(
                 self._auth.url + "api/v1/users/tenant",
                 json={
@@ -242,7 +251,7 @@ class SeerSDK:
 
         URL = f"{self._auth.url}api/v1/usergroups"
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getspaces") as s:
             spaces = s.get(URL)
 
             if spaces.status_code != 200:
@@ -307,8 +316,7 @@ class SeerSDK:
         else:
             params = dict()
 
-        spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getplates") as s:
 
             plates = s.get(
                 f"{URL}/{plate_id}" if plate_id else URL,
@@ -398,7 +406,7 @@ class SeerSDK:
         else:
             params = {"searchFields": "id", "searchItem": project_id}
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getprojects") as s:
 
             projects = s.get(URL, params=params)
             if projects.status_code != 200:
@@ -503,7 +511,7 @@ class SeerSDK:
         sample_params = {"all": "true"}
 
         if project_id or plate_id:
-            with self._get_auth_session() as s:
+            with self._get_auth_session("getsamples") as s:
                 if plate_id:
                     try:
                         self.get_plates(plate_id)
@@ -636,7 +644,7 @@ class SeerSDK:
         """
         URL = f"{self._auth.url}api/v1/samplefields"
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getcustomcolumns") as s:
 
             fields = s.get(URL)
 
@@ -693,7 +701,7 @@ class SeerSDK:
         res = []
         for sample_id in sample_ids:
 
-            with self._get_auth_session() as s:
+            with self._get_auth_session("getmsdatas") as s:
 
                 msdatas = s.post(URL, json={"sampleId": sample_id})
 
@@ -783,7 +791,7 @@ class SeerSDK:
                 }
             )
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalysisprotocols") as s:
 
             protocols = s.get(URL, params=params)
             if protocols.status_code != 200:
@@ -926,7 +934,7 @@ class SeerSDK:
                 "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'."
             )
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalyses") as s:
 
             params = {"all": "true"}
             if folder_id:
@@ -1016,7 +1024,7 @@ class SeerSDK:
             Protein group ID to filter dataframe results. Defaults to None.
 
         """
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalysisresultprotein") as s:
             URL = f"{self._auth.url}api/v1/data"
             response = s.get(
                 f"{URL}/protein?analysisId={analysis_id}&retry=false"
@@ -1092,7 +1100,7 @@ class SeerSDK:
 
         """
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalysisresultpeptide") as s:
             URL = f"{self._auth.url}api/v1/data"
             response = s.get(
                 f"{URL}/peptide?analysisId={analysis_id}&retry=false"
@@ -1156,7 +1164,7 @@ class SeerSDK:
         analysis_id : str
             ID of the analysis for which the data is to be fetched.
         """
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getsearchresultprotein") as s:
             URL = f"{self._auth.url}api/v1/data"
             response = s.get(
                 f"{URL}/protein?analysisId={analysis_id}&retry=false"
@@ -1202,7 +1210,7 @@ class SeerSDK:
 
         """
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getsearchresultpeptide") as s:
             URL = f"{self._auth.url}api/v1/data"
             response = s.get(
                 f"{URL}/peptide?analysisId={analysis_id}&retry=false"
@@ -1268,7 +1276,7 @@ class SeerSDK:
         if folder:
             params["folderKey"] = folder
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("listsearchresultfiles") as s:
             response = s.get(
                 f"{self._auth.url}api/v2/analysisResultFiles/{analysis_id}",
                 params=params,
@@ -1471,7 +1479,7 @@ class SeerSDK:
         analysis_metadata = self.get_analyses(analysis_id)[0]
         if analysis_metadata.get("status") in ["Failed", None]:
             raise ValueError("Cannot generate links for failed searches.")
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getsearchresultfileurl") as s:
             file_url = s.post(
                 f"{self._auth.url}api/v1/analysisResultFiles/getUrl",
                 json={
@@ -1797,7 +1805,7 @@ class SeerSDK:
             ]
 
         URL = self._auth.url + "api/v2/groupanalysis/protein"
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getproteinresults") as s:
             res = s.post(
                 URL, json={"analysisId": analysis_id, "grouping": grouping}
             )
@@ -1866,7 +1874,7 @@ class SeerSDK:
             ]
 
         URL = self._auth.url + "api/v2/groupanalysis/peptide"
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getpeptideresults") as s:
             res = s.post(
                 URL, json={"analysisId": analysis_id, "grouping": grouping}
             )
@@ -1936,7 +1944,7 @@ class SeerSDK:
             if not space
             else f"{self._auth.url}api/v1/msdataindex/filesinfolder?folder={folder}&userGroupId={space}"
         )
-        with self._get_auth_session() as s:
+        with self._get_auth_session("listmsdatafiles") as s:
 
             files = s.get(URL)
 
@@ -1992,7 +2000,7 @@ class SeerSDK:
         tenant_id = self._auth.active_tenant_id
 
         for path in paths:
-            with self._get_auth_session() as s:
+            with self._get_auth_session("getmsdataindexurl") as s:
 
                 download_url = s.post(
                     URL,
@@ -2097,7 +2105,7 @@ class SeerSDK:
             URL = f"{URL}/{group_analysis_id}"
             params["id"] = group_analysis_id
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getgroupanalyses") as s:
             response = s.get(URL, params=params)
             if response.status_code != 200:
                 raise ServerError(
@@ -2183,7 +2191,7 @@ class SeerSDK:
         }
 
         # Pre-GA data call
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalysisresultprotein") as s:
 
             protein_pre_data = s.post(
                 url=f"{URL}api/v2/groupanalysis/protein",
@@ -2198,7 +2206,7 @@ class SeerSDK:
 
             res["pre"]["protein"] = protein_pre_data
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalysisresultpeptide") as s:
 
             peptide_pre_data = s.post(
                 url=f"{URL}api/v2/groupanalysis/peptide",
@@ -2214,7 +2222,7 @@ class SeerSDK:
             res["pre"]["peptide"] = peptide_pre_data
 
         # Post-GA data call
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getgroupanalysispost") as s:
             if group_analysis_id:
                 get_saved_result = self.get_group_analysis(
                     analysis_id=analysis_id,
@@ -2297,7 +2305,7 @@ class SeerSDK:
                                         'proteinId', 'intensity', 'sampleName', 'sampleId', 'condition','gene'
         """
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getgroupanalysisraw") as s:
 
             # API call 1 - get volcano plot data for filtered results and gene mapping
             builder = self.get_volcano_plot_data(
@@ -2453,7 +2461,7 @@ class SeerSDK:
 
         URL = f"{self._auth.url}api/v1/analysisqcpca"
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalysispca") as s:
             json = {
                 "analysisIds": ",".join(analysis_ids),
                 "type": type,
@@ -2603,7 +2611,7 @@ class SeerSDK:
 
         URL = f"{self._auth.url}api/v1/analysishcluster"
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalysishclust") as s:
             json = {
                 "analysisIds": ",".join(analysis_ids),
             }
@@ -2659,7 +2667,7 @@ class SeerSDK:
 
         URL = f"{self._auth.url}api/v1/groupanalysis/stringdb"
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getppinetwork") as s:
             json = {
                 "significantPGs": ",".join(significant_pgs),
             }
@@ -2740,7 +2748,7 @@ class SeerSDK:
             significantPGs=",".join(significant_pgs),
         )
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalysisclusterheatmap") as s:
             URL = f"{self._auth.url}api/v2/clusterheatmap"
             response = s.post(URL, json=payload)
             if response.status_code != 200:
@@ -2779,7 +2787,7 @@ class SeerSDK:
         if not significant_pgs:
             raise ValueError("Significant pgs cannot be empty.")
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalysisenrichmentplot") as s:
             json = {
                 "analysisId": analysis_id,
                 "significantPGs": significant_pgs,
@@ -2874,7 +2882,7 @@ class SeerSDK:
         resp = []
         for row in rows:
             URL = f"{self._auth.url}api/v1/analyses/samples/{row['id']}"
-            with self._get_auth_session() as s:
+            with self._get_auth_session("getanalysissamples") as s:
                 samples = s.get(URL)
                 try:
                     samples.raise_for_status()
@@ -2929,7 +2937,7 @@ class SeerSDK:
                 f"Analysis protocol engine {analysis_protocol_engine} not supported for fasta download."
             )
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalysisprotocolparameters") as s:
             response = s.get(URL)
             if response.status_code != 200:
                 raise ServerError("Request failed.")
@@ -2946,7 +2954,7 @@ class SeerSDK:
 
         URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
         for file in fasta_filenames:
-            with self._get_auth_session() as s:
+            with self._get_auth_session("getanalysisprotocolfilesurl") as s:
                 response = s.post(URL, json={"filepath": file})
                 if response.status_code != 200:
                     raise ServerError("Request failed.")
