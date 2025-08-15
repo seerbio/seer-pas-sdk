@@ -3001,7 +3001,7 @@ class SeerSDK:
             if response.status_code != 200:
                 raise ServerError("Request failed.")
             response = response.json()
-            if type(response) == dict:
+            if isinstance(response, dict):
                 response = response["editableParameters"]
             fasta_filenames = [
                 x["Value"]
