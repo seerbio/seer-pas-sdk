@@ -666,7 +666,7 @@ class SeerSDK:
             938  5b05d440-6610-11ea-96e3-d5a4dab4ebf6  ...       None
             939  9872e3f0-544e-11ea-ad9e-1991e0725494  ...       None
 
-        >>> seer_sdk.find_projectsid="YOUR_PROJECT_ID_HERE")
+        >>> seer_sdk.find_projects(project_id="YOUR_PROJECT_ID_HERE")
         >>> [{ "project_name": ... }]
         """
 
@@ -794,7 +794,7 @@ class SeerSDK:
             with self._get_auth_session("getsamples") as s:
                 if plate_id:
                     try:
-                        self.find_plates(plate_id)
+                        self.find_plates(plate_id=plate_id)
                     except:
                         raise ValueError("Plate ID is invalid.")
                     sample_params["plateId"] = plate_id
@@ -925,14 +925,14 @@ class SeerSDK:
             with self._get_auth_session("findsamples") as s:
                 if plate_id:
                     try:
-                        self.find_plates(plate_id)
+                        self.find_plates(plate_id=plate_id)
                     except:
                         raise ValueError("Plate ID is invalid.")
                     sample_params["plateId"] = plate_id
 
                 else:
                     try:
-                        self.find_projects(project_id)
+                        self.find_projects(project_id=project_id)
                     except:
                         raise ValueError("Project ID is invalid.")
 
