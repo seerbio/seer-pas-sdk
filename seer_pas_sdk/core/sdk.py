@@ -2957,6 +2957,17 @@ class SeerSDK:
         link=False,
         download_path=None,
     ):
+        """Download the fasta file associated with a given analysis protocol.
+
+        Args:
+            analysis_id (str, optional): ID of the analysis. Defaults to None.
+            analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
+            link (bool, optional): If True, return a list of download links instead of downloading the files. Defaults to False.
+            download_path (str, optional): Path to download the fasta file to. Defaults to current working directory.
+
+        Returns:
+            list[dict] | None: If link is True, return a list of dictionaries containing the filename and download URL. Otherwise, return None.
+        """
         if not analysis_id and not analysis_protocol_id:
             raise ValueError(
                 "Please provide an analysis ID or analysis protocol ID."
