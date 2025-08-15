@@ -607,6 +607,7 @@ class SeerSDK:
                 if "user_group" in res:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
+                return res
         else:
             res = self.find_projects(project_name=project_name)
             if not res:
