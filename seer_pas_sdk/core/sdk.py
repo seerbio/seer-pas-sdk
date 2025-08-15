@@ -263,7 +263,7 @@ class SeerSDK:
     @deprecation.deprecated(
         deprecated_in="1.1.0",
         removed_in="2.0.0",
-        text="This method is deprecated and will be removed in a future release. Use `find_plates` instead.",
+        details="This method is deprecated and will be removed in a future release. Use `find_plates` instead.",
     )
     def get_plates(
         self, plate_id: str = None, plate_name: str = None, as_df: bool = False
@@ -340,10 +340,8 @@ class SeerSDK:
                 del entry["tenant_id"]
 
         return res if not as_df else dict_to_df(res)
-    
-    def get_plate(
-        self, plate_id: str = None, plate_name: str = None
-    ):
+
+    def get_plate(self, plate_id: str = None, plate_name: str = None):
         """
         Fetches a plate.
 
@@ -351,7 +349,7 @@ class SeerSDK:
         ----------
         plate_id : str, optional
             ID of the plate to be fetched, defaulted to None.
-        
+
         plate_name : str, optional
             Name of the plate to be fetched, defaulted to None.
 
@@ -364,7 +362,7 @@ class SeerSDK:
             raise ValueError(
                 "You must provide either plate_id or plate_name, but not both."
             )
-        
+
         if plate_id:
             URL = f"{self._auth.url}api/v1/plates/{plate_id}"
             with self._get_auth_session("getplate") as s:
@@ -379,9 +377,7 @@ class SeerSDK:
         else:
             res = self.find_plates(plate_name=plate_name)
             if not res:
-                raise ValueError(
-                    f"No plate found with name '{plate_name}'."
-                )
+                raise ValueError(f"No plate found with name '{plate_name}'.")
             elif len(res) > 1:
                 raise ValueError(
                     f"Multiple plates found with name '{plate_name}'. Please specify a plate_id."
@@ -468,7 +464,7 @@ class SeerSDK:
     @deprecation.deprecated(
         deprecated_in="1.1.0",
         removed_in="2.0.0",
-        text="This method is deprecated and will be removed in a future release. Use `find_projects` instead.",
+        details="This method is deprecated and will be removed in a future release. Use `find_projects` instead.",
     )
     def get_projects(
         self,
@@ -561,12 +557,7 @@ class SeerSDK:
                 ]
         return res if not as_df else dict_to_df(res)
 
-
-    def get_project(
-            self,
-            project_id: str = None,
-            project_name: str = None
-    ):
+    def get_project(self, project_id: str = None, project_name: str = None):
         """
         Fetches a project.
 
@@ -574,7 +565,7 @@ class SeerSDK:
         ----------
         project_id: str, optional
             ID of the project to be fetched, defaulted to None.
-        
+
         project_name: str, optional
             Name of the project to be fetched, defaulted to None.
 
@@ -587,7 +578,7 @@ class SeerSDK:
             raise ValueError(
                 "You must provide either project_id or project_name, but not both."
             )
-        
+
         if project_id:
             URL = f"{self._auth.url}api/v1/projects/{project_id}"
             with self._get_auth_session("getproject") as s:
@@ -611,6 +602,7 @@ class SeerSDK:
                 )
             else:
                 return res[0]
+
     def find_projects(
         self,
         project_id: str = None,
@@ -701,7 +693,7 @@ class SeerSDK:
     @deprecation.deprecated(
         deprecated_in="1.1.0",
         removed_in="2.0.0",
-        text="This method is deprecated and will be removed in a future release. Use `find_samples` instead.",
+        details="This method is deprecated and will be removed in a future release. Use `find_samples` instead.",
     )
     def get_samples(
         self,
@@ -833,12 +825,6 @@ class SeerSDK:
         ]
 
         return res_df.to_dict(orient="records") if not as_df else res_df
-    
-    def get_sample(
-            self,
-            sample_id: str = None,
-            sample_name: str = None
-    )
 
     def find_samples(
         self,
@@ -955,7 +941,6 @@ class SeerSDK:
                     analysis_name=analysis_name, as_df=True, is_name=True
                 )
 
-
         # apply post processing
         res_df.drop(["tenant_id"], axis=1, inplace=True)
 
@@ -1059,7 +1044,7 @@ class SeerSDK:
     @deprecation.deprecated(
         deprecated_in="1.1.0",
         removed_in="2.0.0",
-        text="This method is deprecated and will be removed in a future release. Use `find_msruns` instead.",
+        details="This method is deprecated and will be removed in a future release. Use `find_msruns` instead.",
     )
     def get_msruns(self, sample_ids: list, as_df: bool = False):
         """
@@ -1152,13 +1137,13 @@ class SeerSDK:
         >>> seer_sdk = SeerSDK()
         >>> sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
 
-        >>> seer_sdk.get_msruns(sample_ids)
+        >>> seer_sdk.find_msruns(sample_ids)
         >>> [
             {"id": "SAMPLE_ID_1_HERE" ... },
             {"id": "SAMPLE_ID_2_HERE" ... }
         ]
 
-        >>> seer_sdk.get_msruns(sample_ids, as_df=True)
+        >>> seer_sdk.find_msruns(sample_ids, as_df=True)
         >>>                                      id  ... gradient
             0  81c6a180-15e0-11ee-bdf1-bbaa73585acf  ...     None
             1  816a9ed0-15e0-11ee-bdf1-bbaa73585acf  ...     None
@@ -1198,7 +1183,7 @@ class SeerSDK:
     @deprecation.deprecated(
         deprecated_in="1.1.0",
         removed_in="2.0.0",
-        text="This method is deprecated and will be removed in a future release. Use `find_analysis_protocols` instead.",
+        details="This method is deprecated and will be removed in a future release. Use `find_analysis_protocols` instead.",
     )
     def get_analysis_protocols(
         self,
@@ -1296,7 +1281,7 @@ class SeerSDK:
                     ][location(res[entry]["parameter_file_path"]) :]
 
             return res if not as_df else dict_to_df(res)
-        
+
     def get_analysis_protocol(
         self,
         analysis_protocol_id: str = None,
@@ -1417,7 +1402,7 @@ class SeerSDK:
                     "Invalid request. Please check your parameters."
                 )
             if analysis_protocol_id:
-                res = [protocols.json()]
+                res = protocols.json()["data"]
             else:
                 res = protocols.json()["data"]
 
@@ -1447,7 +1432,7 @@ class SeerSDK:
     @deprecation.deprecated(
         deprecated_in="1.1.0",
         removed_in="2.0.0",
-        text="This method is deprecated and will be removed in a future release. Use `find_analyses` instead.",
+        details="This method is deprecated and will be removed in a future release. Use `find_analyses` instead.",
     )
     def get_analyses(
         self,
@@ -1615,24 +1600,23 @@ class SeerSDK:
                 ]
             return res if not as_df else dict_to_df(res)
 
-
     def get_analysis(
         self,
         analysis_id: str = None,
         analysis_name: str = None,
     ):
-        """ Fetches an analysis.
+        """Fetches an analysis.
 
         Args:
             analysis_id (str, optional): id of the analysis to be fetched. Defaults to None.
             analysis_name (str, optional): name of the analysis to be fetched. Defaults to None.
-        
+
         Returns:
             analysis : dict
                 Analysis object
         Examples
         -------
-        >>> from seer_pas_sdk import SeerSDK 
+        >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
         >>> seer_sdk.get_analysis(analysis_id="YOUR_ANALYSIS_ID_HERE")
         >>> { "id": ..., "analysis_name": ... }
@@ -1652,7 +1636,8 @@ class SeerSDK:
                         "Invalid request. Please check your parameters."
                     )
                 res = analysis.json()
-                del res["tenant_id"]
+                if "tenant_id" in res:
+                    del res["tenant_id"]
                 return res
         else:
             res = self.find_analyses(analysis_name=analysis_name)
@@ -1666,11 +1651,6 @@ class SeerSDK:
                 )
             else:
                 return res[0]
-
-
-
-
-
 
     def find_analyses(
         self,

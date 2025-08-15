@@ -227,8 +227,38 @@ log(spaces)
 
 <hr>
 
+## Get Plate
 
-### Get Plates
+### Description
+Fetches a single plate for the authenticated user.  
+You must provide **either** a `plate_id` or a `plate_name`—but not both.  
+If a matching plate exists, it is returned.
+
+##### <u>Params</u>
+* plate_id (`str`, optional): Unique ID of the plate to be fetched.  
+* plate_name (`str`, optional): Name of the plate to be fetched.  
+
+
+### Returns
+`plate` (`dict`): A plate object for the authenticated user.
+
+### Examples
+
+#### Fetch by `plate_id`
+```python
+# | eval: false
+plate_id = "00d1ac50-1149-11ee-85b5-bd8ec5ef4e32"
+plate = sdk.get_plate(plate_id=plate_id)
+log(plate)
+
+#### Fetch by `plate_name`
+```python
+# | eval: false
+plate_name = "finalPlateNameTest"
+plate = sdk.get_plate(plate_name=plate_name)
+log(plate)
+
+### Find Plates
 Fetches a list of plates for the authenticated user. If no `plate_id` is provided, returns all plates for the authenticated user. If `plate_id` is provided, returns the plate with the given `plate_id`, provided it exists. 
 
 ###### <u>Params</u>
@@ -242,7 +272,7 @@ Fetches a list of plates for the authenticated user. If no `plate_id` is provide
 ###### <u>Example</u>
 ```{python}
 #| eval: false
-plates = sdk.get_plates()
+plates = sdk.find_plates()
 log(plates)
 ```
 ```
@@ -253,7 +283,7 @@ You can also pass in a specific `plate_id` to specifically fetch a plate.
 ```{python}
 #| eval: false
 plate_id = "00d1ac50-1149-11ee-85b5-bd8ec5ef4e32"
-sample_plate = sdk.get_plates(plate_id)
+sample_plate = sdk.find_plates(plate_id)
 log(sample_plate)
 ```
 ```
@@ -263,7 +293,7 @@ log(sample_plate)
 With the `as_df` flag set to `True`:
 ```{python}
 #| eval: false
-sample_plate = sdk.get_plates(plate_id, as_df=True)
+sample_plate = sdk.find_plates(plate_id, as_df=True)
 log(sample_plate)
 ```
 ```
@@ -273,7 +303,7 @@ log(sample_plate)
 
 <hr>
 
-### Get MS Runs
+### Find MS Runs
 Fetches information pertaining to MS runs for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user. 
 
 The function returns a dict containing `DataFrame` objects if the `as_df` flag is passed in as True, otherwise a nested dict object is returned instead.
@@ -291,7 +321,7 @@ The function returns a dict containing `DataFrame` objects if the `as_df` flag i
 ```{python}
 #| eval: false
 sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
-example = sdk.get_msruns(sample_ids)
+example = sdk.find_msruns(sample_ids)
 log(example)
 ```
 ```
@@ -301,7 +331,7 @@ log(example)
 There is also an option to return everything as a DataFrame instead:
 ```{python}
 #| eval: false
-example = sdk.get_msruns(sample_ids, as_df=True)
+example = sdk.find_msruns(sample_ids, as_df=True)
 log(example)
 ```
 ```
@@ -312,9 +342,33 @@ log(example)
 
 <hr>
 
+## Get Project
 
-### Get Projects
-Fetches a list of projects for the authenticated user. If no `project_id` is provided, returns all projects for the authenticated user. If `project_id` is provided, returns the project with the given `project_id`, provided it exists.
+### Description
+Fetches a single project for the authenticated user.  
+You must provide **either** a `project_id` or a `project_name`—but not both.  
+If a matching project exists, it is returned.
+
+##### <u>Params</u>
+* project_id (`str`, optional): Unique ID of the project to be fetched.  
+* project_name (`str`, optional): Name of the project to be fetched.  
+
+> **Note:** Exactly one of `project_id` or `project_name` must be provided.
+
+### <u>Returns</u>
+project: (`dict`) A project object for the authenticated user.
+
+### Examples
+
+#### Fetch by `project_id`
+```python
+# | eval: false
+project_id = "222e0890-0f95-11ee-9c0f-3bf27c252a07"
+project = sdk.get_project(project_id=project_id)
+log(project)
+
+### Find Projects
+Fetches a list of projects. If no `project_id` is provided, returns all projects. If `project_id` is provided, returns the project with the given `project_id`, provided it exists.
 
 The function returns a dict containing `DataFrame` objects if the `as_df` flag is passed in as True, otherwise a nested dict object is returned instead.
 
@@ -324,12 +378,12 @@ The function returns a dict containing `DataFrame` objects if the `as_df` flag i
 <br>
 
 ###### <u>Returns</u>
-`projects`: (`list[dict]` or `DataFrame`) `list[dict]` or `DataFrame` of project objects for the authenticated user.
+`projects`: (`list[dict]` or `DataFrame`) `list[dict]` or `DataFrame` of project objects.
 
 ###### <u>Example</u>
 ```{python}
 #| eval: false
-projects = sdk.get_projects()
+projects = sdk.find_projects()
 log(projects)
 ```
 ```
@@ -340,7 +394,7 @@ You can also pass in a specific `project_id` to specifically fetch a project.
 ```{python}
 #| eval: false
 project_id = "222e0890-0f95-11ee-9c0f-3bf27c252a07"
-sample_project = sdk.get_projects(project_id)
+sample_project = sdk.find_projects(project_id)
 log(sample_project)
 ```
 ```
@@ -421,8 +475,39 @@ log(samples)
 {'id': 'b6325471-d91f-11ef-85ce-51d48ea13827', 'user_group': None, 'plate_id': 'b50768f0-d91f-11ef-8371-dd35d1cfc768', 'sample_name': 'cleanup control', 'sample_id': 'CCLN', 'sample_type': 'Peptide', 'species': 'Human', 'description': 'NONE Lyo PC10 Peptides Controls Rep1', 'notes': None, 'created_by': '7485f2ae-9a12-4cc3-8605-98d10e624937', 'created_timestamp': '2025-01-23T00:19:29.584Z', 'last_modified_by': '7485f2ae-9a12-4cc3-8605-98d10e624937', 'last_modified_timestamp': '2025-01-23T00:19:29.852Z', 'sample_receipt_date': None, 'sample_collection_date': None, 'condition': 'B', 'plate_name': 'NoEdit_Biscayne_Plate_MS1048', 'custom_test': None, 'biological_replicate': None, 'technical_replicate': None, 'custom_new_field': None, 'custom_long_field_1234567890_123456890_1234567890_1234567890_63': None, 'custom_filed': None, 'custom_main_field': None, 'custom_letters_digits_anerscore': None, 'custom_test123': None, 'custom_sample_attribute_for_grouping': None, 'custom_custom_nita_01': None, 'custom_nitafield2': None, 'custom_by_demo_user': None, 'custom_seer_main_staging': None, 'custom_fix_713': None, 'custom_newcustomfield12345': None, 'custom_mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm': None, 'custom_reskin': None, 'custom_newaddedcolumn': None, 'custom_myfirsttestcustomcolumn0817': None, 'custom_sdk_test': None, 'custom_rsun_test_admin_custom_field': None, 'custom_age': None, 'custom_gender': None, 'custom_country': None, 'custom_res2': None, 'custom_region': None, 'custom_nation': None, 'custom_homer_field': None, 'custom_condition_1': None, 'well_location': 'D11', 'control': 'cleanup control'}]
 ```
 
-
 ### Get Analysis
+
+Fetches a single analysis object. You must provide either an analysis_id or an analysis_name (but not both).
+
+###### <u>Params</u>
+
+* analysis_id: (str, optional) Unique ID of the analysis to fetch.
+* analysis_name: (str, optional) Exact name of the analysis to fetch.
+
+Note: Exactly one of analysis_id or analysis_name must be provided.
+
+###### <u>Returns</u>
+
+analysis: (dict) A single analysis object.
+
+###### <u>Examples</u>
+
+```{python}
+# | eval: false
+analysis = sdk.get_analysis(analysis_id="00425a60-a850-11ea-b3d7-0171d11d0807")
+log(analysis)
+
+```{python}
+# | eval: false
+analysis = sdk.get_analysis(analysis_name="MYProject - 4 SAMPLE - NEW")
+log(analysis)
+```
+```
+{'id': '00425a60-a850-11ea-b3d7-0171d11d0807', 'analysis_name': 'MYPROJECT - 4 SAMPLE - NEW', 'description': 'DO NOT DELETE - FOR VISUALS', 'notes': '', 'analysis_protocol_id': 'b07d70f0-5471-11ea-90e8-6743ed53f19f', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2020-06-06T23:46:54.360Z', 'end_time': '2020-06-07T03:23:30.614Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2020-06-06T23:46:54.360Z', 'status': 'SUCCEEDED', 'result_folder': '2d89db50-805b-11ea-a3cb-5341c25962a0/00425a60-a850-11ea-b3d7-0171d11d0807/', 'job_id': '1c7dcdb9-21fe-47a3-9f9c-5326cc9662b2', 'user_group': None, 'project_id': '2d89db50-805b-11ea-a3cb-5341c25962a0', 'number_msdatafile': '20', 'protein_group_count': 3641, 'single_protein_group_count': 3184, 'possible_protein_set_size': 3878, 'peptides_count': 32274, 'contains_control': False, 'job_log_stream_name': None, 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': None, 'total_file_size_mb': None, 'msdatafile_extensions': None}
+```
+
+
+### Find Analyses
 Returns a list of analyses objects for the authenticated user. If no `analysis_id` is provided, returns all analyses for the authenticated user.
 
 ###### <u>Params</u>
@@ -435,7 +520,7 @@ Returns a list of analyses objects for the authenticated user. If no `analysis_i
 ###### <u>Example</u>
 ```{python}
 #| eval: false
-analyses = sdk.get_analyses()
+analyses = sdk.find_analyses()
 log(analyses)
 ```
 ```
@@ -446,11 +531,11 @@ You can also pass in a specific `analysis_id` to specifically fetch an analysis.
 ```{python}
 #| eval: false
 analysis_id = "00425a60-a850-11ea-b3d7-0171d11d0807"
-sample_analysis = sdk.get_analyses(analysis_id)
+sample_analysis = sdk.find_analyses(analysis_id)
 log(sample_analysis)
 ```
 ```
-[{'id': '00425a60-a850-11ea-b3d7-0171d11d0807', 'analysis_name': 'EXP19044 - 4 SAMPLE - NEW', 'description': 'DO NOT DELETE - FOR VISUALS', 'notes': '', 'analysis_protocol_id': 'b07d70f0-5471-11ea-90e8-6743ed53f19f', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2020-06-06T23:46:54.360Z', 'end_time': '2020-06-07T03:23:30.614Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2020-06-06T23:46:54.360Z', 'status': 'SUCCEEDED', 'result_folder': '2d89db50-805b-11ea-a3cb-5341c25962a0/00425a60-a850-11ea-b3d7-0171d11d0807/', 'job_id': '1c7dcdb9-21fe-47a3-9f9c-5326cc9662b2', 'user_group': None, 'project_id': '2d89db50-805b-11ea-a3cb-5341c25962a0', 'number_msdatafile': '20', 'protein_group_count': 3641, 'single_protein_group_count': 3184, 'possible_protein_set_size': 3878, 'peptides_count': 32274, 'contains_control': False, 'job_log_stream_name': None, 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': None, 'total_file_size_mb': None, 'msdatafile_extensions': None}]
+[{'id': '00425a60-a850-11ea-b3d7-0171d11d0807', 'analysis_name': 'MYPROJECT - 4 SAMPLE - NEW', 'description': 'DO NOT DELETE - FOR VISUALS', 'notes': '', 'analysis_protocol_id': 'b07d70f0-5471-11ea-90e8-6743ed53f19f', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2020-06-06T23:46:54.360Z', 'end_time': '2020-06-07T03:23:30.614Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2020-06-06T23:46:54.360Z', 'status': 'SUCCEEDED', 'result_folder': '2d89db50-805b-11ea-a3cb-5341c25962a0/00425a60-a850-11ea-b3d7-0171d11d0807/', 'job_id': '1c7dcdb9-21fe-47a3-9f9c-5326cc9662b2', 'user_group': None, 'project_id': '2d89db50-805b-11ea-a3cb-5341c25962a0', 'number_msdatafile': '20', 'protein_group_count': 3641, 'single_protein_group_count': 3184, 'possible_protein_set_size': 3878, 'peptides_count': 32274, 'contains_control': False, 'job_log_stream_name': None, 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': None, 'total_file_size_mb': None, 'msdatafile_extensions': None}]
 ```
 
 
@@ -490,11 +575,11 @@ log_df(analysis_data)
 ```
 ```
 File Name                         Sample Name     Plate ID Well Nanoparticle Protein Group  Intensity (Log10)  Normalized Intensity (Log10)                   Protein Names                    Gene Names Biological Process Molecular Function Cellular Component
-0          EXP19044_X4534_A_Orbitrap-1_2ug_60min.raw  Test-Sample-112A  EXP19044  B1     SP-0333      P56181-2          8.698                    0.030             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN
-1          EXP19044_X4533_A_Orbitrap-1_2ug_60min.raw  Test-Sample-112A  EXP19044  B2     SP-0334      P56181-2          8.294                   -0.525             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN
-2  EXP19044_X4541_A_Orbitrap-1_2ug_60min_20190829...  Test-Sample-110A  EXP19044  A4     SP-0336      P56181-2          8.780                   -0.156             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN
-3  EXP19044_X4540_A_Orbitrap-1_2ug_60min_20190829...  Test-Sample-110A  EXP19044  A5     SP-0337      P56181-2          8.867                    0.137             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN
-4  EXP19044_X4544_A_Orbitrap-1_2ug_60min_20190829...  Test-Sample-110A  EXP19044  A3     SP-0335      P56181-2          9.837                    0.992             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN       
+0          MYPROJECT_X4534_A_Orbitrap-1_2ug_60min.raw  Test-Sample-112A  MYPROJECT  B1     SP-0333      P56181-2          8.698                    0.030             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN
+1          MYPROJECT_X4533_A_Orbitrap-1_2ug_60min.raw  Test-Sample-112A  MYPROJECT  B2     SP-0334      P56181-2          8.294                   -0.525             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN
+2  MYPROJECT_X4541_A_Orbitrap-1_2ug_60min_20190829...  Test-Sample-110A  MYPROJECT  A4     SP-0336      P56181-2          8.780                   -0.156             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN
+3  MYPROJECT_X4540_A_Orbitrap-1_2ug_60min_20190829...  Test-Sample-110A  MYPROJECT  A5     SP-0337      P56181-2          8.867                    0.137             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN
+4  MYPROJECT_X4544_A_Orbitrap-1_2ug_60min_20190829...  Test-Sample-110A  MYPROJECT  A3     SP-0335      P56181-2          9.837                    0.992             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN       
 ```
 
 #### Download Search Output Files
