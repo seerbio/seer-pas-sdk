@@ -3049,6 +3049,6 @@ class SeerSDK:
                         if not os.path.isdir(f"{download_path}"):
                             os.makedirs(f"{download_path}")
 
-                print(f"Downloaded file to {download_path}/{file}")
+                print(f"Downloaded file to {download_path}/{filename}")
         if link:
             return links
