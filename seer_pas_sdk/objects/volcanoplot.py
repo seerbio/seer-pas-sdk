@@ -147,14 +147,15 @@ class VolcanoPlotBuilder:
         Returns:
             dict: The row data
         """
-        self.protein_gene_map[data[self.feature_type_index]] = data["gene"]
+        if "gene" in data:
+            self.protein_gene_map[data[self.feature_type_index]] = data["gene"]
 
         row = dict(
             logFD=data["logFD"],
             negativeLog10P=data["negativeLog10P"],
             dataIndex=i,
             rowID=json.dumps(data),
-            gene=data["gene"],
+            gene=data.get("gene", ""),
             group=self.get_contrast_group_string(data),
             significant=self.get_significance_class(data),
             euclideanDistance=self.calculate_euclidean_distance(
