@@ -157,9 +157,7 @@ class _UnsupportedSDK(_SeerSDK):
         if not project_name:
             raise ValueError("Project name cannot be empty.")
 
-        all_plate_ids = set(
-            [plate["id"] for plate in self.get_plate_metadata()]
-        )
+        all_plate_ids = set([plate["id"] for plate in self.find_plates()])
 
         for plate_id in plate_ids:
             if plate_id not in all_plate_ids:
@@ -270,7 +268,7 @@ class _UnsupportedSDK(_SeerSDK):
         samples = (
             x["id"]
             for plate_id in plates
-            for x in self.get_samples(plate_id=plate_id)
+            for x in self.find_samples(plate_id=plate_id)
         )
 
         return self.add_samples_to_project(
@@ -664,16 +662,16 @@ class _UnsupportedSDK(_SeerSDK):
             Name of the analysis.
 
         project_id : str
-            ID of the project to which the analysis belongs. Can be fetched using the get_project_metadata() function.
+            ID of the project to which the analysis belongs. Can be fetched using the find_projects() function.
 
         sample_ids: list[str], optional
             List of sample IDs to be used for the analysis. Should be omitted if analysis is to be run with all samples.
 
         analysis_protocol_name : str, optional
-            Name of the analysis protocol to be used for the analysis. Can be fetched using the get_analysis_protocols() function. Should be omitted if analysis_protocol_id is provided.
+            Name of the analysis protocol to be used for the analysis. Can be fetched using the find_analysis_protocols() function. Should be omitted if analysis_protocol_id is provided.
 
         analysis_protocol_id : str, optional
-            ID of the analysis protocol to be used for the analysis. Can be fetched using the get_analysis_protocols() function. Should be omitted if analysis_protocol_name is provided.
+            ID of the analysis protocol to be used for the analysis. Can be fetched using the find_analysis_protocols() function. Should be omitted if analysis_protocol_name is provided.
 
         notes : str, optional
             Notes for the analysis, defaulted to an empty string.
@@ -707,7 +705,7 @@ class _UnsupportedSDK(_SeerSDK):
             raise ValueError("Project ID cannot be empty.")
 
         if not analysis_protocol_id and analysis_protocol_name:
-            valid_analysis_protocol = self.get_analysis_protocols(
+            valid_analysis_protocol = self.find_analysis_protocols(
                 analysis_protocol_name=analysis_protocol_name
             )
 
@@ -719,7 +717,7 @@ class _UnsupportedSDK(_SeerSDK):
             analysis_protocol_id = valid_analysis_protocol[0]["id"]
 
         if analysis_protocol_id and not analysis_protocol_name:
-            valid_analysis_protocol = self.get_analysis_protocols(
+            valid_analysis_protocol = self.find_analysis_protocols(
                 analysis_protocol_id=analysis_protocol_id
             )
 
@@ -736,7 +734,7 @@ class _UnsupportedSDK(_SeerSDK):
         if sample_ids:
             valid_ids = [
                 entry["id"]
-                for entry in self.get_samples(project_id=project_id)
+                for entry in self.find_samples(project_id=project_id)
             ]
 
             for sample_id in sample_ids:
@@ -1133,7 +1131,7 @@ class _UnsupportedSDK(_SeerSDK):
 
         plate_ids = (
             set()
-        )  # contains all the plate_ids fetched from self.get_plate_metadata()
+        )  # contains all the plate_ids fetched from self.find_plates()
         samples = []  # list of all the sample responses from the backend
         id_uuid = ""  # uuid for the plate id
         raw_file_paths = {}  # list of all the AWS raw file paths
