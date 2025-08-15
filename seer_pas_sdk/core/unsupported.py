@@ -157,9 +157,7 @@ class _UnsupportedSDK(_SeerSDK):
         if not project_name:
             raise ValueError("Project name cannot be empty.")
 
-        all_plate_ids = set(
-            [plate["id"] for plate in self.find_plates()]
-        )
+        all_plate_ids = set([plate["id"] for plate in self.find_plates()])
 
         for plate_id in plate_ids:
             if plate_id not in all_plate_ids:
