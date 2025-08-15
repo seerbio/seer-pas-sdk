@@ -265,7 +265,7 @@ class SeerSDK:
         removed_in="2.0.0",
         details="This method is deprecated and will be removed in a future release. Use `find_plates` instead.",
     )
-    def get_plates(
+    def find_plates(
         self, plate_id: str = None, plate_name: str = None, as_df: bool = False
     ):
         """
@@ -287,7 +287,7 @@ class SeerSDK:
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.get_plates()
+        >>> seer_sdk.find_plates()
         >>> [
                 { "id": ... },
                 { "id": ... },
@@ -355,8 +355,8 @@ class SeerSDK:
 
         Returns
         -------
-        plates: list[dict]
-            List of plate objects for the authenticated user.
+        plate: dict
+            A plate object.
         """
         if not bool(plate_id) ^ bool(plate_name):
             raise ValueError(
@@ -414,13 +414,13 @@ class SeerSDK:
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.get_plates()
+        >>> seer_sdk.find_plates()
         >>> [
                 { "id": ... },
                 { "id": ... },
                 ...
             ]
-        >>> seer_sdk.get_plates(as_df=True)
+        >>> seer_sdk.find_plates(as_df=True)
         >>>                                        id  ... user_group
             0    a7c12190-15da-11ee-bdf1-bbaa73585acf  ...       None
             1    8c3b1480-15da-11ee-bdf1-bbaa73585acf  ...       None
@@ -582,8 +582,8 @@ class SeerSDK:
 
         Returns
         -------
-        projects: list[dict]
-            List of project objects for the authenticated user.
+        projects: dict
+            A project object.
         """
         if not bool(project_id) ^ bool(project_name):
             raise ValueError(
@@ -667,7 +667,7 @@ class SeerSDK:
             938  5b05d440-6610-11ea-96e3-d5a4dab4ebf6  ...       None
             939  9872e3f0-544e-11ea-ad9e-1991e0725494  ...       None
 
-        >>> seer_sdk.get_projects(id="YOUR_PROJECT_ID_HERE")
+        >>> seer_sdk.find_projectsid="YOUR_PROJECT_ID_HERE")
         >>> [{ "project_name": ... }]
         """
 
@@ -795,7 +795,7 @@ class SeerSDK:
             with self._get_auth_session("getsamples") as s:
                 if plate_id:
                     try:
-                        self.get_plates(plate_id)
+                        self.find_plates(plate_id)
                     except:
                         raise ValueError("Plate ID is invalid.")
                     sample_params["plateId"] = plate_id
@@ -882,14 +882,14 @@ class SeerSDK:
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
 
-        >>> seer_sdk.get_samples(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
+        >>> seer_sdk.find_samples(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
         >>> [
                 { "id": ... },
                 { "id": ... },
                 ...
             ]
 
-        >>> seer_sdk.get_samples(as_df=True)
+        >>> seer_sdk.find_samples(as_df=True)
         >>>                                     id  ...      control
         0     812139c0-15e0-11ee-bdf1-bbaa73585acf  ...
         1     803e05b0-15e0-11ee-bdf1-bbaa73585acf  ...  MPE Control
@@ -1017,7 +1017,7 @@ class SeerSDK:
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk._get_samples_filter("FILTER", "PROJECT_ID")
+        >>> seer_sdk._filter_samples_metadata("FILTER", "PROJECT_ID")
         >>> {
                 "samples": [
                     {
@@ -1038,7 +1038,7 @@ class SeerSDK:
                 "Invalid filter. Please choose between 'control' or 'sample'."
             )
 
-        df = self.get_samples(project_id=project_id, as_df=True)
+        df = self.find_samples(project_id=project_id, as_df=True)
 
         if filter == "control":
             df = df[~df["control"].isna()]
@@ -1328,7 +1328,7 @@ class SeerSDK:
             analysis_protocol_id (str, optional): id of the analysis protocol to be fetched. Defaults to None.
             analysis_protocol_name (str, optional): name of the analysis protocol to be fetched. Defaults to None.
         Returns:
-            dict: Analysis protocol object for the authenticated user.
+            dict: Analysis protocol object
         Examples
         -------
         >>> from seer_pas_sdk import SeerSDK
@@ -1405,20 +1405,20 @@ class SeerSDK:
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.get_analysis_protocols()
+        >>> seer_sdk.find_analysis_protocols()
         >>> [
                 { "id": ..., "analysis_protocol_name": ... },
                 { "id": ..., "analysis_protocol_name": ... },
                 ...
             ]
 
-        >>> seer_sdk.get_analysis_protocols(name="YOUR_ANALYSIS_PROTOCOL_NAME_HERE")
+        >>> seer_sdk.find_analysis_protocols(name="YOUR_ANALYSIS_PROTOCOL_NAME_HERE")
         >>> [{ "id": ..., "analysis_protocol_name": ... }]
 
-        >>> seer_sdk.get_analysis_protocols(id="YOUR_ANALYSIS_PROTOCOL_ID_HERE")
+        >>> seer_sdk.find_analysis_protocols(id="YOUR_ANALYSIS_PROTOCOL_ID_HERE")
         >>> [{ "id": ..., "analysis_protocol_name": ... }]
 
-        >>> seer_sdk.get_analysis_protocols(id="YOUR_ANALYSIS_PROTOCOL_ID_HERE", name="YOUR_ANALYSIS_PROTOCOL_NAME_HERE")
+        >>> seer_sdk.find_analysis_protocols(id="YOUR_ANALYSIS_PROTOCOL_ID_HERE", name="YOUR_ANALYSIS_PROTOCOL_NAME_HERE")
 
         >>> [{ "id": ..., "analysis_protocol_name": ... }] # in this case the id would supersede the inputted name.
         """
@@ -1758,23 +1758,23 @@ class SeerSDK:
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.get_analyses()
+        >>> seer_sdk.find_analyses()
         >>> [
                 {id: "YOUR_ANALYSIS_ID_HERE", ...},
                 {id: "YOUR_ANALYSIS_ID_HERE", ...},
                 {id: "YOUR_ANALYSIS_ID_HERE", ...}
             ]
 
-        >>> seer_sdk.get_analyses("YOUR_ANALYSIS_ID_HERE")
+        >>> seer_sdk.find_analyses("YOUR_ANALYSIS_ID_HERE")
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
 
-        >>> seer_sdk.get_analyses(folder_name="YOUR_FOLDER_NAME_HERE")
+        >>> seer_sdk.find_analyses(folder_name="YOUR_FOLDER_NAME_HERE")
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
 
-        >>> seer_sdk.get_analyses(analysis_name="YOUR_ANALYSIS")
+        >>> seer_sdk.find_analyses(analysis_name="YOUR_ANALYSIS")
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
 
-        >>> seer_sdk.get_analyses(description="YOUR_DESCRIPTION")
+        >>> seer_sdk.find_analyses(description="YOUR_DESCRIPTION")
         >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
         """
 
@@ -1870,7 +1870,7 @@ class SeerSDK:
 
             # recursive solution to get analyses in folders
             for folder in folders:
-                res += self.get_analyses(folder_id=folder)
+                res += self.find_analyses(folder_id=folder)
 
             if analysis_only:
                 res = [
@@ -2135,7 +2135,7 @@ class SeerSDK:
             List of files associated with the analysis.
         """
         try:
-            analysis_metadata = self.get_analyses(analysis_id)[0]
+            analysis_metadata = self.find_analyses(analysis_id)[0]
         except (IndexError, ServerError):
             raise ValueError("Invalid analysis ID.")
         except:
@@ -2348,7 +2348,7 @@ class SeerSDK:
                 f"Filename {filename} not among the available analysis result files. Please use SeerSDK.list_search_result_files('{analysis_id}') to see available files for this analysis."
             )
 
-        analysis_metadata = self.get_analyses(analysis_id)[0]
+        analysis_metadata = self.find_analyses(analysis_id)[0]
         if analysis_metadata.get("status") in ["Failed", None]:
             raise ValueError("Cannot generate links for failed searches.")
         with self._get_auth_session("getsearchresultfileurl") as s:
@@ -2638,7 +2638,7 @@ class SeerSDK:
             raise ValueError("Analysis id cannot be empty.")
 
         try:
-            res = self.get_analyses(analysis_id)
+            res = self.find_analyses(analysis_id)
         except ValueError:
             return ValueError("Analysis not found. Your ID could be incorrect")
 
@@ -2672,7 +2672,7 @@ class SeerSDK:
             )
 
         if not analysis_id and analysis_name:
-            analysis_id = self.get_analyses(analysis_name=analysis_name)[0][
+            analysis_id = self.find_analyses(analysis_name=analysis_name)[0][
                 "id"
             ]
 
@@ -2741,7 +2741,7 @@ class SeerSDK:
             )
 
         if not analysis_id and analysis_name:
-            analysis_id = self.get_analyses(analysis_name=analysis_name)[0][
+            analysis_id = self.find_analyses(analysis_name=analysis_name)[0][
                 "id"
             ]
 
@@ -3742,7 +3742,7 @@ class SeerSDK:
         if analysis_id:
             rows = [{"id": analysis_id}]
         else:
-            rows = self.get_analyses(analysis_name=analysis_name)
+            rows = self.find_analyses(analysis_name=analysis_name)
 
         resp = []
         for row in rows:
@@ -3773,14 +3773,14 @@ class SeerSDK:
             download_path = os.getcwd()
 
         try:
-            analysis_protocol_id = self.get_analyses(analysis_id)[0][
+            analysis_protocol_id = self.find_analyses(analysis_id)[0][
                 "analysis_protocol_id"
             ]
         except (IndexError, KeyError):
             raise ValueError(f"Could not parse server response.")
 
         try:
-            analysis_protocol_engine = self.get_analysis_protocols(
+            analysis_protocol_engine = self.find_analysis_protocols(
                 analysis_protocol_id=analysis_protocol_id
             )[0]["analysis_engine"]
         except (IndexError, KeyError):
