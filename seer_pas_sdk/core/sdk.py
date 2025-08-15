@@ -372,7 +372,14 @@ class SeerSDK:
                         "Invalid request. Please check your parameters."
                     )
                 res = plates.json()
-                del res["tenant_id"]
+                spaces = {
+                    x["id"]: x["usergroup_name"] for x in self.get_spaces()
+                }
+                if "tenant_id" in res:
+                    del res["tenant_id"]
+                if "user_group" in res:
+                    res["space"] = spaces.get(res["user_group"], "General")
+                    del res["user_group"]
                 return res
         else:
             res = self.find_plates(plate_name=plate_name)
@@ -441,6 +448,7 @@ class SeerSDK:
         else:
             params = dict()
 
+        spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
         with self._get_auth_session("findplates") as s:
 
             plates = s.get(
@@ -457,8 +465,11 @@ class SeerSDK:
                 res = [plates.json()]
 
             for entry in res:
-                del entry["tenant_id"]
-
+                if "tenant_id" in entry:
+                    del entry["tenant_id"]
+                if "user_group" in entry:
+                    entry["space"] = spaces.get(entry["user_group"], "General")
+                    del entry["user_group"]
         return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
@@ -588,8 +599,14 @@ class SeerSDK:
                         "Invalid request. Please check your parameters."
                     )
                 res = projects.json()
-                del res["tenant_id"]
-                return res
+                spaces = {
+                    x["id"]: x["usergroup_name"] for x in self.get_spaces()
+                }
+                if "tenant_id" in res:
+                    del res["tenant_id"]
+                if "user_group" in res:
+                    res["space"] = spaces.get(res["user_group"], "General")
+                    del res["user_group"]
         else:
             res = self.find_projects(project_name=project_name)
             if not res:
@@ -677,6 +694,7 @@ class SeerSDK:
             if project_id and not res:
                 raise ValueError("Project ID is invalid.")
 
+        spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
         for entry in res:
             if "tenant_id" in entry:
                 del entry["tenant_id"]
@@ -688,6 +706,9 @@ class SeerSDK:
                 entry["raw_file_path"] = entry["raw_file_path"][
                     location(entry["raw_file_path"]) :
                 ]
+            if "user_group" in entry:
+                entry["space"] = spaces.get(entry["user_group"], "General")
+                del entry["user_group"]
         return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
@@ -942,7 +963,15 @@ class SeerSDK:
                 )
 
         # apply post processing
-        res_df.drop(["tenant_id"], axis=1, inplace=True)
+        if "tenant_id" in res_df.columns:
+            res_df.drop(["tenant_id"], axis=1, inplace=True)
+
+        if "user_group" in res_df.columns:
+            spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+            res_df["space"] = res_df["user_group"].apply(
+                lambda x: spaces.get(x, "General")
+            )
+            res_df.drop(["user_group"], axis=1, inplace=True)
 
         custom_columns = [
             x["field_name"] for x in self._get_sample_custom_fields()
@@ -1167,6 +1196,7 @@ class SeerSDK:
 
                 res += [x for x in msdatas.json()["data"]]
 
+        spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
         for entry in res:
             if "tenant_id" in entry:
                 del entry["tenant_id"]
@@ -1178,6 +1208,9 @@ class SeerSDK:
                 entry["raw_file_path"] = entry["raw_file_path"][
                     location(entry["raw_file_path"]) :
                 ]
+            if "user_group" in entry:
+                entry["space"] = spaces.get(entry["user_group"], "General")
+                del entry["user_group"]
         return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
@@ -1319,7 +1352,14 @@ class SeerSDK:
                         "Invalid request. Please check your parameters."
                     )
                 res = protocols.json()
-                del res["tenant_id"]
+                spaces = {
+                    x["id"]: x["usergroup_name"] for x in self.get_spaces()
+                }
+                if "tenant_id" in res:
+                    del res["tenant_id"]
+                if "user_group" in res:
+                    res["space"] = spaces.get(res["user_group"], "General")
+                    del res["user_group"]
                 return res
         else:
             res = self.find_analysis_protocols(
@@ -1406,6 +1446,7 @@ class SeerSDK:
             else:
                 res = protocols.json()["data"]
 
+            spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -1426,6 +1467,11 @@ class SeerSDK:
                     res[entry]["parameter_file_path"] = res[entry][
                         "parameter_file_path"
                     ][location(res[entry]["parameter_file_path"]) :]
+                if "user_group" in res[entry]:
+                    res[entry]["space"] = spaces.get(
+                        res[entry]["user_group"], "General"
+                    )
+                    del res[entry]["user_group"]
 
             return res if not as_df else dict_to_df(res)
 
@@ -1636,8 +1682,14 @@ class SeerSDK:
                         "Invalid request. Please check your parameters."
                     )
                 res = analysis.json()
+                spaces = {
+                    x["id"]: x["usergroup_name"] for x in self.get_spaces()
+                }
                 if "tenant_id" in res:
                     del res["tenant_id"]
+                if "user_group" in res:
+                    res["space"] = spaces.get(res["user_group"], "General")
+                    del res["user_group"]
                 return res
         else:
             res = self.find_analyses(analysis_name=analysis_name)
@@ -1788,6 +1840,7 @@ class SeerSDK:
                 res = [analyses.json()["analysis"]]
 
             folders = []
+            spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -1807,6 +1860,12 @@ class SeerSDK:
                     and res[entry]["is_folder"]
                 ):
                     folders.append(res[entry]["id"])
+
+                if "user_group" in res[entry]:
+                    res[entry]["space"] = spaces.get(
+                        res[entry]["user_group"], "General"
+                    )
+                    del res[entry]["user_group"]
 
             # recursive solution to get analyses in folders
             for folder in folders:
