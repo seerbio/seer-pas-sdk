@@ -316,6 +316,7 @@ class SeerSDK:
         else:
             params = dict()
 
+        spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
         with self._get_auth_session("getplates") as s:
 
             plates = s.get(
