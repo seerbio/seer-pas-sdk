@@ -260,7 +260,7 @@ class SeerSDK:
                 )
             return spaces.json()
 
-    def get_plates(
+    def find_plates(
         self, plate_id: str = None, plate_name: str = None, as_df: bool = False
     ):
         """
@@ -282,7 +282,7 @@ class SeerSDK:
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.get_plates()
+        >>> seer_sdk.find_plates()
         >>> [
                 { "id": ... },
                 { "id": ... },
@@ -336,6 +336,142 @@ class SeerSDK:
 
         return res if not as_df else dict_to_df(res)
 
+    def get_plate(self, plate_id: str = None, plate_name: str = None):
+        """
+        Fetches a plate.
+
+        Parameters
+        ----------
+        plate_id : str, optional
+            ID of the plate to be fetched, defaulted to None.
+
+        plate_name : str, optional
+            Name of the plate to be fetched, defaulted to None.
+
+        Returns
+        -------
+        plate: dict
+            A plate object.
+        """
+        if not bool(plate_id) ^ bool(plate_name):
+            raise ValueError(
+                "You must provide either plate_id or plate_name, but not both."
+            )
+
+        if plate_id:
+            URL = f"{self._auth.url}api/v1/plates/{plate_id}"
+            with self._get_auth_session("getplate") as s:
+                plates = s.get(URL)
+                if plates.status_code != 200:
+                    raise ValueError(
+                        "Invalid request. Please check your parameters."
+                    )
+                res = plates.json()
+                spaces = {
+                    x["id"]: x["usergroup_name"] for x in self.get_spaces()
+                }
+                if "tenant_id" in res:
+                    del res["tenant_id"]
+                if "user_group" in res:
+                    res["space"] = spaces.get(res["user_group"], "General")
+                    del res["user_group"]
+                return res
+        else:
+            res = self.find_plates(plate_name=plate_name)
+            if not res:
+                raise ValueError(f"No plate found with name '{plate_name}'.")
+            elif len(res) > 1:
+                raise ValueError(
+                    f"Multiple plates found with name '{plate_name}'. Please specify a plate_id."
+                )
+            else:
+                return res[0]
+
+    def find_plates(
+        self, plate_id: str = None, plate_name: str = None, as_df: bool = False
+    ):
+        """
+        Fetches a list of plates for the authenticated user. If no `plate_id` is provided, returns all plates for the authenticated user. If `plate_id` is provided, returns the plate with the given `plate_id`, provided it exists.
+
+        Parameters
+        ----------
+        plate_id : str, optional
+            ID of the plate to be fetched, defaulted to None.
+        as_df: bool
+            whether the result should be converted to a DataFrame, defaulted to None.
+
+        Returns
+        -------
+        plates: list[dict] or DataFrame
+            List/DataFrame of plate objects for the authenticated user.
+
+        Examples
+        -------
+        >>> from seer_pas_sdk import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk.find_plates()
+        >>> [
+                { "id": ... },
+                { "id": ... },
+                ...
+            ]
+        >>> seer_sdk.find_plates(as_df=True)
+        >>>                                        id  ... user_group
+            0    a7c12190-15da-11ee-bdf1-bbaa73585acf  ...       None
+            1    8c3b1480-15da-11ee-bdf1-bbaa73585acf  ...       None
+            2    6f158840-15da-11ee-bdf1-bbaa73585acf  ...       None
+            3    1a8a2920-15da-11ee-bdf1-bbaa73585acf  ...       None
+            4    7ab47f40-15d9-11ee-bdf1-bbaa73585acf  ...       None
+            ..                                    ...  ...        ...
+            935  8fa91c00-6621-11ea-96e3-d5a4dab4ebf6  ...       None
+            936  53180b20-6621-11ea-96e3-d5a4dab4ebf6  ...       None
+            937  5c31fe90-6618-11ea-96e3-d5a4dab4ebf6  ...       None
+            938  5b05d440-6610-11ea-96e3-d5a4dab4ebf6  ...       None
+            939  9872e3f0-544e-11ea-ad9e-1991e0725494  ...       None
+
+        >>> seer_sdk.get_plate_metadata(id="YOUR_PLATE_ID_HERE")
+        >>> [{ "id": ... }]
+        """
+
+        URL = f"{self._auth.url}api/v1/plates"
+        res = []
+
+        if not plate_id and not plate_name:
+            params = {"all": "true"}
+        elif plate_name:
+            params = {"searchFields": "plate_name", "searchItem": plate_name}
+        else:
+            params = dict()
+
+        spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+        with self._get_auth_session("findplates") as s:
+
+            plates = s.get(
+                f"{URL}/{plate_id}" if plate_id else URL,
+                params=params,
+            )
+            if plates.status_code != 200:
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
+            if not plate_id:
+                res = plates.json()["data"]
+            else:
+                res = [plates.json()]
+
+            for entry in res:
+                if "tenant_id" in entry:
+                    del entry["tenant_id"]
+                if "user_group" in entry:
+                    entry["space"] = spaces.get(entry["user_group"], "General")
+                    del entry["user_group"]
+        return res if not as_df else dict_to_df(res)
+
+    @deprecation.deprecated(
+        deprecated_in="1.1.0",
+        removed_in="2.0.0",
+        details="This method is deprecated and will be removed in a future release. Use `find_projects` instead.",
+    )
     def get_projects(
         self,
         project_id: str = None,
@@ -427,6 +563,155 @@ class SeerSDK:
                 ]
         return res if not as_df else dict_to_df(res)
 
+    def get_project(self, project_id: str = None, project_name: str = None):
+        """
+        Fetches a project.
+
+        Parameters
+        ----------
+        project_id: str, optional
+            ID of the project to be fetched, defaulted to None.
+
+        project_name: str, optional
+            Name of the project to be fetched, defaulted to None.
+
+        Returns
+        -------
+        projects: dict
+            A project object.
+        """
+        if not bool(project_id) ^ bool(project_name):
+            raise ValueError(
+                "You must provide either project_id or project_name, but not both."
+            )
+
+        if project_id:
+            URL = f"{self._auth.url}api/v1/projects/{project_id}"
+            with self._get_auth_session("getproject") as s:
+                projects = s.get(URL)
+                if projects.status_code != 200:
+                    raise ValueError(
+                        "Invalid request. Please check your parameters."
+                    )
+                res = projects.json()
+                spaces = {
+                    x["id"]: x["usergroup_name"] for x in self.get_spaces()
+                }
+                if "tenant_id" in res:
+                    del res["tenant_id"]
+                if "user_group" in res:
+                    res["space"] = spaces.get(res["user_group"], "General")
+                    del res["user_group"]
+                return res
+        else:
+            res = self.find_projects(project_name=project_name)
+            if not res:
+                raise ValueError(
+                    f"No project found with name '{project_name}'."
+                )
+            elif len(res) > 1:
+                raise ValueError(
+                    f"Multiple projects found with name '{project_name}'. Please specify a project_id."
+                )
+            else:
+                return res[0]
+
+    def find_projects(
+        self,
+        project_id: str = None,
+        project_name: str = None,
+        as_df: bool = False,
+    ):
+        """
+        Fetches a list of projects. If no `project_id` is provided, returns all projects. If `project_id` is provided, returns the project with the given `project_id`, provided it exists.
+
+        Parameters
+        ----------
+        project_id: str, optional
+            Project ID of the project to be fetched, defaulted to None.
+        as_df: bool
+            whether the result should be converted to a DataFrame, defaulted to False.
+
+        Returns
+        -------
+        projects: list[dict] or DataFrame
+            DataFrame or list of project objects.
+
+        Examples
+        -------
+        >>> from seer_pas_sdk import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk.get_projects()
+        >>> [
+                { "project_name": ... },
+                { "project_name": ... },
+                ...
+            ]
+
+        >>> seer_sdk.get_projects(as_df=True)
+        >>>                                        id  ... user_group
+            0    a7c12190-15da-11ee-bdf1-bbaa73585acf  ...       None
+            1    8c3b1480-15da-11ee-bdf1-bbaa73585acf  ...       None
+            2    6f158840-15da-11ee-bdf1-bbaa73585acf  ...       None
+            3    1a8a2920-15da-11ee-bdf1-bbaa73585acf  ...       None
+            4    7ab47f40-15d9-11ee-bdf1-bbaa73585acf  ...       None
+            ..                                    ...  ...        ...
+            935  8fa91c00-6621-11ea-96e3-d5a4dab4ebf6  ...       None
+            936  53180b20-6621-11ea-96e3-d5a4dab4ebf6  ...       None
+            937  5c31fe90-6618-11ea-96e3-d5a4dab4ebf6  ...       None
+            938  5b05d440-6610-11ea-96e3-d5a4dab4ebf6  ...       None
+            939  9872e3f0-544e-11ea-ad9e-1991e0725494  ...       None
+
+        >>> seer_sdk.find_projects(project_id="YOUR_PROJECT_ID_HERE")
+        >>> [{ "project_name": ... }]
+        """
+
+        URL = f"{self._auth.url}api/v1/projects"
+        res = []
+        if not project_id and not project_name:
+            params = {"all": "true"}
+        elif project_name:
+            params = {
+                "searchFields": "project_name",
+                "searchItem": project_name,
+            }
+        else:
+            params = {"searchFields": "id", "searchItem": project_id}
+
+        with self._get_auth_session("getprojects") as s:
+
+            projects = s.get(URL, params=params)
+            if projects.status_code != 200:
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
+            res = projects.json()["data"]
+
+            if project_id and not res:
+                raise ValueError("Project ID is invalid.")
+
+        spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+        for entry in res:
+            if "tenant_id" in entry:
+                del entry["tenant_id"]
+
+            if "raw_file_path" in entry:
+                # Simple lambda function to find the third occurrence of '/' in the raw file path
+                location = lambda s: len(s) - len(s.split("/", 3)[-1])
+                # Slicing the string from the location
+                entry["raw_file_path"] = entry["raw_file_path"][
+                    location(entry["raw_file_path"]) :
+                ]
+            if "user_group" in entry:
+                entry["space"] = spaces.get(entry["user_group"], "General")
+                del entry["user_group"]
+        return res if not as_df else dict_to_df(res)
+
+    @deprecation.deprecated(
+        deprecated_in="1.1.0",
+        removed_in="2.0.0",
+        details="This method is deprecated and will be removed in a future release. Use `find_samples` instead.",
+    )
     def get_samples(
         self,
         plate_id: str = None,
@@ -505,7 +790,7 @@ class SeerSDK:
             with self._get_auth_session("getsamples") as s:
                 if plate_id:
                     try:
-                        self.get_plates(plate_id)
+                        self.find_plates(plate_id=plate_id)
                     except:
                         raise ValueError("Plate ID is invalid.")
                     sample_params["plateId"] = plate_id
@@ -558,6 +843,145 @@ class SeerSDK:
 
         return res_df.to_dict(orient="records") if not as_df else res_df
 
+    def find_samples(
+        self,
+        plate_id: str = None,
+        project_id: str = None,
+        analysis_id: str = None,
+        analysis_name: str = None,
+        as_df: bool = False,
+    ):
+        """
+        Fetches a list of samples. If no parameters are provided, returns all samples. If `plate_id` or `project_id` is provided, returns samples associated with that plate or project. If `analysis_id` or `analysis_name` is provided, returns samples associated with that analysis.
+
+        Parameters
+        ----------
+        plate_id : str, optional
+            ID of the plate for which samples are to be fetched, defaulted to None.
+        project_id : str, optional
+            ID of the project for which samples are to be fetched, defaulted to None.
+        analysis_id : str, optional
+            ID of the analysis for which samples are to be fetched, defaulted to None.
+        analysis_name : str, optional
+            Name of the analysis for which samples are to be fetched, defaulted to None.
+        as_df: bool
+            whether the result should be converted to a DataFrame, defaulted to False.
+
+        Returns
+        -------
+        samples: list[dict] or DataFrame
+            List/DataFrame of samples for the authenticated user.
+
+        Examples
+        -------
+        >>> from seer_pas_sdk import SeerSDK
+        >>> seer_sdk = SeerSDK()
+
+        >>> seer_sdk.find_samples(plate_id="7ec8cad0-15e0-11ee-bdf1-bbaa73585acf")
+        >>> [
+                { "id": ... },
+                { "id": ... },
+                ...
+            ]
+
+        >>> seer_sdk.find_samples(as_df=True)
+        >>>                                     id  ...      control
+        0     812139c0-15e0-11ee-bdf1-bbaa73585acf  ...
+        1     803e05b0-15e0-11ee-bdf1-bbaa73585acf  ...  MPE Control
+        2     a9b26a40-15da-11ee-bdf1-bbaa73585acf  ...
+        3     a8fc87c0-15da-11ee-bdf1-bbaa73585acf  ...  MPE Control
+        4     8e322990-15da-11ee-bdf1-bbaa73585acf  ...
+        ...                                    ...  ...          ...
+        3624  907e1f40-6621-11ea-96e3-d5a4dab4ebf6  ...         C132
+        3625  53e59450-6621-11ea-96e3-d5a4dab4ebf6  ...         C132
+        3626  5d11b030-6618-11ea-96e3-d5a4dab4ebf6  ...         C132
+        3627  5bdf9270-6610-11ea-96e3-d5a4dab4ebf6  ...         C132
+        3628  dd607ef0-654c-11ea-8eb2-25a1cfd1163c  ...         C132
+        """
+
+        # Raise an error if none or more than one of the primary key parameters are passed in.
+        if (
+            sum(
+                [
+                    True if x else False
+                    for x in [plate_id, project_id, analysis_id, analysis_name]
+                ]
+            )
+            > 1
+        ):
+            raise ValueError(
+                "You must pass in no more than one of plate_id, project_id, analysis_id, analysis_name."
+            )
+
+        res = []
+        URL = f"{self._auth.url}api/v1/samples"
+        sample_params = {"all": "true"}
+
+        if project_id or plate_id:
+            with self._get_auth_session("findsamples") as s:
+                if plate_id:
+                    try:
+                        self.find_plates(plate_id=plate_id)
+                    except:
+                        raise ValueError("Plate ID is invalid.")
+                    sample_params["plateId"] = plate_id
+
+                else:
+                    try:
+                        self.find_projects(project_id=project_id)
+                    except:
+                        raise ValueError("Project ID is invalid.")
+
+                    sample_params["projectId"] = project_id
+
+            samples = s.get(URL, params=sample_params)
+            if samples.status_code != 200:
+                raise ValueError(
+                    f"Failed to fetch sample data for plate ID: {plate_id}."
+                )
+            res = samples.json()["data"]
+            if not res:
+                return [] if not as_df else dict_to_df(res)
+            res_df = dict_to_df(res)
+
+            # API returns empty strings if not a control, replace with None for filtering purposes
+            res_df["control"] = res_df["control"].apply(
+                lambda x: x if x else None
+            )
+        else:
+            if analysis_id:
+                res_df = self._get_analysis_samples(
+                    analysis_id=analysis_id, as_df=True
+                )
+            else:
+                res_df = self._get_analysis_samples(
+                    analysis_name=analysis_name, as_df=True, is_name=True
+                )
+
+        # apply post processing
+        if "tenant_id" in res_df.columns:
+            res_df.drop(["tenant_id"], axis=1, inplace=True)
+
+        if "user_group" in res_df.columns:
+            spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+            res_df["space"] = res_df["user_group"].apply(
+                lambda x: spaces.get(x, "General")
+            )
+            res_df.drop(["user_group"], axis=1, inplace=True)
+
+        custom_columns = [
+            x["field_name"] for x in self._get_sample_custom_fields()
+        ]
+        res_df = res_df[
+            [
+                x
+                for x in res_df.columns
+                if not x.startswith("custom_") or x in custom_columns
+            ]
+        ]
+
+        return res_df.to_dict(orient="records") if not as_df else res_df
+
     def _filter_samples_metadata(
         self,
         project_id: str,
@@ -588,7 +1012,7 @@ class SeerSDK:
         -------
         >>> from core import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk._get_samples_filter("FILTER", "PROJECT_ID")
+        >>> seer_sdk._filter_samples_metadata("FILTER", "PROJECT_ID")
         >>> {
                 "samples": [
                     {
@@ -609,7 +1033,7 @@ class SeerSDK:
                 "Invalid filter. Please choose between 'control' or 'sample'."
             )
 
-        df = self.get_samples(project_id=project_id, as_df=True)
+        df = self.find_samples(project_id=project_id, as_df=True)
 
         if filter == "control":
             df = df[~df["control"].isna()]
@@ -642,6 +1066,11 @@ class SeerSDK:
                 del entry["tenant_id"]
             return res
 
+    @deprecation.deprecated(
+        deprecated_in="1.1.0",
+        removed_in="2.0.0",
+        details="This method is deprecated and will be removed in a future release. Use `find_msruns` instead.",
+    )
     def get_msruns(self, sample_ids: list, as_df: bool = False):
         """
         Fetches MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user.
@@ -709,6 +1138,82 @@ class SeerSDK:
                 ]
         return res if not as_df else dict_to_df(res)
 
+    def find_msruns(self, sample_ids: list, as_df: bool = False):
+        """
+        Fetches MS data files for passed in `sample_ids` (provided they are valid and contain relevant files) for an authenticated user.
+
+        The function returns a dict containing DataFrame objects if the `df` flag is passed in as True, otherwise a nested dict object is returned instead.
+
+        Parameters
+        ----------
+        sample_ids : list
+            List of unique sample IDs.
+        as_df: bool
+            whether the result should be converted to a DataFrame, defaulted to False.
+
+        Returns
+        -------
+        res: list[dict] or DataFrame
+            List/DataFrame of plate objects for the authenticated user.
+
+        Examples
+        -------
+        >>> from seer_pas_sdk import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> sample_ids = ["812139c0-15e0-11ee-bdf1-bbaa73585acf", "803e05b0-15e0-11ee-bdf1-bbaa73585acf"]
+
+        >>> seer_sdk.find_msruns(sample_ids)
+        >>> [
+            {"id": "SAMPLE_ID_1_HERE" ... },
+            {"id": "SAMPLE_ID_2_HERE" ... }
+        ]
+
+        >>> seer_sdk.find_msruns(sample_ids, as_df=True)
+        >>>                                      id  ... gradient
+            0  81c6a180-15e0-11ee-bdf1-bbaa73585acf  ...     None
+            1  816a9ed0-15e0-11ee-bdf1-bbaa73585acf  ...     None
+
+            [2 rows x 26 columns]
+        """
+
+        URL = f"{self._auth.url}api/v1/msdatas/items"
+
+        res = []
+        for sample_id in sample_ids:
+
+            with self._get_auth_session("getmsdatas") as s:
+
+                msdatas = s.post(URL, json={"sampleId": sample_id})
+
+                if msdatas.status_code != 200 or not msdatas.json()["data"]:
+                    raise ValueError(
+                        f"Failed to fetch MS data for sample ID={sample_id}."
+                    )
+
+                res += [x for x in msdatas.json()["data"]]
+
+        spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+        for entry in res:
+            if "tenant_id" in entry:
+                del entry["tenant_id"]
+
+            if "raw_file_path" in entry:
+                # Simple lambda function to find the third occurrence of '/' in the raw file path
+                location = lambda s: len(s) - len(s.split("/", 3)[-1])
+                # Slicing the string from the location
+                entry["raw_file_path"] = entry["raw_file_path"][
+                    location(entry["raw_file_path"]) :
+                ]
+            if "user_group" in entry:
+                entry["space"] = spaces.get(entry["user_group"], "General")
+                del entry["user_group"]
+        return res if not as_df else dict_to_df(res)
+
+    @deprecation.deprecated(
+        deprecated_in="1.1.0",
+        removed_in="2.0.0",
+        details="This method is deprecated and will be removed in a future release. Use `find_analysis_protocols` instead.",
+    )
     def get_analysis_protocols(
         self,
         analysis_protocol_name: str = None,
@@ -806,6 +1311,171 @@ class SeerSDK:
 
             return res if not as_df else dict_to_df(res)
 
+    def get_analysis_protocol(
+        self,
+        analysis_protocol_id: str = None,
+        analysis_protocol_name: str = None,
+    ):
+        """
+        Fetches an analysis protocol.
+
+        Args:
+            analysis_protocol_id (str, optional): id of the analysis protocol to be fetched. Defaults to None.
+            analysis_protocol_name (str, optional): name of the analysis protocol to be fetched. Defaults to None.
+        Returns:
+            dict: Analysis protocol object
+        Examples
+        -------
+        >>> from seer_pas_sdk import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk.get_analysis_protocol(analysis_protocol_id="YOUR_ANALYSIS_PROTOCOL_ID_HERE")
+        >>> { "id": ..., "analysis_protocol_name": ... }
+        >>> seer_sdk.get_analysis_protocol(analysis_protocol_name="YOUR_ANALYSIS_PROTOCOL_NAME_HERE")
+        >>> { "id": ..., "analysis_protocol_name": ... }
+        """
+
+        if not bool(analysis_protocol_id) ^ bool(analysis_protocol_name):
+            raise ValueError(
+                "You must provide either analysis_protocol_id or analysis_protocol_name, but not both."
+            )
+
+        if analysis_protocol_id:
+            URL = f"{self._auth.url}api/v1/analysisProtocols/{analysis_protocol_id}"
+            with self._get_auth_session("getanalysisprotocol") as s:
+                protocols = s.get(URL)
+                if protocols.status_code != 200:
+                    raise ValueError(
+                        "Invalid request. Please check your parameters."
+                    )
+                res = protocols.json()
+                spaces = {
+                    x["id"]: x["usergroup_name"] for x in self.get_spaces()
+                }
+                if "tenant_id" in res:
+                    del res["tenant_id"]
+                if "user_group" in res:
+                    res["space"] = spaces.get(res["user_group"], "General")
+                    del res["user_group"]
+                return res
+        else:
+            res = self.find_analysis_protocols(
+                analysis_protocol_name=analysis_protocol_name
+            )
+            if not res:
+                raise ValueError(
+                    f"No analysis protocol found with name '{analysis_protocol_name}'."
+                )
+            elif len(res) > 1:
+                raise ValueError(
+                    f"Multiple analysis protocols found with name '{analysis_protocol_name}'. Please specify an analysis_protocol_id."
+                )
+            else:
+                return res[0]
+
+    def find_analysis_protocols(
+        self,
+        analysis_protocol_name: str = None,
+        analysis_protocol_id: str = None,
+        as_df: bool = False,
+    ):
+        """
+        Fetches a list of analysis protocols for the authenticated user. If no `analysis_protocol_id` is provided, returns all analysis protocols for the authenticated user. If `analysis_protocol_name` (and no `analysis_protocol_id`) is provided, returns the analysis protocol with the given name, provided it exists.
+
+        Parameters
+        ----------
+        analysis_protocol_id : str, optional
+            ID of the analysis protocol to be fetched, defaulted to None.
+
+        analysis_protocol_name : str, optional
+            Name of the analysis protocol to be fetched, defaulted to None.
+
+        as_df : bool, optional
+            whether the result should be converted to a DataFrame, defaulted to False.
+        Returns
+        -------
+        protocols: list[dict]
+            List of analysis protocol objects for the authenticated user.
+
+        Examples
+        -------
+        >>> from seer_pas_sdk import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk.find_analysis_protocols()
+        >>> [
+                { "id": ..., "analysis_protocol_name": ... },
+                { "id": ..., "analysis_protocol_name": ... },
+                ...
+            ]
+
+        >>> seer_sdk.find_analysis_protocols(name="YOUR_ANALYSIS_PROTOCOL_NAME_HERE")
+        >>> [{ "id": ..., "analysis_protocol_name": ... }]
+
+        >>> seer_sdk.find_analysis_protocols(id="YOUR_ANALYSIS_PROTOCOL_ID_HERE")
+        >>> [{ "id": ..., "analysis_protocol_name": ... }]
+
+        >>> seer_sdk.find_analysis_protocols(id="YOUR_ANALYSIS_PROTOCOL_ID_HERE", name="YOUR_ANALYSIS_PROTOCOL_NAME_HERE")
+
+        >>> [{ "id": ..., "analysis_protocol_name": ... }] # in this case the id would supersede the inputted name.
+        """
+
+        URL = f"{self._auth.url}api/v1/analysisProtocols"
+        res = []
+        params = {"all": "true"}
+
+        if analysis_protocol_name:
+            params.update(
+                {
+                    "searchFields": "analysis_protocol_name,offering_name",
+                    "searchItem": analysis_protocol_name,
+                }
+            )
+
+        with self._get_auth_session("findanalysisprotocols") as s:
+
+            protocols = s.get(URL, params=params)
+            if protocols.status_code != 200:
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
+            if analysis_protocol_id:
+                res = protocols.json()["data"]
+            else:
+                res = protocols.json()["data"]
+
+            spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+            for entry in range(len(res)):
+                if "tenant_id" in res[entry]:
+                    del res[entry]["tenant_id"]
+
+                if "can_edit" in res[entry]:
+                    del res[entry]["can_edit"]
+
+                if "can_delete" in res[entry]:
+                    del res[entry]["can_delete"]
+
+                if "scope" in res[entry]:
+                    del res[entry]["scope"]
+
+                if "parameter_file_path" in res[entry]:
+                    # Simple lambda function to find the third occurrence of '/' in the raw file path
+                    location = lambda s: len(s) - len(s.split("/", 3)[-1])
+                    # Slicing the string from the location
+                    res[entry]["parameter_file_path"] = res[entry][
+                        "parameter_file_path"
+                    ][location(res[entry]["parameter_file_path"]) :]
+                if "user_group" in res[entry]:
+                    res[entry]["space"] = spaces.get(
+                        res[entry]["user_group"], "General"
+                    )
+                    del res[entry]["user_group"]
+
+            return res if not as_df else dict_to_df(res)
+
+    @deprecation.deprecated(
+        deprecated_in="1.1.0",
+        removed_in="2.0.0",
+        details="This method is deprecated and will be removed in a future release. Use `find_analyses` instead.",
+    )
     def get_analyses(
         self,
         analysis_id: str = None,
@@ -972,7 +1642,238 @@ class SeerSDK:
                 ]
             return res if not as_df else dict_to_df(res)
 
-    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
+    def get_analysis(
+        self,
+        analysis_id: str = None,
+        analysis_name: str = None,
+    ):
+        """Fetches an analysis.
+
+        Args:
+            analysis_id (str, optional): id of the analysis to be fetched. Defaults to None.
+            analysis_name (str, optional): name of the analysis to be fetched. Defaults to None.
+
+        Returns:
+            analysis : dict
+                Analysis object
+        Examples
+        -------
+        >>> from seer_pas_sdk import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk.get_analysis(analysis_id="YOUR_ANALYSIS_ID_HERE")
+        >>> { "id": ..., "analysis_name": ... }
+
+        """
+        if not bool(analysis_id) ^ bool(analysis_name):
+            raise ValueError(
+                "You must provide either analysis_id or analysis_name, but not both."
+            )
+
+        if analysis_id:
+            URL = f"{self._auth.url}api/v1/analyses/{analysis_id}"
+            with self._get_auth_session("getanalysis") as s:
+                analysis = s.get(URL)
+                if analysis.status_code != 200:
+                    raise ValueError(
+                        "Invalid request. Please check your parameters."
+                    )
+                res = analysis.json()
+                spaces = {
+                    x["id"]: x["usergroup_name"] for x in self.get_spaces()
+                }
+                if "tenant_id" in res:
+                    del res["tenant_id"]
+                if "user_group" in res:
+                    res["space"] = spaces.get(res["user_group"], "General")
+                    del res["user_group"]
+                return res
+        else:
+            res = self.find_analyses(analysis_name=analysis_name)
+            if not res:
+                raise ValueError(
+                    f"No analysis found with name '{analysis_name}'."
+                )
+            elif len(res) > 1:
+                raise ValueError(
+                    f"Multiple analyses found with name '{analysis_name}'. Please specify an analysis_id."
+                )
+            else:
+                return res[0]
+
+    def find_analyses(
+        self,
+        analysis_id: str = None,
+        folder_id: str = None,
+        show_folders: bool = True,
+        analysis_only: bool = True,
+        project_id: str = None,
+        plate_name: str = None,
+        as_df=False,
+        **kwargs,
+    ):
+        """
+        Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
+        Search parameters may be passed in as keyword arguments to filter the results. Acceptable values are 'analysis_name', 'folder_name', 'description', 'notes', or 'number_msdatafile'.
+        Only search on a single field is supported.
+
+        Parameters
+        ----------
+        analysis_id : str, optional
+            ID of the analysis to be fetched, defaulted to None.
+
+        folder_id : str, optional
+            ID of the folder to be fetched, defaulted to None.
+
+        show_folders : bool, optional
+            Mark True if folder contents are to be returned in the response, i.e. recursive search, defaulted to True.
+            Will be disabled if an analysis id is provided.
+
+        analysis_only : bool, optional
+            Mark True if only analyses objects are to be returned in the response, defaulted to True.
+            If marked false, folder objects will also be included in the response.
+
+        project_id : str, optional
+            ID of the project to be fetched, defaulted to None.
+
+        plate_name : str, optional
+            Name of the plate to be fetched, defaulted to None.
+
+        as_df : bool, optional
+            whether the result should be converted to a DataFrame, defaulted to False.
+
+        **kwargs : dict, optional
+            Search keyword parameters to be passed in. Acceptable values are 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'.
+
+        Returns
+        -------
+        analyses: list[dict]
+            Contains a list of analyses objects for the authenticated user.
+
+        Examples
+        -------
+        >>> from seer_pas_sdk import SeerSDK
+        >>> seer_sdk = SeerSDK()
+        >>> seer_sdk.find_analyses()
+        >>> [
+                {id: "YOUR_ANALYSIS_ID_HERE", ...},
+                {id: "YOUR_ANALYSIS_ID_HERE", ...},
+                {id: "YOUR_ANALYSIS_ID_HERE", ...}
+            ]
+
+        >>> seer_sdk.find_analyses("YOUR_ANALYSIS_ID_HERE")
+        >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
+
+        >>> seer_sdk.find_analyses(folder_name="YOUR_FOLDER_NAME_HERE")
+        >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
+
+        >>> seer_sdk.find_analyses(analysis_name="YOUR_ANALYSIS")
+        >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
+
+        >>> seer_sdk.find_analyses(description="YOUR_DESCRIPTION")
+        >>> [{ id: "YOUR_ANALYSIS_ID_HERE", ...}]
+        """
+
+        URL = f"{self._auth.url}api/v1/analyses"
+        res = []
+
+        search_field = None
+        search_item = None
+        if kwargs:
+            if len(kwargs.keys()) > 1:
+                raise ValueError("Please include only one search parameter.")
+            search_field = list(kwargs.keys())[0]
+            search_item = kwargs[search_field]
+
+            if not search_item:
+                raise ValueError(
+                    f"Please provide a non null value for {search_field}"
+                )
+
+        if search_field and search_field not in [
+            "analysis_name",
+            "folder_name",
+            "analysis_protocol_name",
+            "description",
+            "notes",
+            "number_msdatafile",
+        ]:
+            raise ValueError(
+                "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'."
+            )
+
+        with self._get_auth_session("findanalyses") as s:
+
+            params = {"all": "true"}
+            if folder_id:
+                params["folder"] = folder_id
+
+            if search_field:
+                params["searchFields"] = search_field
+                params["searchItem"] = search_item
+                del params["all"]
+
+                if search_field == "folder_name":
+                    params["searchFields"] = "analysis_name"
+
+            if project_id:
+                params["projectId"] = project_id
+
+            if plate_name:
+                params["plateName"] = plate_name
+
+            analyses = s.get(
+                f"{URL}/{analysis_id}" if analysis_id else URL, params=params
+            )
+
+            if analyses.status_code != 200:
+                raise ValueError(
+                    "Invalid request. Please check your parameters."
+                )
+            if not analysis_id:
+                res = analyses.json()["data"]
+
+            else:
+                res = [analyses.json()["analysis"]]
+
+            folders = []
+            spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+            for entry in range(len(res)):
+                if "tenant_id" in res[entry]:
+                    del res[entry]["tenant_id"]
+
+                if "parameter_file_path" in res[entry]:
+                    # Simple lambda function to find the third occurrence of '/' in the raw file path
+                    location = lambda s: len(s) - len(s.split("/", 3)[-1])
+
+                    # Slicing the string from the location
+                    res[entry]["parameter_file_path"] = res[entry][
+                        "parameter_file_path"
+                    ][location(res[entry]["parameter_file_path"]) :]
+
+                if (
+                    show_folders
+                    and not analysis_id
+                    and res[entry]["is_folder"]
+                ):
+                    folders.append(res[entry]["id"])
+
+                if "user_group" in res[entry]:
+                    res[entry]["space"] = spaces.get(
+                        res[entry]["user_group"], "General"
+                    )
+                    del res[entry]["user_group"]
+
+            # recursive solution to get analyses in folders
+            for folder in folders:
+                res += self.find_analyses(folder_id=folder)
+
+            if analysis_only:
+                res = [
+                    analysis for analysis in res if not analysis["is_folder"]
+                ]
+            return res if not as_df else dict_to_df(res)
+
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="2.0.0")
     def get_analysis_result_protein_data(
         self, analysis_id: str, link: bool = False, pg: str = None
     ):
@@ -1045,7 +1946,7 @@ class SeerSDK:
                         "protein_panel": protein_panel,
                     }
 
-    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="2.0.0")
     def get_analysis_result_peptide_data(
         self, analysis_id: str, link: bool = False, peptide: str = None
     ):
@@ -1229,7 +2130,7 @@ class SeerSDK:
             List of files associated with the analysis.
         """
         try:
-            analysis_metadata = self.get_analyses(analysis_id)[0]
+            analysis_metadata = self.find_analyses(analysis_id)[0]
         except (IndexError, ServerError):
             raise ValueError("Invalid analysis ID.")
         except:
@@ -1442,7 +2343,7 @@ class SeerSDK:
                 f"Filename {filename} not among the available analysis result files. Please use SeerSDK.list_search_result_files('{analysis_id}') to see available files for this analysis."
             )
 
-        analysis_metadata = self.get_analyses(analysis_id)[0]
+        analysis_metadata = self.find_analyses(analysis_id)[0]
         if analysis_metadata.get("status") in ["Failed", None]:
             raise ValueError("Cannot generate links for failed searches.")
         with self._get_auth_session("getsearchresultfileurl") as s:
@@ -1461,7 +2362,7 @@ class SeerSDK:
         response["filename"] = filename
         return response
 
-    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="2.0.0")
     def get_analysis_result_files(
         self,
         analysis_id: str,
@@ -1604,7 +2505,7 @@ class SeerSDK:
 
         return links
 
-    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="1.0.0")
+    @deprecation.deprecated(deprecated_in="0.3.0", removed_in="2.0.0")
     def get_analysis_result(
         self,
         analysis_id: str,
@@ -1732,7 +2633,7 @@ class SeerSDK:
             raise ValueError("Analysis id cannot be empty.")
 
         try:
-            res = self.get_analyses(analysis_id)
+            res = self.find_analyses(analysis_id)
         except ValueError:
             return ValueError("Analysis not found. Your ID could be incorrect")
 
@@ -1766,7 +2667,7 @@ class SeerSDK:
             )
 
         if not analysis_id and analysis_name:
-            analysis_id = self.get_analyses(analysis_name=analysis_name)[0][
+            analysis_id = self.find_analyses(analysis_name=analysis_name)[0][
                 "id"
             ]
 
@@ -1835,7 +2736,7 @@ class SeerSDK:
             )
 
         if not analysis_id and analysis_name:
-            analysis_id = self.get_analyses(analysis_name=analysis_name)[0][
+            analysis_id = self.find_analyses(analysis_name=analysis_name)[0][
                 "id"
             ]
 
@@ -2836,7 +3737,7 @@ class SeerSDK:
         if analysis_id:
             rows = [{"id": analysis_id}]
         else:
-            rows = self.get_analyses(analysis_name=analysis_name)
+            rows = self.find_analyses(analysis_name=analysis_name)
 
         resp = []
         for row in rows:
@@ -2867,14 +3768,14 @@ class SeerSDK:
             download_path = os.getcwd()
 
         try:
-            analysis_protocol_id = self.get_analyses(analysis_id)[0][
+            analysis_protocol_id = self.find_analyses(analysis_id)[0][
                 "analysis_protocol_id"
             ]
         except (IndexError, KeyError):
             raise ValueError(f"Could not parse server response.")
 
         try:
-            analysis_protocol_engine = self.get_analysis_protocols(
+            analysis_protocol_engine = self.find_analysis_protocols(
                 analysis_protocol_id=analysis_protocol_id
             )[0]["analysis_engine"]
         except (IndexError, KeyError):
