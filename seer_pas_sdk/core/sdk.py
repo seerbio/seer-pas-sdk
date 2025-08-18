@@ -685,7 +685,7 @@ class SeerSDK:
         else:
             params = {"searchFields": "id", "searchItem": project_id}
 
-        with self._get_auth_session("getprojects") as s:
+        with self._get_auth_session("findprojects") as s:
 
             projects = s.get(URL, params=params)
             if projects.status_code != 200:
@@ -1188,7 +1188,7 @@ class SeerSDK:
         res = []
         for sample_id in sample_ids:
 
-            with self._get_auth_session("getmsdatas") as s:
+            with self._get_auth_session("findmsdatas") as s:
 
                 msdatas = s.post(URL, json={"sampleId": sample_id})
 
