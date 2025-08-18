@@ -45,6 +45,8 @@ class SeerSDK:
                 print("Logging into home tenant...")
                 # If an error occurs while directing the user to a tenant, default to home tenant.
                 print(f"You are now active in {self.get_active_tenant_name()}")
+        except ServerError as e:
+            raise e
         except Exception as e:
             raise ValueError(
                 f"Could not log in.\nPlease check your credentials and/or instance: {e}."
