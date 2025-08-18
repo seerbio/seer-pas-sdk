@@ -262,7 +262,12 @@ class SeerSDK:
                 )
             return spaces.json()
 
-    def find_plates(
+    @deprecation.deprecated(
+        deprecated_in="1.1.0",
+        removed_in="2.0.0",
+        details="This method is deprecated and will be removed in a future release. Use `find_plates` instead.",
+    )
+    def get_plates(
         self, plate_id: str = None, plate_name: str = None, as_df: bool = False
     ):
         """
@@ -304,7 +309,7 @@ class SeerSDK:
             938  5b05d440-6610-11ea-96e3-d5a4dab4ebf6  ...       None
             939  9872e3f0-544e-11ea-ad9e-1991e0725494  ...       None
 
-        >>> seer_sdk.get_plate_metadata(id="YOUR_PLATE_ID_HERE")
+        >>> seer_sdk.get_plates(id="YOUR_PLATE_ID_HERE")
         >>> [{ "id": ... }]
         """
 
