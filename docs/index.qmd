@@ -72,10 +72,10 @@ sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE, tenant='My Active Tenant')
 print(sdk.get_active_tenant())
 
 # List available tenants
-print(sdk.list_user_tenants())
+print(sdk.list_tenants())
 
 # Switch active tenant
-pas.switch_tenant('My Next Tenant')
+sdk.switch_tenant('My Next Tenant')
 
 ```
 
