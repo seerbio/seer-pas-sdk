@@ -3853,31 +3853,31 @@ class SeerSDK:
 
     def download_analysis_protocol_fasta(
         self,
-        analysis_id=None,
         analysis_protocol_id=None,
+        analysis_id=None,
         link=False,
         download_path=None,
     ):
         """Download the fasta file associated with a given analysis protocol.
 
         Args:
-            analysis_id (str, optional): ID of the analysis. Defaults to None.
             analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
+            analysis_id (str, optional): ID of the analysis. Defaults to None.
             link (bool, optional): If True, return a list of download links instead of downloading the files. Defaults to False.
             download_path (str, optional): Path to download the fasta file to. Defaults to current working directory.
 
         Returns:
             list[dict] | None: If link is True, return a list of dictionaries containing the filename and download URL. Otherwise, return None.
         """
-        if not analysis_id and not analysis_protocol_id:
+        if not bool(analysis_protocol_id) ^ bool(analysis_id):
             raise ValueError(
-                "Please provide an analysis ID or analysis protocol ID."
+                "Please provide either an analysis ID or an analysis protocol ID."
             )
 
         if not download_path:
             download_path = os.getcwd()
 
-        if analysis_id:
+        if not analysis_protocol_id:
             try:
                 analysis_protocol_id = self.get_analyses(analysis_id)[0][
                     "analysis_protocol_id"
@@ -3908,7 +3908,7 @@ class SeerSDK:
                 f"Analysis protocol engine {analysis_protocol_engine} not supported for fasta download."
             )
 
-        with self._get_auth_session() as s:
+        with self._get_auth_session("getanalysisprotocolparameters") as s:
             response = s.get(URL)
             if response.status_code != 200:
                 raise ServerError("Request failed.")
@@ -3926,7 +3926,7 @@ class SeerSDK:
         URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
         links = []
         for file in fasta_filenames:
-            with self._get_auth_session() as s:
+            with self._get_auth_session("getanalysisprotocolfilesurl") as s:
                 response = s.post(URL, json={"filepath": file})
                 if response.status_code != 200:
                     raise ServerError("Request failed.")
