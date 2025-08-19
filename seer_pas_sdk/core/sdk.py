@@ -45,6 +45,8 @@ class SeerSDK:
                 print("Logging into home tenant...")
                 # If an error occurs while directing the user to a tenant, default to home tenant.
                 print(f"You are now active in {self.get_active_tenant_name()}")
+        except ServerError as e:
+            raise e
         except Exception as e:
             raise ValueError(
                 f"Could not log in.\nPlease check your credentials and/or instance: {e}."
@@ -260,7 +262,12 @@ class SeerSDK:
                 )
             return spaces.json()
 
-    def find_plates(
+    @deprecation.deprecated(
+        deprecated_in="1.1.0",
+        removed_in="2.0.0",
+        details="This method is deprecated and will be removed in a future release. Use `find_plates` instead.",
+    )
+    def get_plates(
         self, plate_id: str = None, plate_name: str = None, as_df: bool = False
     ):
         """
@@ -302,7 +309,7 @@ class SeerSDK:
             938  5b05d440-6610-11ea-96e3-d5a4dab4ebf6  ...       None
             939  9872e3f0-544e-11ea-ad9e-1991e0725494  ...       None
 
-        >>> seer_sdk.get_plate_metadata(id="YOUR_PLATE_ID_HERE")
+        >>> seer_sdk.get_plates(id="YOUR_PLATE_ID_HERE")
         >>> [{ "id": ... }]
         """
 
@@ -678,7 +685,7 @@ class SeerSDK:
         else:
             params = {"searchFields": "id", "searchItem": project_id}
 
-        with self._get_auth_session("getprojects") as s:
+        with self._get_auth_session("findprojects") as s:
 
             projects = s.get(URL, params=params)
             if projects.status_code != 200:
@@ -1181,7 +1188,7 @@ class SeerSDK:
         res = []
         for sample_id in sample_ids:
 
-            with self._get_auth_session("getmsdatas") as s:
+            with self._get_auth_session("findmsdatas") as s:
 
                 msdatas = s.post(URL, json={"sampleId": sample_id})
 

@@ -85,6 +85,67 @@ class Auth:
             raise ServerError("Could not login to the PAS instance")
 
         res = response.json()
+        mfa_challenge = res.get("challenge", None)
+        if mfa_challenge:
+            mfa_args = {}
+            if any(
+                x not in res
+                for x in ["challenge", "session", "challengeParameters"]
+            ):
+                raise ServerError(
+                    "Unexpected return from server during MFA challenge. Please check the PAS SDK version and update the PAS SDK if necessary."
+                )
+            mfa_args["challengeName"] = res["challenge"]
+            mfa_args["session"] = res["session"]
+            mfa_args["username"] = res["challengeParameters"].get(
+                "USER_ID_FOR_SRP", ""
+            )
+            if not mfa_args["username"]:
+                raise ServerError(
+                    "Unexpected return from server during MFA challenge. Please check the PAS SDK version and update the PAS SDK if necessary."
+                )
+            print(
+                "Multi-factor authentication (MFA) is enabled for your account."
+            )
+            mfa_code = input(
+                "Please enter the code from your authenticator app:"
+            )
+            mfa_response = s.post(
+                f"{self.url}auth/confirmMFA",
+                json={
+                    "username": mfa_args["username"],
+                    "mfaCode": mfa_code,
+                    "challengeName": mfa_args["challengeName"],
+                    "session": mfa_args["session"],
+                },
+            )
+            if mfa_response.status_code != 200:
+                raise ServerError(
+                    "Could not confirm MFA for the PAS instance."
+                )
+            mfa_response = mfa_response.json()
+            if "AuthenticationResult" not in mfa_response:
+                raise ServerError(
+                    "Unexpected return from server during MFA confirmation. Please check the PAS SDK version and update the PAS SDK if necessary."
+                )
+            mfa_response = mfa_response["AuthenticationResult"]
+            if any(
+                x not in mfa_response
+                for x in [
+                    "AccessToken",
+                    "IdToken",
+                    "ExpiresIn",
+                    "RefreshToken",
+                ]
+            ):
+                raise ServerError(
+                    "Unexpected return from server during MFA confirmation. Please check the PAS SDK version and update the PAS SDK if necessary."
+                )
+            res["id_token"] = mfa_response["IdToken"]
+            res["access_token"] = mfa_response["AccessToken"]
+            res["expiresIn"] = mfa_response["ExpiresIn"]
+            res["refresh_token"] = mfa_response["RefreshToken"]
+
         decoded_token = jwt.decode(
             res["id_token"], options={"verify_signature": False}
         )
@@ -106,8 +167,7 @@ class Auth:
         return res["id_token"], res["access_token"]
 
     def _logout(self):
-        if not self.has_valid_refresh_token():
-            print("No valid refresh token found. Skipping logout")
+        if not self.has_valid_token():
             return True
         s = requests.Session()
         s.headers.update(
