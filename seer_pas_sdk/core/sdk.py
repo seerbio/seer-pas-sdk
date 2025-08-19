@@ -360,7 +360,7 @@ class SeerSDK:
         plate: dict
             A plate object.
         """
-        if not bool(plate_id) ^ bool(plate_name):
+        if not (bool(plate_id) ^ bool(plate_name)):
             raise ValueError(
                 "You must provide either plate_id or plate_name, but not both."
             )
@@ -587,7 +587,7 @@ class SeerSDK:
         projects: dict
             A project object.
         """
-        if not bool(project_id) ^ bool(project_name):
+        if not (bool(project_id) ^ bool(project_name)):
             raise ValueError(
                 "You must provide either project_id or project_name, but not both."
             )
@@ -1341,7 +1341,7 @@ class SeerSDK:
         >>> { "id": ..., "analysis_protocol_name": ... }
         """
 
-        if not bool(analysis_protocol_id) ^ bool(analysis_protocol_name):
+        if not (bool(analysis_protocol_id) ^ bool(analysis_protocol_name)):
             raise ValueError(
                 "You must provide either analysis_protocol_id or analysis_protocol_name, but not both."
             )
@@ -1671,7 +1671,7 @@ class SeerSDK:
         >>> { "id": ..., "analysis_name": ... }
 
         """
-        if not bool(analysis_id) ^ bool(analysis_name):
+        if not (bool(analysis_id) ^ bool(analysis_name)):
             raise ValueError(
                 "You must provide either analysis_id or analysis_name, but not both."
             )
@@ -3876,7 +3876,7 @@ class SeerSDK:
         Returns:
             list[dict] | None: If link is True, return a list of dictionaries containing the filename and download URL. Otherwise, return None.
         """
-        if not bool(analysis_protocol_id) ^ bool(analysis_id):
+        if not (bool(analysis_protocol_id) ^ bool(analysis_id)):
             raise ValueError(
                 "Please provide either an analysis ID or an analysis protocol ID."
             )
