@@ -1,6 +1,7 @@
 from tqdm import tqdm
 
 import deprecation
+import numpy as np
 import os
 import requests
 import urllib.request
@@ -3909,11 +3910,7 @@ class SeerSDK:
         elif analysis_protocol_engine == "proteogenomics":
             URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/proteogenomics/{analysis_protocol_id}"
         else:
-            # Change needed on the backend to get s3 file path for MaxQuant
-            # URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/{analysis_protocol_id}"
-            raise ValueError(
-                f"Analysis protocol engine {analysis_protocol_engine} not supported for fasta download."
-            )
+            URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/{analysis_protocol_id}"
 
         with self._get_auth_session("getanalysisprotocolparameters") as s:
             response = s.get(URL)
@@ -3922,28 +3919,36 @@ class SeerSDK:
             response = response.json()
             if isinstance(response, dict):
                 response = response["editableParameters"]
-            fasta_filenames = [
-                x["Value"]
-                for x in response
-                if x["Key"] in ["fasta", "fastaFilePath", "referencegenome"]
-            ]
+            fasta_filenames = (
+                np.array(
+                    [
+                        x["Value"]
+                        for x in response
+                        if x["Key"]
+                        in ["fasta", "fastaFilePath", "referencegenome"]
+                    ]
+                )
+                .flatten()
+                .tolist()
+            )
             if not fasta_filenames:
                 raise ServerError("No fasta file name returned from server.")
 
         URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
         links = []
+        missing_links = []
         for file in fasta_filenames:
             with self._get_auth_session("getanalysisprotocolfilesurl") as s:
+                filename = os.path.basename(file)
                 response = s.post(URL, json={"filepath": file})
                 if response.status_code != 200:
-                    raise ServerError("Request failed.")
+                    print(f"Could not retrieve download link for {filename}.")
+                    missing_links.append(filename)
+                    continue
                 url = response.json()["url"]
                 if link:
-                    links.append(
-                        {"filename": os.path.basename(file), "url": url}
-                    )
+                    links.append({"filename": filename, "url": url})
                     continue
-                filename = os.path.basename(file)
                 print(f"Downloading {filename}")
                 for _ in range(2):
                     try:
@@ -3969,5 +3974,9 @@ class SeerSDK:
                             os.makedirs(f"{download_path}")
 
                 print(f"Downloaded file to {download_path}/{filename}")
+        if missing_links:
+            print(
+                f"Could not retrieve download links for the following files: {', '.join(missing_links)}"
+            )
         if link:
             return links
