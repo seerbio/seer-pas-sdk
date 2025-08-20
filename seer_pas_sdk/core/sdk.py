@@ -956,7 +956,7 @@ class SeerSDK:
             res_df["control"] = res_df["control"].apply(
                 lambda x: x if x else None
             )
-        else:
+        elif analysis_id or analysis_name:
             if analysis_id:
                 res_df = self._get_analysis_samples(
                     analysis_id=analysis_id, as_df=True
@@ -965,6 +965,16 @@ class SeerSDK:
                 res_df = self._get_analysis_samples(
                     analysis_name=analysis_name, as_df=True
                 )
+        else:
+            # case: fetch all samples
+            with self._get_auth_session("findsamples") as s:
+                samples = s.get(URL, params=sample_params)
+                if samples.status_code != 200:
+                    raise ValueError(
+                        "Failed to fetch sample data for the authenticated user."
+                    )
+                res = samples.json()["data"]
+                res_df = dict_to_df(res)
 
         # apply post processing
         if "tenant_id" in res_df.columns:
