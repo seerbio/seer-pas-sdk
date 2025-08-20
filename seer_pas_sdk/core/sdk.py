@@ -832,7 +832,7 @@ class SeerSDK:
                 )
             else:
                 res_df = self._get_analysis_samples(
-                    analysis_name=analysis_name, as_df=True, is_name=True
+                    analysis_name=analysis_name, as_df=True
                 )
 
         # apply post processing
@@ -963,7 +963,7 @@ class SeerSDK:
                 )
             else:
                 res_df = self._get_analysis_samples(
-                    analysis_name=analysis_name, as_df=True, is_name=True
+                    analysis_name=analysis_name, as_df=True
                 )
 
         # apply post processing
