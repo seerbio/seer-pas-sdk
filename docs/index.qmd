@@ -867,13 +867,16 @@ uniprot_id gene_name   coverage  n_samples     median  fraction_samples         
 
 ### Get Peptide Results Table
 Returns the peptide results table for given `analysis_id` or `analysis_name`.
+
 #### <u>Params</u>
 * `analysis_id`: (`str`, optional) The analysis ID, defaulted to None.
 * `analysis_name`: (`str`, optional) The analysis name, defaulted to None.
 * `grouping`: ('str', optional): group criteria of table result. Defaults to "condition".
 * `as_df`: (`bool`, optional) Whether the result should be converted to a DataFrame, defaulted to False.
+
 #### <u>Returns</u>
 * res: (`list[dict]` or `DataFrame`) A list of dictionaries or DataFrame containing the peptide results table.
+
 #### <u>Example</u>
 ```{python}
 #| eval: false
