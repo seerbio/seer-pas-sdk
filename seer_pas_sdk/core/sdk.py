@@ -289,7 +289,7 @@ class SeerSDK:
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.find_plates()
+        >>> seer_sdk.get_plates()
         >>> [
                 { "id": ... },
                 { "id": ... },
@@ -436,7 +436,7 @@ class SeerSDK:
             938  5b05d440-6610-11ea-96e3-d5a4dab4ebf6  ...       None
             939  9872e3f0-544e-11ea-ad9e-1991e0725494  ...       None
 
-        >>> seer_sdk.get_plate_metadata(id="YOUR_PLATE_ID_HERE")
+        >>> seer_sdk.find_plates(id="YOUR_PLATE_ID_HERE")
         >>> [{ "id": ... }]
         """
 
@@ -472,6 +472,7 @@ class SeerSDK:
                 if "user_group" in entry:
                     entry["space"] = spaces.get(entry["user_group"], "General")
                     del entry["user_group"]
+
         return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
