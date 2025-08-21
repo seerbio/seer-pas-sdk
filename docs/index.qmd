@@ -941,3 +941,61 @@ log(sdk.group_analysis_results(group_analysis_id, box_plot_info))
 ```
 
 <hr>
+
+###Download Analysis Protocol FASTA
+
+Downloads the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly. Optionally, return signed download links instead of downloading.
+
+######<u>Params</u>
+* `analysis_protocol_id`: (`str`, optional) ID of the analysis protocol whose FASTA file(s) you want.
+
+* `analysis_id`: (`str`, optional) ID of the analysis whose protocol FASTA file(s) you want.
+
+* `link`: (`bool`, optional) If True, returns signed download links without downloading files. Defaults to False.
+
+* `download_path`: (`str`, optional) Directory to save files to. Defaults to the current working directory.
+
+Note: Provide either analysis_id or analysis_protocol_id (but not both).
+
+<br>
+######<u>Returns</u>
+
+* `list[dict] | None` — If link=True, returns a list of dictionaries with filename and url. Otherwise downloads files to download_path and returns None.
+
+<br>
+
+###### <u>Examples</u>
+
+Download by analysis ID (files saved to current directory):
+```{python}
+#| eval: false
+sdk.download_analysis_protocol_fasta(
+    analysis_id="c80a0260-856e-11ee-b1b7-ff20dde1461b"
+)
+```
+
+Download by analysis protocol ID to a specific folder:
+```{python}
+#| eval: false
+sdk.download_analysis_protocol_fasta(
+    analysis_protocol_id="dc61a360-6b77-11ed-8ac3-37d35135f08e",
+    download_path="/path/to/fasta"
+)
+```
+
+Get links only (no download):
+```{python}
+#| eval: false
+links = sdk.download_analysis_protocol_fasta(
+    analysis_protocol_id="dc61a360-6b77-11ed-8ac3-37d35135f08e",
+    link=True
+)
+log(links)
+```
+```
+[
+  {"filename": "uniprot_human_2023_08.fasta", "url": "https://...signed..."},
+  {"filename": "contaminants.fasta", "url": "https://...signed..."}
+]
+```
+<br>
