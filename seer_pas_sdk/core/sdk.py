@@ -382,6 +382,8 @@ class SeerSDK:
                 if "user_group" in res:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
+                res["id_uuid"] = res["id"]
+                del res["id"]
                 return res
         else:
             res = self.find_plates(plate_name=plate_name)
@@ -472,6 +474,8 @@ class SeerSDK:
                 if "user_group" in entry:
                     entry["space"] = spaces.get(entry["user_group"], "General")
                     del entry["user_group"]
+                entry["id_uuid"] = entry["id"]
+                del entry["id"]
         return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
