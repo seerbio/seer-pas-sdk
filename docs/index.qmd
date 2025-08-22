@@ -999,3 +999,95 @@ log(links)
 ]
 ```
 <br>
+
+
+
+### Get PCA Plot Data
+
+    Fetches PCA results for the given analyses and (optionally) subset of samples. Results include variance explained per axis and per-sample coordinates, returned either as a list of dicts or a pandas DataFrame.
+
+    ###### <u>Params</u>
+
+    * analysis_ids: (list[str]) IDs of the analyses of interest.
+
+    * type: (str) Data level to fetch. Must be either 'protein' or 'peptide'.
+
+    * sample_ids: (list[str], optional) IDs of the samples to include.
+
+    * hide_control: (bool, optional) Exclude controls if True. Defaults to False.
+
+    * as_df: (bool, optional) If True, convert the data payload to a pandas DataFrame. Defaults to False.
+
+    <br>
+   ###### <u>Returns</u>
+
+    * dict with the following keys:
+
+        * x_contribution_ratio (float): Proportion of variance explained by the x-axis (PC1).
+
+        * y_contribution_ratio (float): Proportion of variance explained by the y-axis (PC2).
+
+        * data (list[dict] | pd.DataFrame): Each item/row contains:
+
+            * sample_name (str): Sample name.
+
+            * plate_name (str): Plate name.
+
+            * sample_id (int): Sample ID.
+
+            * condition (str): Condition label.
+
+            * PC1 (float): PC1 coordinate.
+
+            * PC2 (float): PC2 coordinate.
+
+            * custom_* (str): Custom fields present if non-null in the data.
+
+    <br>
+
+    ###### <u>Examples</u>
+
+    Fetch protein-level PCA for a specific analysis/sample set:
+
+<br>
+
+
+### Get Analysis Hierarchical Clustering
+
+Fetches hierarchical clustering data for the specified analyses and (optionally) a subset of samples.
+
+##### <u>Params</u>
+
+* analysis_ids: (list[str]) IDs of the analyses. Required.
+
+* sample_ids: (list[str], optional) IDs of the samples. Must be non-empty if provided; an empty list may raise a ValueError.
+
+* hide_control: (bool, optional) Exclude control samples if True. Defaults to False.
+
+
+<br>
+<u>Returns</u>
+
+* dict — Hierarchical clustering payload returned by the API for the given inputs.
+
+<br>
+
+##### <u>Example</u>
+<br>
+
+### Get PPI Network Plot Data
+
+Fetches protein–protein interaction (PPI) network data for the provided list of significant protein groups.
+
+##### <u>Params</u>
+
+* significant_pgs: (list[str]) Significant protein group identifiers. Required.
+
+* species: (str, optional) Species filter. If omitted, the backend default is used.
+
+<br>
+##### <u>Returns</u>
+
+dict — API response containing the PPI network data (e.g., nodes, edges, and any associated metadata).
+
+<br>

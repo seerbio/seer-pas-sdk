@@ -3465,7 +3465,6 @@ class SeerSDK:
             analysis_ids (list[str]): IDs of the analyses.
             sample_ids (list[str], optional): IDs of the samples.
             hide_control (bool, optional): Mark true if controls are to be excluded. Defaults to False.
-            raw_data (bool, optional): Mark true if raw data should be returned. Defaults to True.
         Raises:
             ValueError: No analysis IDs provided.
             ValueError: No sample IDs provided.
