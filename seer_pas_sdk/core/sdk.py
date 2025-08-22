@@ -1705,7 +1705,7 @@ class SeerSDK:
                     raise ValueError(
                         "Invalid request. Please check your parameters."
                     )
-                res = analysis.json()
+                res = analysis.json()["analysis"]
                 spaces = {
                     x["id"]: x["usergroup_name"] for x in self.get_spaces()
                 }
