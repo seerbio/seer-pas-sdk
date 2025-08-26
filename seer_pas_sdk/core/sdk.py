@@ -4159,6 +4159,7 @@ class SeerSDK:
                 "RT",
                 "iRT",
                 "IM",
+                "iIM",
             ]
 
             return search_results[included_columns]
