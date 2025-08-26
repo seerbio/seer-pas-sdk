@@ -464,8 +464,8 @@ class SeerSDK:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
                 )
-            if not plate_id:
-                res = plates.json()["data"]
+
+            res = plates.json()["data"]
 
             for entry in res:
                 if "tenant_id" in entry:
