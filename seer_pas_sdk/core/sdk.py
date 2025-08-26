@@ -3980,3 +3980,140 @@ class SeerSDK:
             )
         if link:
             return links
+
+    def get_search_data(
+        self, analysis_id: str, analyte_type: str, rollup: str, engine: str
+    ):
+        # 1. Get msrun data for analysis
+
+        sample_ids = [
+            s["id"] for s in self.find_samples(analysis_id=analysis_id)
+        ]
+        msruns = self.find_msruns(sample_ids=sample_ids)
+        file_to_msrun = {
+            os.path.basename(msrun["raw_file_path"]).split(".")[0]: msrun
+            for msrun in msruns
+        }
+
+        # 2. Get search results for protein / peptide
+        # precursor will require its own logic
+        search_results = self.get_search_result(
+            analysis_id=analysis_id,
+            analyte_type=analyte_type,
+            rollup=rollup,
+        )
+
+        intensity_column = None
+        if engine.casefold() == "raw":
+            intensity_column = (
+                "Intensities Log10"
+                if "Intensities Log10" in search_results.columns
+                else "Intensity (Log10)"
+            )
+        elif engine.casefold() == "diann":
+            intensity_column = (
+                "DIA-NN Normalized Intensities Log10"
+                if "DIA-NN Normalized Intensities Log10"
+                in search_results.columns
+                else "DIA-NN Intensity (Log10)"
+            )
+        elif engine.casefold() == "median":
+            if (
+                not "Median Normalized Intensities Log10"
+                in search_results.columns
+            ):
+                raise ValueError(
+                    "Median normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later."
+                )
+            intensity_column = "Median Normalized Intensities Log10"
+        elif engine.casefold() == "median80":
+            if (
+                not "Median 80 Normalized Intensities Log10"
+                in search_results.columns
+            ):
+                raise ValueError(
+                    "Median 80 normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later."
+                )
+            intensity_column = "Median 80 Normalized Intensities Log10"
+        elif engine.casefold() == "pepcal":
+            if (
+                not "Pepcal Normalized Intensities Log10"
+                in search_results.columns
+            ):
+                raise ValueError(
+                    "Pepcal normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later with the Seer Peptide Calibrant option enabled."
+                )
+            intensity_column = "Pepcal Normalized Intensities Log10"
+        else:
+            raise ValueError(
+                f"Engine {engine} not supported. Supported engines are: raw, diann, median, median80, pepcal."
+            )
+
+        search_results["File Name"] = search_results["File Name"].apply(
+            lambda x: os.path.basename(x).split(".")[0]
+        )
+
+        search_results["Intensity Log10"] = search_results[intensity_column]
+
+        # 3. pull report.tsv
+
+        report = self.get_search_result(
+            analysis_id=analysis_id,
+            analyte_type="precursor",
+            rollup="np",
+        )
+
+        if analyte_type == "protein":
+            report["File Name"] = report["Run"]
+            report["Protein Group"] = report["Protein.Group"]
+            report["Q Value"] = (
+                report["Q.Value"]
+                if analyte_type == "peptide"
+                else report["Protein.Q.Value"]
+            )
+
+            report = report[["File Name", "Protein Group", "Q Value"]]
+            report.drop_duplicates(
+                subset=["File Name", "Protein Group"], inplace=True
+            )
+
+            search_results = search_results[
+                ["File Name", "Intensity Log10", "Protein Group"]
+            ]
+            # 4. merge report and search results on file name
+            df = pd.merge(
+                search_results,
+                report,
+                on=["File Name", "Protein Group"],
+                how="left",
+            )
+
+            df["MsRun ID"] = df["File Name"].apply(
+                lambda x: (
+                    file_to_msrun[x]["id"] if x in file_to_msrun else None
+                )
+            )
+            df["Sample ID"] = df["MsRun ID"].apply(
+                lambda x: (
+                    file_to_msrun[x]["sample_id"]
+                    if x in file_to_msrun
+                    else None
+                )
+            )
+
+            included_columns = [
+                "MsRun ID",
+                "Sample ID",
+                "Protein Group",
+                "Intensity Log10",
+                "Q Value",
+            ]
+            # 5. From report, get q values,
+            return df[included_columns]
+
+            #    If analyte_type is peptide, attach retention time (RT, iRT)
+            #    If analyte_type is precursor, attach retention time (RT, iRT), precursor charge
+
+        return df[included_columns]
+
+        # Where to get peptide Q value?
