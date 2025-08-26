@@ -1,6 +1,7 @@
 from tqdm import tqdm
 
 import deprecation
+import numpy as np
 import os
 import requests
 import urllib.request
@@ -361,7 +362,7 @@ class SeerSDK:
         plate: dict
             A plate object.
         """
-        if not bool(plate_id) ^ bool(plate_name):
+        if not (bool(plate_id) ^ bool(plate_name)):
             raise ValueError(
                 "You must provide either plate_id or plate_name, but not both."
             )
@@ -592,7 +593,7 @@ class SeerSDK:
         projects: dict
             A project object.
         """
-        if not bool(project_id) ^ bool(project_name):
+        if not (bool(project_id) ^ bool(project_name)):
             raise ValueError(
                 "You must provide either project_id or project_name, but not both."
             )
@@ -1359,7 +1360,7 @@ class SeerSDK:
         >>> { "id": ..., "analysis_protocol_name": ... }
         """
 
-        if not bool(analysis_protocol_id) ^ bool(analysis_protocol_name):
+        if not (bool(analysis_protocol_id) ^ bool(analysis_protocol_name)):
             raise ValueError(
                 "You must provide either analysis_protocol_id or analysis_protocol_name, but not both."
             )
@@ -1692,7 +1693,7 @@ class SeerSDK:
         >>> { "id": ..., "analysis_name": ... }
 
         """
-        if not bool(analysis_id) ^ bool(analysis_name):
+        if not (bool(analysis_id) ^ bool(analysis_name)):
             raise ValueError(
                 "You must provide either analysis_id or analysis_name, but not both."
             )
@@ -3781,6 +3782,11 @@ class SeerSDK:
         resp.drop_duplicates(subset=["id"], inplace=True)
         return resp if as_df else resp.to_dict(orient="records")
 
+    @deprecation.deprecated(
+        deprecated_in="1.1.0",
+        removed_in="2.0.0",
+        details="get_analysis_protocol_fasta is deprecated. Use download_analysis_protocol_fasta instead.",
+    )
     def get_analysis_protocol_fasta(self, analysis_id, download_path=None):
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
@@ -3866,3 +3872,125 @@ class SeerSDK:
                             os.makedirs(f"{download_path}")
 
                 print(f"Downloaded file to {download_path}/{file}")
+
+    def download_analysis_protocol_fasta(
+        self,
+        analysis_protocol_id=None,
+        analysis_id=None,
+        link=False,
+        download_path=None,
+    ):
+        """Download the fasta file associated with a given analysis protocol.
+
+        Args:
+            analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
+            analysis_id (str, optional): ID of the analysis. Defaults to None.
+            link (bool, optional): If True, return a list of download links instead of downloading the files. Defaults to False.
+            download_path (str, optional): Path to download the fasta file to. Defaults to current working directory.
+
+        Returns:
+            list[dict] | None: If link is True, return a list of dictionaries containing the filename and download URL. Otherwise, return None.
+        """
+        if not (bool(analysis_protocol_id) ^ bool(analysis_id)):
+            raise ValueError(
+                "Please provide either an analysis ID or an analysis protocol ID."
+            )
+
+        if not download_path:
+            download_path = os.getcwd()
+
+        if not analysis_protocol_id:
+            try:
+                analysis_protocol_id = self.get_analyses(analysis_id)[0][
+                    "analysis_protocol_id"
+                ]
+            except (IndexError, KeyError):
+                raise ValueError(f"Could not parse server response.")
+
+        try:
+            analysis_protocol_engine = self.get_analysis_protocols(
+                analysis_protocol_id=analysis_protocol_id
+            )[0]["analysis_engine"]
+        except (IndexError, KeyError):
+            raise ValueError(f"Could not parse server response.")
+
+        analysis_protocol_engine = analysis_protocol_engine.lower()
+        if analysis_protocol_engine == "diann":
+            URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/diann/{analysis_protocol_id}"
+        elif analysis_protocol_engine == "encyclopedia":
+            URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/dia/{analysis_protocol_id}"
+        elif analysis_protocol_engine == "msfragger":
+            URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/msfragger/{analysis_protocol_id}"
+        elif analysis_protocol_engine == "proteogenomics":
+            URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/proteogenomics/{analysis_protocol_id}"
+        else:
+            URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/{analysis_protocol_id}"
+
+        with self._get_auth_session("getanalysisprotocolparameters") as s:
+            response = s.get(URL)
+            if response.status_code != 200:
+                raise ServerError("Request failed.")
+            response = response.json()
+            if isinstance(response, dict):
+                response = response["editableParameters"]
+            fasta_filenames = (
+                np.array(
+                    [
+                        x["Value"]
+                        for x in response
+                        if x["Key"]
+                        in ["fasta", "fastaFilePath", "referencegenome"]
+                    ]
+                )
+                .flatten()
+                .tolist()
+            )
+            if not fasta_filenames:
+                raise ServerError("No fasta file name returned from server.")
+
+        URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
+        links = []
+        missing_links = []
+        for file in fasta_filenames:
+            with self._get_auth_session("getanalysisprotocolfilesurl") as s:
+                filename = os.path.basename(file)
+                response = s.post(URL, json={"filepath": file})
+                if response.status_code != 200:
+                    print(f"Could not retrieve download link for {filename}.")
+                    missing_links.append(filename)
+                    continue
+                url = response.json()["url"]
+                if link:
+                    links.append({"filename": filename, "url": url})
+                    continue
+                print(f"Downloading {filename}")
+                for _ in range(2):
+                    try:
+                        with tqdm(
+                            unit="B",
+                            unit_scale=True,
+                            unit_divisor=1024,
+                            miniters=1,
+                            desc=f"Progress",
+                        ) as t:
+                            ssl._create_default_https_context = (
+                                ssl._create_unverified_context
+                            )
+                            urllib.request.urlretrieve(
+                                url,
+                                f"{download_path}/{filename}",
+                                reporthook=download_hook(t),
+                                data=None,
+                            )
+                            break
+                    except:
+                        if not os.path.isdir(f"{download_path}"):
+                            os.makedirs(f"{download_path}")
+
+                print(f"Downloaded file to {download_path}/{filename}")
+        if missing_links:
+            print(
+                f"Could not retrieve download links for the following files: {', '.join(missing_links)}"
+            )
+        if link:
+            return links
