@@ -710,6 +710,10 @@ class SeerSDK:
             res = projects.json()["data"]
 
         spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+        plate_name_to_plate_uuid = {
+            x["plate_name"]: x["plate_uuid"]
+            for x in self.find_plates(as_df=False)
+        }
         for entry in res:
             if "tenant_id" in entry:
                 del entry["tenant_id"]
@@ -725,11 +729,10 @@ class SeerSDK:
                 entry["space"] = spaces.get(entry["user_group"], "General")
                 del entry["user_group"]
 
-            plate_ids = {
-                x["plate_uuid"]
-                for x in self.find_samples(project_id=entry["id"])
-            }
-            entry["plate_uuids"] = list(plate_ids)
+            if "plates" in entry:
+                entry["plate_uuids"] = [
+                    plate_name_to_plate_uuid[x] for x in entry["plates"]
+                ]
 
         if not res and as_df:
             return pd.DataFrame(columns=PROJECT_COLUMNS)
