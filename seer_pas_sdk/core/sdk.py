@@ -477,7 +477,6 @@ class SeerSDK:
                     del entry["user_group"]
                 if "id" in entry:
                     entry["plate_uuid"] = entry["id"]
-                    del entry["id"]
 
         if not res and as_df:
             return pd.DataFrame(columns=PLATE_COLUMNS)
@@ -620,10 +619,10 @@ class SeerSDK:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
                 plate_ids = {
-                    x["plate_id"]
+                    x["plate_uuid"]
                     for x in self.find_samples(project_id=res["id"])
                 }
-                res["plate_ids"] = list(plate_ids)
+                res["plate_uuids"] = list(plate_ids)
                 return res
         else:
             res = self.find_projects(project_name=project_name)
@@ -726,10 +725,10 @@ class SeerSDK:
                 del entry["user_group"]
 
             plate_ids = {
-                x["plate_id"]
+                x["plate_uuid"]
                 for x in self.find_samples(project_id=entry["id"])
             }
-            entry["plate_ids"] = list(plate_ids)
+            entry["plate_uuids"] = list(plate_ids)
 
         if not res and as_df:
             return pd.DataFrame(columns=PROJECT_COLUMNS)
