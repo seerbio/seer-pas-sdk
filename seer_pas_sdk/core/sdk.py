@@ -13,6 +13,7 @@ from typing import List as _List, Tuple as _Tuple
 from ..common import *
 from ..auth import Auth
 from ..objects.volcanoplot import VolcanoPlotBuilder
+from ..objects.headers import *
 
 
 class SeerSDK:
@@ -290,7 +291,7 @@ class SeerSDK:
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.find_plates()
+        >>> seer_sdk.get_plates()
         >>> [
                 { "id": ... },
                 { "id": ... },
@@ -437,7 +438,7 @@ class SeerSDK:
             938  5b05d440-6610-11ea-96e3-d5a4dab4ebf6  ...       None
             939  9872e3f0-544e-11ea-ad9e-1991e0725494  ...       None
 
-        >>> seer_sdk.get_plate_metadata(id="YOUR_PLATE_ID_HERE")
+        >>> seer_sdk.find_plates(id="YOUR_PLATE_ID_HERE")
         >>> [{ "id": ... }]
         """
 
@@ -446,6 +447,8 @@ class SeerSDK:
 
         if not plate_id and not plate_name:
             params = {"all": "true"}
+        elif plate_id:
+            params = {"searchFields": "id", "searchItem": plate_id}
         elif plate_name:
             params = {"searchFields": "plate_name", "searchItem": plate_name}
         else:
@@ -455,17 +458,15 @@ class SeerSDK:
         with self._get_auth_session("findplates") as s:
 
             plates = s.get(
-                f"{URL}/{plate_id}" if plate_id else URL,
+                URL,
                 params=params,
             )
             if plates.status_code != 200:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
                 )
-            if not plate_id:
-                res = plates.json()["data"]
-            else:
-                res = [plates.json()]
+
+            res = plates.json()["data"]
 
             for entry in res:
                 if "tenant_id" in entry:
@@ -473,6 +474,9 @@ class SeerSDK:
                 if "user_group" in entry:
                     entry["space"] = spaces.get(entry["user_group"], "General")
                     del entry["user_group"]
+
+        if not res and as_df:
+            return pd.DataFrame(columns=PLATE_COLUMNS)
         return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
@@ -569,6 +573,7 @@ class SeerSDK:
                 entry["raw_file_path"] = entry["raw_file_path"][
                     location(entry["raw_file_path"]) :
                 ]
+
         return res if not as_df else dict_to_df(res)
 
     def get_project(self, project_id: str = None, project_name: str = None):
@@ -695,9 +700,6 @@ class SeerSDK:
                 )
             res = projects.json()["data"]
 
-            if project_id and not res:
-                raise ValueError("Project ID is invalid.")
-
         spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
         for entry in res:
             if "tenant_id" in entry:
@@ -713,6 +715,9 @@ class SeerSDK:
             if "user_group" in entry:
                 entry["space"] = spaces.get(entry["user_group"], "General")
                 del entry["user_group"]
+
+        if not res and as_df:
+            return pd.DataFrame(columns=PROJECT_COLUMNS)
         return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
@@ -832,7 +837,7 @@ class SeerSDK:
                 )
             else:
                 res_df = self._get_analysis_samples(
-                    analysis_name=analysis_name, as_df=True, is_name=True
+                    analysis_name=analysis_name, as_df=True
                 )
 
         # apply post processing
@@ -928,44 +933,52 @@ class SeerSDK:
         if project_id or plate_id:
             with self._get_auth_session("findsamples") as s:
                 if plate_id:
-                    try:
-                        self.find_plates(plate_id=plate_id)
-                    except:
-                        raise ValueError("Plate ID is invalid.")
+                    search_name = "plate_id"
+                    search_value = plate_id
                     sample_params["plateId"] = plate_id
 
                 else:
-                    try:
-                        self.find_projects(project_id=project_id)
-                    except:
-                        raise ValueError("Project ID is invalid.")
-
+                    search_name = "project_id"
+                    search_value = project_id
                     sample_params["projectId"] = project_id
 
             samples = s.get(URL, params=sample_params)
             if samples.status_code != 200:
                 raise ValueError(
-                    f"Failed to fetch sample data for plate ID: {plate_id}."
+                    f"Failed to fetch sample data for {search_name}: {search_value}."
                 )
             res = samples.json()["data"]
             if not res:
-                return [] if not as_df else dict_to_df(res)
+                return (
+                    [] if not as_df else pd.DataFrame(columns=SAMPLE_COLUMNS)
+                )
             res_df = dict_to_df(res)
 
             # API returns empty strings if not a control, replace with None for filtering purposes
             res_df["control"] = res_df["control"].apply(
                 lambda x: x if x else None
             )
-        else:
+        elif analysis_id or analysis_name:
             if analysis_id:
                 res_df = self._get_analysis_samples(
                     analysis_id=analysis_id, as_df=True
                 )
             else:
                 res_df = self._get_analysis_samples(
-                    analysis_name=analysis_name, as_df=True, is_name=True
+                    analysis_name=analysis_name, as_df=True
                 )
+        else:
+            with self._get_auth_session("findsamples") as s:
+                samples = s.get(URL, params=sample_params)
+                if samples.status_code != 200:
+                    raise ValueError(
+                        "Failed to fetch sample data for the authenticated user."
+                    )
+                res = samples.json()["data"]
+                res_df = dict_to_df(res)
 
+        if res_df.empty and as_df:
+            return pd.DataFrame(columns=SAMPLE_COLUMNS)
         # apply post processing
         if "tenant_id" in res_df.columns:
             res_df.drop(["tenant_id"], axis=1, inplace=True)
@@ -988,6 +1001,8 @@ class SeerSDK:
             ]
         ]
 
+        if res_df.empty and as_df:
+            return pd.DataFrame(columns=SAMPLE_COLUMNS)
         return res_df.to_dict(orient="records") if not as_df else res_df
 
     def _filter_samples_metadata(
@@ -1215,6 +1230,9 @@ class SeerSDK:
             if "user_group" in entry:
                 entry["space"] = spaces.get(entry["user_group"], "General")
                 del entry["user_group"]
+
+        if not res and as_df:
+            return pd.DataFrame(columns=MSRUN_COLUMNS)
         return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
@@ -1437,6 +1455,10 @@ class SeerSDK:
                     "searchItem": analysis_protocol_name,
                 }
             )
+        elif analysis_protocol_id:
+            params.update(
+                {"searchFields": "id", "searchItem": analysis_protocol_id}
+            )
 
         with self._get_auth_session("findanalysisprotocols") as s:
 
@@ -1445,10 +1467,7 @@ class SeerSDK:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
                 )
-            if analysis_protocol_id:
-                res = protocols.json()["data"]
-            else:
-                res = protocols.json()["data"]
+            res = protocols.json()["data"]
 
             spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
             for entry in range(len(res)):
@@ -1477,6 +1496,8 @@ class SeerSDK:
                     )
                     del res[entry]["user_group"]
 
+            if not res and as_df:
+                return pd.DataFrame(columns=ANALYSIS_PROTOCOL_COLUMNS)
             return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
@@ -1685,7 +1706,7 @@ class SeerSDK:
                     raise ValueError(
                         "Invalid request. Please check your parameters."
                     )
-                res = analysis.json()
+                res = analysis.json()["analysis"]
                 spaces = {
                     x["id"]: x["usergroup_name"] for x in self.get_spaces()
                 }
@@ -1815,6 +1836,9 @@ class SeerSDK:
             if folder_id:
                 params["folder"] = folder_id
 
+            if analysis_id:
+                params["searchFields"] = "id"
+                params["searchItem"] = analysis_id
             if search_field:
                 params["searchFields"] = search_field
                 params["searchItem"] = search_item
@@ -1829,19 +1853,13 @@ class SeerSDK:
             if plate_name:
                 params["plateName"] = plate_name
 
-            analyses = s.get(
-                f"{URL}/{analysis_id}" if analysis_id else URL, params=params
-            )
+            analyses = s.get(URL, params=params)
 
             if analyses.status_code != 200:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
                 )
-            if not analysis_id:
-                res = analyses.json()["data"]
-
-            else:
-                res = [analyses.json()["analysis"]]
+            res = analyses.json()["data"]
 
             folders = []
             spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
@@ -1850,10 +1868,9 @@ class SeerSDK:
                     del res[entry]["tenant_id"]
 
                 if "parameter_file_path" in res[entry]:
-                    # Simple lambda function to find the third occurrence of '/' in the raw file path
+                    # Trim parameter file path to user visible attributes
                     location = lambda s: len(s) - len(s.split("/", 3)[-1])
 
-                    # Slicing the string from the location
                     res[entry]["parameter_file_path"] = res[entry][
                         "parameter_file_path"
                     ][location(res[entry]["parameter_file_path"]) :]
@@ -1879,6 +1896,8 @@ class SeerSDK:
                 res = [
                     analysis for analysis in res if not analysis["is_folder"]
                 ]
+            if not res and as_df:
+                return pd.DataFrame(columns=ANALYSIS_COLUMNS)
             return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(deprecated_in="0.3.0", removed_in="2.0.0")
@@ -3758,11 +3777,6 @@ class SeerSDK:
                     resp += obj["samples"]
                 except:
                     continue
-
-        if not resp:
-            raise ServerError(
-                f"Could not retrieve samples for analysis {analysis_id or analysis_name}."
-            )
 
         resp = pd.DataFrame(resp)
         resp.drop_duplicates(subset=["id"], inplace=True)
