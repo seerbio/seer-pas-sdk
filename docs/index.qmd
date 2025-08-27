@@ -252,7 +252,7 @@ plate = sdk.get_plate(plate_id=plate_id)
 log(plate)
 ```
 ```
-{'id': '00d1ac50-1149-11ee-85b5-bd8ec5ef4e32', 'plate_name': 'finalPlateNameTest', 'plate_id': 'finalPlateIdTest', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-22T22:06:13.963Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-22T22:06:18.470Z', 'user_group': None}
+{'id': '00d1ac50-1149-11ee-85b5-bd8ec5ef4e32', 'plate_name': 'finalPlateNameTest', 'plate_id': 'finalPlateIdTest', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-22T22:06:13.963Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-22T22:06:18.470Z', 'space': None}
 ```
 
 #### Fetch by `plate_name`
@@ -263,7 +263,7 @@ plate = sdk.get_plate(plate_name=plate_name)
 log(plate)
 ```
 ```
-{'id': '00d1ac50-1149-11ee-85b5-bd8ec5ef4e32', 'plate_name': 'finalPlateNameTest', 'plate_id': 'finalPlateIdTest', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-22T22:06:13.963Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-22T22:06:18.470Z', 'user_group': None}
+{'id': '00d1ac50-1149-11ee-85b5-bd8ec5ef4e32', 'plate_name': 'finalPlateNameTest', 'plate_id': 'finalPlateIdTest', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-22T22:06:13.963Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-22T22:06:18.470Z', 'space': None}
 ```
 
 <hr>
@@ -285,7 +285,7 @@ plates = sdk.find_plates()
 log(plates)
 ```
 ```
-[{'id': '303bfc20-87d7-11ee-b03f-27a54e8c1798', 'plate_name': 'some_plate_name', 'plate_id': 'unique223id', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-11-20T19:01:19.249Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-20T19:01:26.881Z', 'user_group': None}, {'id': '0ddf9920-87d7-11ee-b03f-27a54e8c1798', 'plate_name': 'some_plate_name', 'plate_id': 'unique223id', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-11-20T19:00:21.602Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-20T19:00:27.273Z', 'user_group': None}]
+[{'id': '303bfc20-87d7-11ee-b03f-27a54e8c1798', 'plate_name': 'some_plate_name', 'plate_id': 'unique223id', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-11-20T19:01:19.249Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-20T19:01:26.881Z', 'space': None}, {'id': '0ddf9920-87d7-11ee-b03f-27a54e8c1798', 'plate_name': 'some_plate_name', 'plate_id': 'unique223id', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-11-20T19:00:21.602Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-20T19:00:27.273Z', 'space': None}]
 ```
 
 You can also pass in a specific `plate_id` to specifically fetch a plate.
@@ -296,7 +296,7 @@ sample_plate = sdk.find_plates(plate_id)
 log(sample_plate)
 ```
 ```
-[{'id': '00d1ac50-1149-11ee-85b5-bd8ec5ef4e32', 'plate_name': 'finalPlateNameTest', 'plate_id': 'finalPlateIdTest', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-22T22:06:13.963Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-22T22:06:18.470Z', 'user_group': None}]
+[{'id': '00d1ac50-1149-11ee-85b5-bd8ec5ef4e32', 'plate_name': 'finalPlateNameTest', 'plate_id': 'finalPlateIdTest', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-22T22:06:13.963Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-22T22:06:18.470Z', 'space': None}]
 ```
 
 With the `as_df` flag set to `True`:
@@ -306,7 +306,7 @@ sample_plate = sdk.find_plates(plate_id, as_df=True)
 log(sample_plate)
 ```
 ```
-                    id                       plate_name          plate_id     description notes               created_by                  created_timestamp                last_modified_by            last_modified_timestamp  user_group
+                    id                       plate_name          plate_id     description notes               created_by                  created_timestamp                last_modified_by            last_modified_timestamp  space
 0  00d1ac50-1149-11ee-85b5-bd8ec5ef4e32  finalPlateNameTest  finalPlateIdTest     None     None  04936dea-d255-4130-8e82-2f28938a8f9a  2023-06-22T22:06:13.963Z  04936dea-d255-4130-8e82-2f28938a8f9a  2023-06-22T22:06:18.470Z    None
 ```
 
@@ -334,7 +334,7 @@ example = sdk.find_msruns(sample_ids)
 log(example)
 ```
 ```
-[{'id': '81c6a180-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '812139c0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/AgamSDKTest2.raw', 'well_location': 'D11', 'nanoparticle': '', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:49.006Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:49.006Z', 'user_group': None, 'sample_id_tracking': 'A112', 'nanoparticle_id': '', 'control': '', 'control_id': '', 'date_sample_prep': '', 'sample_volume': '', 'peptide_concentration': '', 'peptide_mass_sample': '', 'dilution_factor': '', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}, {'id': '816a9ed0-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '803e05b0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/AgamSDKTest1.raw', 'well_location': 'C11', 'nanoparticle': 'NONE', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:48.408Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:48.408Z', 'user_group': None, 'sample_id_tracking': 'A111', 'nanoparticle_id': 'NONE', 'control': 'MPE Control', 'control_id': 'MPE Control', 'date_sample_prep': '', 'sample_volume': '20.0', 'peptide_concentration': '59.514', 'peptide_mass_sample': '8.57', 'dilution_factor': '1.0', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}]
+[{'id': '81c6a180-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '812139c0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/AgamSDKTest2.raw', 'well_location': 'D11', 'nanoparticle': '', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:49.006Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:49.006Z', 'space': None, 'sample_id_tracking': 'A112', 'nanoparticle_id': '', 'control': '', 'control_id': '', 'date_sample_prep': '', 'sample_volume': '', 'peptide_concentration': '', 'peptide_mass_sample': '', 'dilution_factor': '', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}, {'id': '816a9ed0-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '803e05b0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/AgamSDKTest1.raw', 'well_location': 'C11', 'nanoparticle': 'NONE', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:48.408Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:48.408Z', 'space': None, 'sample_id_tracking': 'A111', 'nanoparticle_id': 'NONE', 'control': 'MPE Control', 'control_id': 'MPE Control', 'date_sample_prep': '', 'sample_volume': '20.0', 'peptide_concentration': '59.514', 'peptide_mass_sample': '8.57', 'dilution_factor': '1.0', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}]
 ```
 
 There is also an option to return everything as a DataFrame instead:
@@ -344,7 +344,7 @@ example = sdk.find_msruns(sample_ids, as_df=True)
 log(example)
 ```
 ```
-                    id                                sample_id                                 raw_file_path                    well_location nanoparticle instrument_name               created_by                  created_timestamp                last_modified_by            last_modified_timestamp  user_group sample_id_tracking nanoparticle_id   control     control_id  date_sample_prep sample_volume peptide_concentration peptide_mass_sample dilution_factor kit_id injection_timestamp ms_instrument_sn recon_volume gradient
+                    id                                sample_id                                 raw_file_path                    well_location nanoparticle instrument_name               created_by                  created_timestamp                last_modified_by            last_modified_timestamp  space sample_id_tracking nanoparticle_id   control     control_id  date_sample_prep sample_volume peptide_concentration peptide_mass_sample dilution_factor kit_id injection_timestamp ms_instrument_sn recon_volume gradient
 0  81c6a180-15e0-11ee-bdf1-bbaa73585acf  812139c0-15e0-11ee-bdf1-bbaa73585acf  7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/202306281...       D11                                   04936dea-d255-4130-8e82-2f28938a8f9a  2023-06-28T18:20:49.006Z  04936dea-d255-4130-8e82-2f28938a8f9a  2023-06-28T18:20:49.006Z    None           A112                                                                                                                                            None          None              None           None       None
 1  816a9ed0-15e0-11ee-bdf1-bbaa73585acf  803e05b0-15e0-11ee-bdf1-bbaa73585acf  7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/202306281...       C11         NONE                      04936dea-d255-4130-8e82-2f28938a8f9a  2023-06-28T18:20:48.408Z  04936dea-d255-4130-8e82-2f28938a8f9a  2023-06-28T18:20:48.408Z    None           A111              NONE       MPE Control  MPE Control                       20.0             59.514                8.57               1.0       None          None              None           None       None
 ```
@@ -377,7 +377,7 @@ project = sdk.get_project(project_id=project_id)
 log(project)
 ```
 ```
-{'id': '222e0890-0f95-11ee-9c0f-3bf27c252a07', 'project_name': 'sdk test projjjjjj', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-20T18:06:09.397Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-20T18:06:09.397Z', 'user_group': None}
+{'id': '222e0890-0f95-11ee-9c0f-3bf27c252a07', 'project_name': 'sdk test projjjjjj', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-20T18:06:09.397Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-20T18:06:09.397Z', 'space': None}
 ```
 #### Fetch by `project_name`
 ```python
@@ -387,7 +387,7 @@ project = sdk.get_project(project_name=project_name)
 log(project)
 ```
 ```
-{'id': '222e0890-0f95-11ee-9c0f-3bf27c252a07', 'project_name': 'sdk test projjjjjj', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-20T18:06:09.397Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-20T18:06:09.397Z', 'user_group': None}
+{'id': '222e0890-0f95-11ee-9c0f-3bf27c252a07', 'project_name': 'sdk test projjjjjj', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-20T18:06:09.397Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-20T18:06:09.397Z', 'space': None}
 ```
 
 <hr>
@@ -412,7 +412,7 @@ projects = sdk.find_projects()
 log(projects)
 ```
 ```
-[{'id': '542e36d0-87d6-11ee-b03f-27a54e8c1798', 'project_name': 'test_project', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-11-20T18:55:10.059Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-20T18:55:10.059Z', 'user_group': None}, {'id': '221f0e80-66f7-11ee-abb2-359a84c72f54', 'project_name': 'test_project', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-10-09T22:56:51.066Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-10-09T22:56:51.066Z', 'user_group': None}]
+[{'id': '542e36d0-87d6-11ee-b03f-27a54e8c1798', 'project_name': 'test_project', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-11-20T18:55:10.059Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-20T18:55:10.059Z', 'space': None}, {'id': '221f0e80-66f7-11ee-abb2-359a84c72f54', 'project_name': 'test_project', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-10-09T22:56:51.066Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-10-09T22:56:51.066Z', 'space': None}]
 ```
 
 You can also pass in a specific `project_id` to specifically fetch a project.
@@ -423,7 +423,7 @@ sample_project = sdk.find_projects(project_id)
 log(sample_project)
 ```
 ```
-[{'id': '222e0890-0f95-11ee-9c0f-3bf27c252a07', 'project_name': 'sdk test projjjjjj', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-20T18:06:09.397Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-20T18:06:09.397Z', 'user_group': None}]
+[{'id': '222e0890-0f95-11ee-9c0f-3bf27c252a07', 'project_name': 'sdk test projjjjjj', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-20T18:06:09.397Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-20T18:06:09.397Z', 'space': None}]
 ```
 
 <hr>
@@ -454,7 +454,7 @@ protocol = sdk.get_analysis_protocol(
 log(protocol)
 ```
 ```
-{'id': 'dc61a360-6b77-11ed-8ac3-37d35135f08e', 'analysis_protocol_name': 'testMSFraggerUpload26', 'analysis_type': 'DDA', 'version_number': '1', 'description': '', 'notes': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2022-11-23T21:43:26.142Z', 'parameter_file_path': 'msfragger-parameter/testMSFraggerUpload26.json', 'user_group': None, 'species': 'Human', 'alg_version': '3.4', 'analysis_engine': 'msfragger', 'scope': 'user'}
+{'id': 'dc61a360-6b77-11ed-8ac3-37d35135f08e', 'analysis_protocol_name': 'testMSFraggerUpload26', 'analysis_type': 'DDA', 'version_number': '1', 'description': '', 'notes': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2022-11-23T21:43:26.142Z', 'parameter_file_path': 'msfragger-parameter/testMSFraggerUpload26.json', 'space': None, 'species': 'Human', 'alg_version': '3.4', 'analysis_engine': 'msfragger', 'scope': 'user'}
 ```
 Fetch by name:
 ```{python}
@@ -465,7 +465,7 @@ protocol = sdk.get_analysis_protocol(
 log(protocol)
 ```
 ```
-{'id': 'dc61a360-6b77-11ed-8ac3-37d35135f08e', 'analysis_protocol_name': 'testMSFraggerUpload26', 'analysis_type': 'DDA', 'version_number': '1', 'description': '', 'notes': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2022-11-23T21:43:26.142Z', 'parameter_file_path': 'msfragger-parameter/testMSFraggerUpload26.json', 'user_group': None, 'species': 'Human', 'alg_version': '3.4', 'analysis_engine': 'msfragger', 'scope': 'user'}
+{'id': 'dc61a360-6b77-11ed-8ac3-37d35135f08e', 'analysis_protocol_name': 'testMSFraggerUpload26', 'analysis_type': 'DDA', 'version_number': '1', 'description': '', 'notes': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2022-11-23T21:43:26.142Z', 'parameter_file_path': 'msfragger-parameter/testMSFraggerUpload26.json', 'space': None, 'species': 'Human', 'alg_version': '3.4', 'analysis_engine': 'msfragger', 'scope': 'user'}
 ```
 
 <hr>
@@ -489,7 +489,7 @@ analysis_protocols = sdk.find_analysis_protocols()
 log(analysis_protocols)
 ```
 ```
-[{'id': 'f17bf010-3d55-11ee-8e2e-d304769e96eb', 'analysis_protocol_name': 'first analysis protocol for DIA - DIANN 1.8.1 - Prefect - MBR', 'analysis_type': 'DIA', 'version_number': '1', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-08-17T23:29:42.870Z', 'parameter_file_path': 'diann-parameter/first_analysis_protocol_for_DIA_-_DIANN_1.8.1_-_Prefect_-_MBR.json', 'user_group': None, 'species': 'Human', 'alg_version': '1.8.1', 'analysis_engine': 'diann', 'scope': 'user'}, {'id': '10', 'analysis_protocol_name': 'first analysis protocol for DIA - DIANN 1.8.1 - Prefect', 'analysis_type': 'DIA', 'version_number': '1', 'description': None, 'notes': None, 'created_by': 'c7b78248-d7f3-4379-8a33-64853dc427a9', 'created_timestamp': '2023-08-17T18:50:02.504Z', 'parameter_file_path': 'diann-parameter/diann-20230915.json', 'user_group': None, 'species': 'Human', 'alg_version': '1.8.1', 'analysis_engine': 'diann', 'scope': 'system'}]
+[{'id': 'f17bf010-3d55-11ee-8e2e-d304769e96eb', 'analysis_protocol_name': 'first analysis protocol for DIA - DIANN 1.8.1 - Prefect - MBR', 'analysis_type': 'DIA', 'version_number': '1', 'description': None, 'notes': None, 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-08-17T23:29:42.870Z', 'parameter_file_path': 'diann-parameter/first_analysis_protocol_for_DIA_-_DIANN_1.8.1_-_Prefect_-_MBR.json', 'space': None, 'species': 'Human', 'alg_version': '1.8.1', 'analysis_engine': 'diann', 'scope': 'user'}, {'id': '10', 'analysis_protocol_name': 'first analysis protocol for DIA - DIANN 1.8.1 - Prefect', 'analysis_type': 'DIA', 'version_number': '1', 'description': None, 'notes': None, 'created_by': 'c7b78248-d7f3-4379-8a33-64853dc427a9', 'created_timestamp': '2023-08-17T18:50:02.504Z', 'parameter_file_path': 'diann-parameter/diann-20230915.json', 'space': None, 'species': 'Human', 'alg_version': '1.8.1', 'analysis_engine': 'diann', 'scope': 'system'}]
 ```
 
 You can also pass in a specific `name` to specifically fetch an analysis protocol.
@@ -500,7 +500,7 @@ sample_analysis_protocol = sdk.find_analysis_protocols(analysis_protocol_name=pr
 log(sample_analysis_protocol)
 ```
 ```
-[{'id': 'dc61a360-6b77-11ed-8ac3-37d35135f08e', 'analysis_protocol_name': 'testMSFraggerUpload26', 'analysis_type': 'DDA', 'version_number': '1', 'description': '', 'notes': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2022-11-23T21:43:26.142Z', 'parameter_file_path': 'msfragger-parameter/testMSFraggerUpload26.json', 'user_group': None, 'species': 'Human', 'alg_version': '3.4', 'analysis_engine': 'msfragger', 'scope': 'user'}]
+[{'id': 'dc61a360-6b77-11ed-8ac3-37d35135f08e', 'analysis_protocol_name': 'testMSFraggerUpload26', 'analysis_type': 'DDA', 'version_number': '1', 'description': '', 'notes': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2022-11-23T21:43:26.142Z', 'parameter_file_path': 'msfragger-parameter/testMSFraggerUpload26.json', 'space': None, 'species': 'Human', 'alg_version': '3.4', 'analysis_engine': 'msfragger', 'scope': 'user'}]
 ```
 
 The same can be done for `analysis_id`.
@@ -511,7 +511,7 @@ sample_analysis_protocol = sdk.find_analysis_protocols(analysis_protocol_id=prot
 log(sample_analysis_protocol)
 ```
 ```
-[{'id': 'dc61a360-6b77-11ed-8ac3-37d35135f08e', 'analysis_protocol_name': 'testMSFraggerUpload26', 'analysis_type': 'DDA', 'version_number': '1', 'description': '', 'notes': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2022-11-23T21:43:26.142Z', 'parameter_file_path': 'msfragger-parameter/testMSFraggerUpload26.json', 'user_group': None, 'species': 'Human', 'alg_version': '3.4', 'analysis_engine': 'msfragger', 'scope': 'user'}]
+[{'id': 'dc61a360-6b77-11ed-8ac3-37d35135f08e', 'analysis_protocol_name': 'testMSFraggerUpload26', 'analysis_type': 'DDA', 'version_number': '1', 'description': '', 'notes': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2022-11-23T21:43:26.142Z', 'parameter_file_path': 'msfragger-parameter/testMSFraggerUpload26.json', 'space': None, 'species': 'Human', 'alg_version': '3.4', 'analysis_engine': 'msfragger', 'scope': 'user'}]
 ```
 
 <hr>
@@ -537,8 +537,8 @@ log(samples)
 ```
 
 ```
-[{'id': 'b632546f-d91f-11ef-85ce-51d48ea13827', 'user_group': None, 'plate_id': 'b50768f0-d91f-11ef-8371-dd35d1cfc768', 'sample_name': 'process control', 'sample_id': 'CPRO', 'sample_type': 'Plasma', 'species': 'Human', 'description': 'Digestion Control S-538-7239/S-431-7226 Lyo PC10 Controls Rep1', 'notes': None, 'created_by': '7485f2ae-9a12-4cc3-8605-98d10e624937', 'created_timestamp': '2025-01-23T00:19:29.584Z', 'last_modified_by': 'c71f7f48-e7f8-4a5f-91f8-8bcdaff4aa82', 'last_modified_timestamp': '2025-06-25T22:54:09.374Z', 'sample_receipt_date': None, 'sample_collection_date': None, 'condition': 'B', 'plate_name': 'NoEdit_Biscayne_Plate_MS1048', 'custom_test': None, 'biological_replicate': None, 'technical_replicate': None, 'custom_new_field': None, 'custom_long_field_1234567890_123456890_1234567890_1234567890_63': None, 'custom_filed': None, 'custom_main_field': None, 'custom_letters_digits_anerscore': None, 'custom_test123': None, 'custom_sample_attribute_for_grouping': None, 'custom_custom_nita_01': None, 'custom_nitafield2': None, 'custom_by_demo_user': None, 'custom_seer_main_staging': None, 'custom_fix_713': None, 'custom_newcustomfield12345': None, 'custom_mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm': None, 'custom_reskin': None, 'custom_newaddedcolumn': None, 'custom_myfirsttestcustomcolumn0817': None, 'custom_sdk_test': None, 'custom_rsun_test_admin_custom_field': None, 'custom_age': None, 'custom_gender': None, 'custom_country': None, 'custom_res2': None, 'custom_region': None, 'custom_nation': None, 'custom_homer_field': None, 'custom_condition_1': None, 'well_location': 'B11', 'control': 'CPRO'}, 
-{'id': 'b6325471-d91f-11ef-85ce-51d48ea13827', 'user_group': None, 'plate_id': 'b50768f0-d91f-11ef-8371-dd35d1cfc768', 'sample_name': 'cleanup control', 'sample_id': 'CCLN', 'sample_type': 'Peptide', 'species': 'Human', 'description': 'NONE Lyo PC10 Peptides Controls Rep1', 'notes': None, 'created_by': '7485f2ae-9a12-4cc3-8605-98d10e624937', 'created_timestamp': '2025-01-23T00:19:29.584Z', 'last_modified_by': '7485f2ae-9a12-4cc3-8605-98d10e624937', 'last_modified_timestamp': '2025-01-23T00:19:29.852Z', 'sample_receipt_date': None, 'sample_collection_date': None, 'condition': 'B', 'plate_name': 'NoEdit_Biscayne_Plate_MS1048', 'custom_test': None, 'biological_replicate': None, 'technical_replicate': None, 'custom_new_field': None, 'custom_long_field_1234567890_123456890_1234567890_1234567890_63': None, 'custom_filed': None, 'custom_main_field': None, 'custom_letters_digits_anerscore': None, 'custom_test123': None, 'custom_sample_attribute_for_grouping': None, 'custom_custom_nita_01': None, 'custom_nitafield2': None, 'custom_by_demo_user': None, 'custom_seer_main_staging': None, 'custom_fix_713': None, 'custom_newcustomfield12345': None, 'custom_mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm': None, 'custom_reskin': None, 'custom_newaddedcolumn': None, 'custom_myfirsttestcustomcolumn0817': None, 'custom_sdk_test': None, 'custom_rsun_test_admin_custom_field': None, 'custom_age': None, 'custom_gender': None, 'custom_country': None, 'custom_res2': None, 'custom_region': None, 'custom_nation': None, 'custom_homer_field': None, 'custom_condition_1': None, 'well_location': 'D11', 'control': 'cleanup control'}]
+[{'id': 'b632546f-d91f-11ef-85ce-51d48ea13827', 'space': None, 'plate_id': 'b50768f0-d91f-11ef-8371-dd35d1cfc768', 'sample_name': 'process control', 'sample_id': 'CPRO', 'sample_type': 'Plasma', 'species': 'Human', 'description': 'Digestion Control S-538-7239/S-431-7226 Lyo PC10 Controls Rep1', 'notes': None, 'created_by': '7485f2ae-9a12-4cc3-8605-98d10e624937', 'created_timestamp': '2025-01-23T00:19:29.584Z', 'last_modified_by': 'c71f7f48-e7f8-4a5f-91f8-8bcdaff4aa82', 'last_modified_timestamp': '2025-06-25T22:54:09.374Z', 'sample_receipt_date': None, 'sample_collection_date': None, 'condition': 'B', 'plate_name': 'NoEdit_Biscayne_Plate_MS1048', 'custom_test': None, 'biological_replicate': None, 'technical_replicate': None, 'custom_new_field': None, 'custom_long_field_1234567890_123456890_1234567890_1234567890_63': None, 'custom_filed': None, 'custom_main_field': None, 'custom_letters_digits_anerscore': None, 'custom_test123': None, 'custom_sample_attribute_for_grouping': None, 'custom_custom_nita_01': None, 'custom_nitafield2': None, 'custom_by_demo_user': None, 'custom_seer_main_staging': None, 'custom_fix_713': None, 'custom_newcustomfield12345': None, 'custom_mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm': None, 'custom_reskin': None, 'custom_newaddedcolumn': None, 'custom_myfirsttestcustomcolumn0817': None, 'custom_sdk_test': None, 'custom_rsun_test_admin_custom_field': None, 'custom_age': None, 'custom_gender': None, 'custom_country': None, 'custom_res2': None, 'custom_region': None, 'custom_nation': None, 'custom_homer_field': None, 'custom_condition_1': None, 'well_location': 'B11', 'control': 'CPRO'}, 
+{'id': 'b6325471-d91f-11ef-85ce-51d48ea13827', 'space': None, 'plate_id': 'b50768f0-d91f-11ef-8371-dd35d1cfc768', 'sample_name': 'cleanup control', 'sample_id': 'CCLN', 'sample_type': 'Peptide', 'species': 'Human', 'description': 'NONE Lyo PC10 Peptides Controls Rep1', 'notes': None, 'created_by': '7485f2ae-9a12-4cc3-8605-98d10e624937', 'created_timestamp': '2025-01-23T00:19:29.584Z', 'last_modified_by': '7485f2ae-9a12-4cc3-8605-98d10e624937', 'last_modified_timestamp': '2025-01-23T00:19:29.852Z', 'sample_receipt_date': None, 'sample_collection_date': None, 'condition': 'B', 'plate_name': 'NoEdit_Biscayne_Plate_MS1048', 'custom_test': None, 'biological_replicate': None, 'technical_replicate': None, 'custom_new_field': None, 'custom_long_field_1234567890_123456890_1234567890_1234567890_63': None, 'custom_filed': None, 'custom_main_field': None, 'custom_letters_digits_anerscore': None, 'custom_test123': None, 'custom_sample_attribute_for_grouping': None, 'custom_custom_nita_01': None, 'custom_nitafield2': None, 'custom_by_demo_user': None, 'custom_seer_main_staging': None, 'custom_fix_713': None, 'custom_newcustomfield12345': None, 'custom_mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm': None, 'custom_reskin': None, 'custom_newaddedcolumn': None, 'custom_myfirsttestcustomcolumn0817': None, 'custom_sdk_test': None, 'custom_rsun_test_admin_custom_field': None, 'custom_age': None, 'custom_gender': None, 'custom_country': None, 'custom_res2': None, 'custom_region': None, 'custom_nation': None, 'custom_homer_field': None, 'custom_condition_1': None, 'well_location': 'D11', 'control': 'cleanup control'}]
 ```
 
 ### Get Analysis
@@ -569,7 +569,7 @@ analysis = sdk.get_analysis(analysis_name="MYProject - 4 SAMPLE - NEW")
 log(analysis)
 ```
 ```
-{'id': '00425a60-a850-11ea-b3d7-0171d11d0807', 'analysis_name': 'MYPROJECT - 4 SAMPLE - NEW', 'description': 'DO NOT DELETE - FOR VISUALS', 'notes': '', 'analysis_protocol_id': 'b07d70f0-5471-11ea-90e8-6743ed53f19f', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2020-06-06T23:46:54.360Z', 'end_time': '2020-06-07T03:23:30.614Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2020-06-06T23:46:54.360Z', 'status': 'SUCCEEDED', 'result_folder': '2d89db50-805b-11ea-a3cb-5341c25962a0/00425a60-a850-11ea-b3d7-0171d11d0807/', 'job_id': '1c7dcdb9-21fe-47a3-9f9c-5326cc9662b2', 'user_group': None, 'project_id': '2d89db50-805b-11ea-a3cb-5341c25962a0', 'number_msdatafile': '20', 'protein_group_count': 3641, 'single_protein_group_count': 3184, 'possible_protein_set_size': 3878, 'peptides_count': 32274, 'contains_control': False, 'job_log_stream_name': None, 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': None, 'total_file_size_mb': None, 'msdatafile_extensions': None}
+{'id': '00425a60-a850-11ea-b3d7-0171d11d0807', 'analysis_name': 'MYPROJECT - 4 SAMPLE - NEW', 'description': 'DO NOT DELETE - FOR VISUALS', 'notes': '', 'analysis_protocol_id': 'b07d70f0-5471-11ea-90e8-6743ed53f19f', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2020-06-06T23:46:54.360Z', 'end_time': '2020-06-07T03:23:30.614Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2020-06-06T23:46:54.360Z', 'status': 'SUCCEEDED', 'result_folder': '2d89db50-805b-11ea-a3cb-5341c25962a0/00425a60-a850-11ea-b3d7-0171d11d0807/', 'job_id': '1c7dcdb9-21fe-47a3-9f9c-5326cc9662b2', 'space': None, 'project_id': '2d89db50-805b-11ea-a3cb-5341c25962a0', 'number_msdatafile': '20', 'protein_group_count': 3641, 'single_protein_group_count': 3184, 'possible_protein_set_size': 3878, 'peptides_count': 32274, 'contains_control': False, 'job_log_stream_name': None, 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': None, 'total_file_size_mb': None, 'msdatafile_extensions': None}
 ```
 
 
@@ -590,7 +590,7 @@ analyses = sdk.find_analyses()
 log(analyses)
 ```
 ```
-[{'id': 'c80a0260-856e-11ee-b1b7-ff20dde1461b', 'analysis_name': '11172023-dia-test-0419 reanalysis', 'description': '', 'notes': '', 'analysis_protocol_id': 'cb053660-a48a-11ea-bcfb-f7528a88c755', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2023-11-17T17:28:54.451Z', 'end_time': '2023-11-17T17:49:23.492Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-17T17:28:54.451Z', 'status': 'SUCCEEDED', 'result_folder': 'e46af6a0-7a11-11eb-882e-1719d79479fd/c80a0260-856e-11ee-b1b7-ff20dde1461b/', 'job_id': 'eac28b3d-f6ba-4644-bce6-6007756d9af7', 'user_group': None, 'project_id': 'e46af6a0-7a11-11eb-882e-1719d79479fd', 'number_msdatafile': '5', 'protein_group_count': 827, 'single_protein_group_count': 562, 'possible_protein_set_size': None, 'peptides_count': 8281, 'contains_control': False, 'job_log_stream_name': 'encyclopedia_group/default/3a364a127b5d4cc5acc348d5d1da3b21', 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': 1, 'total_file_size_mb': 5806, 'msdatafile_extensions': '.wiff', 'analysis_protocol_name': 'DIA - first analysis protocol', 'analysis_type': 'DIA', 'plate_id': ['adbc28a0-04ea-11eb-9581-2ddecac39483']}, {'id': 'fd62a3b0-834b-11ee-a7fd-912ae102163f', 'analysis_name': '11142023-1 - 1028-3 reanalysis 333111 reanalysis 44122 reanalysis', 'description': '', 'notes': '', 'analysis_protocol_id': '4', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2023-11-15T00:14:49.243Z', 'end_time': '2023-11-15T00:59:22.703Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-15T00:14:49.243Z', 'status': 'SUCCEEDED', 'result_folder': 'bdf855d0-9beb-11ea-810d-31caeb439dfe/fd62a3b0-834b-11ee-a7fd-912ae102163f/', 'job_id': 'b94f7dfb-a44e-4df0-9581-fa0ce43eaaf2', 'user_group': None, 'project_id': 'bdf855d0-9beb-11ea-810d-31caeb439dfe', 'number_msdatafile': '6', 'protein_group_count': 775, 'single_protein_group_count': None, 'possible_protein_set_size': None, 'peptides_count': 5514, 'contains_control': False, 'job_log_stream_name': 'proteogenomics_group/default/6efe18275eee455a911f0db0e558a598', 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': 1, 'total_file_size_mb': 3036, 'msdatafile_extensions': '.raw', 'analysis_protocol_name': 'second analysis protocol for proteogenomics', 'analysis_type': 'PROTEOGENOMICS', 'plate_id': ['0bb11350-8ca8-11ea-911b-f9d607852407']}, {'id': 'a8c51390-8334-11ee-a7fd-912ae102163f', 'analysis_name': '11142023-dia-test-0419 reanalysis', 'description': '', 'notes': '', 'analysis_protocol_id': 'cb053660-a48a-11ea-bcfb-f7528a88c755', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2023-11-14T21:27:48.956Z', 'end_time': '2023-11-14T21:47:39.113Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-14T21:27:48.956Z', 'status': 'SUCCEEDED', 'result_folder': 'e46af6a0-7a11-11eb-882e-1719d79479fd/a8c51390-8334-11ee-a7fd-912ae102163f/', 'job_id': '81bfeb1c-bdba-4adb-9d04-0730b06638a6', 'user_group': None, 'project_id': 'e46af6a0-7a11-11eb-882e-1719d79479fd', 'number_msdatafile': '5', 'protein_group_count': 827, 'single_protein_group_count': 562, 'possible_protein_set_size': None, 'peptides_count': 8281, 'contains_control': False, 'job_log_stream_name': 'encyclopedia_group/default/caadabba7bfa4a42ae950506768d40c1', 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': 1, 'total_file_size_mb': 5806, 'msdatafile_extensions': '.wiff', 'analysis_protocol_name': 'DIA - first analysis protocol', 'analysis_type': 'DIA', 'plate_id': ['adbc28a0-04ea-11eb-9581-2ddecac39483']}]
+[{'id': 'c80a0260-856e-11ee-b1b7-ff20dde1461b', 'analysis_name': '11172023-dia-test-0419 reanalysis', 'description': '', 'notes': '', 'analysis_protocol_id': 'cb053660-a48a-11ea-bcfb-f7528a88c755', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2023-11-17T17:28:54.451Z', 'end_time': '2023-11-17T17:49:23.492Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-17T17:28:54.451Z', 'status': 'SUCCEEDED', 'result_folder': 'e46af6a0-7a11-11eb-882e-1719d79479fd/c80a0260-856e-11ee-b1b7-ff20dde1461b/', 'job_id': 'eac28b3d-f6ba-4644-bce6-6007756d9af7', 'space': None, 'project_id': 'e46af6a0-7a11-11eb-882e-1719d79479fd', 'number_msdatafile': '5', 'protein_group_count': 827, 'single_protein_group_count': 562, 'possible_protein_set_size': None, 'peptides_count': 8281, 'contains_control': False, 'job_log_stream_name': 'encyclopedia_group/default/3a364a127b5d4cc5acc348d5d1da3b21', 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': 1, 'total_file_size_mb': 5806, 'msdatafile_extensions': '.wiff', 'analysis_protocol_name': 'DIA - first analysis protocol', 'analysis_type': 'DIA', 'plate_id': ['adbc28a0-04ea-11eb-9581-2ddecac39483']}, {'id': 'fd62a3b0-834b-11ee-a7fd-912ae102163f', 'analysis_name': '11142023-1 - 1028-3 reanalysis 333111 reanalysis 44122 reanalysis', 'description': '', 'notes': '', 'analysis_protocol_id': '4', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2023-11-15T00:14:49.243Z', 'end_time': '2023-11-15T00:59:22.703Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-15T00:14:49.243Z', 'status': 'SUCCEEDED', 'result_folder': 'bdf855d0-9beb-11ea-810d-31caeb439dfe/fd62a3b0-834b-11ee-a7fd-912ae102163f/', 'job_id': 'b94f7dfb-a44e-4df0-9581-fa0ce43eaaf2', 'space': None, 'project_id': 'bdf855d0-9beb-11ea-810d-31caeb439dfe', 'number_msdatafile': '6', 'protein_group_count': 775, 'single_protein_group_count': None, 'possible_protein_set_size': None, 'peptides_count': 5514, 'contains_control': False, 'job_log_stream_name': 'proteogenomics_group/default/6efe18275eee455a911f0db0e558a598', 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': 1, 'total_file_size_mb': 3036, 'msdatafile_extensions': '.raw', 'analysis_protocol_name': 'second analysis protocol for proteogenomics', 'analysis_type': 'PROTEOGENOMICS', 'plate_id': ['0bb11350-8ca8-11ea-911b-f9d607852407']}, {'id': 'a8c51390-8334-11ee-a7fd-912ae102163f', 'analysis_name': '11142023-dia-test-0419 reanalysis', 'description': '', 'notes': '', 'analysis_protocol_id': 'cb053660-a48a-11ea-bcfb-f7528a88c755', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2023-11-14T21:27:48.956Z', 'end_time': '2023-11-14T21:47:39.113Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-11-14T21:27:48.956Z', 'status': 'SUCCEEDED', 'result_folder': 'e46af6a0-7a11-11eb-882e-1719d79479fd/a8c51390-8334-11ee-a7fd-912ae102163f/', 'job_id': '81bfeb1c-bdba-4adb-9d04-0730b06638a6', 'space': None, 'project_id': 'e46af6a0-7a11-11eb-882e-1719d79479fd', 'number_msdatafile': '5', 'protein_group_count': 827, 'single_protein_group_count': 562, 'possible_protein_set_size': None, 'peptides_count': 8281, 'contains_control': False, 'job_log_stream_name': 'encyclopedia_group/default/caadabba7bfa4a42ae950506768d40c1', 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': 1, 'total_file_size_mb': 5806, 'msdatafile_extensions': '.wiff', 'analysis_protocol_name': 'DIA - first analysis protocol', 'analysis_type': 'DIA', 'plate_id': ['adbc28a0-04ea-11eb-9581-2ddecac39483']}]
 ```
 
 You can also pass in a specific `analysis_id` to specifically fetch an analysis.
@@ -601,7 +601,7 @@ sample_analysis = sdk.find_analyses(analysis_id)
 log(sample_analysis)
 ```
 ```
-[{'id': '00425a60-a850-11ea-b3d7-0171d11d0807', 'analysis_name': 'MYPROJECT - 4 SAMPLE - NEW', 'description': 'DO NOT DELETE - FOR VISUALS', 'notes': '', 'analysis_protocol_id': 'b07d70f0-5471-11ea-90e8-6743ed53f19f', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2020-06-06T23:46:54.360Z', 'end_time': '2020-06-07T03:23:30.614Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2020-06-06T23:46:54.360Z', 'status': 'SUCCEEDED', 'result_folder': '2d89db50-805b-11ea-a3cb-5341c25962a0/00425a60-a850-11ea-b3d7-0171d11d0807/', 'job_id': '1c7dcdb9-21fe-47a3-9f9c-5326cc9662b2', 'user_group': None, 'project_id': '2d89db50-805b-11ea-a3cb-5341c25962a0', 'number_msdatafile': '20', 'protein_group_count': 3641, 'single_protein_group_count': 3184, 'possible_protein_set_size': 3878, 'peptides_count': 32274, 'contains_control': False, 'job_log_stream_name': None, 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': None, 'total_file_size_mb': None, 'msdatafile_extensions': None}]
+[{'id': '00425a60-a850-11ea-b3d7-0171d11d0807', 'analysis_name': 'MYPROJECT - 4 SAMPLE - NEW', 'description': 'DO NOT DELETE - FOR VISUALS', 'notes': '', 'analysis_protocol_id': 'b07d70f0-5471-11ea-90e8-6743ed53f19f', 'analyzed_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'start_time': '2020-06-06T23:46:54.360Z', 'end_time': '2020-06-07T03:23:30.614Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2020-06-06T23:46:54.360Z', 'status': 'SUCCEEDED', 'result_folder': '2d89db50-805b-11ea-a3cb-5341c25962a0/00425a60-a850-11ea-b3d7-0171d11d0807/', 'job_id': '1c7dcdb9-21fe-47a3-9f9c-5326cc9662b2', 'space': None, 'project_id': '2d89db50-805b-11ea-a3cb-5341c25962a0', 'number_msdatafile': '20', 'protein_group_count': 3641, 'single_protein_group_count': 3184, 'possible_protein_set_size': 3878, 'peptides_count': 32274, 'contains_control': False, 'job_log_stream_name': None, 'contains_sample': True, 'is_folder': False, 'folder_id': None, 'number_sample': None, 'total_file_size_mb': None, 'msdatafile_extensions': None}]
 ```
 
 
@@ -867,13 +867,16 @@ uniprot_id gene_name   coverage  n_samples     median  fraction_samples         
 
 ### Get Peptide Results Table
 Returns the peptide results table for given `analysis_id` or `analysis_name`.
+
 #### <u>Params</u>
 * `analysis_id`: (`str`, optional) The analysis ID, defaulted to None.
 * `analysis_name`: (`str`, optional) The analysis name, defaulted to None.
 * `grouping`: ('str', optional): group criteria of table result. Defaults to "condition".
 * `as_df`: (`bool`, optional) Whether the result should be converted to a DataFrame, defaulted to False.
+
 #### <u>Returns</u>
 * res: (`list[dict]` or `DataFrame`) A list of dictionaries or DataFrame containing the peptide results table.
+
 #### <u>Example</u>
 ```{python}
 #| eval: false
@@ -941,3 +944,61 @@ log(sdk.group_analysis_results(group_analysis_id, box_plot_info))
 ```
 
 <hr>
+
+###Download Analysis Protocol FASTA
+
+Downloads the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly. Optionally, return signed download links instead of downloading.
+
+######<u>Params</u>
+* `analysis_protocol_id`: (`str`, optional) ID of the analysis protocol whose FASTA file(s) you want.
+
+* `analysis_id`: (`str`, optional) ID of the analysis whose protocol FASTA file(s) you want.
+
+* `link`: (`bool`, optional) If True, returns signed download links without downloading files. Defaults to False.
+
+* `download_path`: (`str`, optional) Directory to save files to. Defaults to the current working directory.
+
+Note: Provide either analysis_id or analysis_protocol_id (but not both).
+
+<br>
+######<u>Returns</u>
+
+* `list[dict] | None` — If link=True, returns a list of dictionaries with filename and url. Otherwise downloads files to download_path and returns None.
+
+<br>
+
+###### <u>Examples</u>
+
+Download by analysis ID (files saved to current directory):
+```{python}
+#| eval: false
+sdk.download_analysis_protocol_fasta(
+    analysis_id="c80a0260-856e-11ee-b1b7-ff20dde1461b"
+)
+```
+
+Download by analysis protocol ID to a specific folder:
+```{python}
+#| eval: false
+sdk.download_analysis_protocol_fasta(
+    analysis_protocol_id="dc61a360-6b77-11ed-8ac3-37d35135f08e",
+    download_path="/path/to/fasta"
+)
+```
+
+Get links only (no download):
+```{python}
+#| eval: false
+links = sdk.download_analysis_protocol_fasta(
+    analysis_protocol_id="dc61a360-6b77-11ed-8ac3-37d35135f08e",
+    link=True
+)
+log(links)
+```
+```
+[
+  {"filename": "uniprot_human_2023_08.fasta", "url": "https://...signed..."},
+  {"filename": "contaminants.fasta", "url": "https://...signed..."}
+]
+```
+<br>
