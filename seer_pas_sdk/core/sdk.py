@@ -384,6 +384,8 @@ class SeerSDK:
                 if "user_group" in res:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
+                if "id" in res:
+                    res["plate_uuid"] = res["id"]
                 return res
         else:
             res = self.find_plates(plate_name=plate_name)
@@ -639,6 +641,11 @@ class SeerSDK:
                 if "user_group" in res:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
+                plate_ids = {
+                    x["plate_id"]
+                    for x in self.find_samples(project_id=res["id"])
+                }
+                res["plate_ids"] = list(plate_ids)
                 return res
         else:
             res = self.find_projects(project_name=project_name)
@@ -1013,6 +1020,11 @@ class SeerSDK:
                 lambda x: spaces.get(x, "General")
             )
             res_df.drop(["user_group"], axis=1, inplace=True)
+        if "plate_id" in res_df.columns:
+            res_df["plate_uuid"] = res_df["plate_id"]
+            res_df["plate_id"] = res_df["plate_uuid"].apply(
+                lambda x: plate_uuid_to_id.get(x, None)
+            )
 
         custom_columns = [
             x["field_name"] for x in self._get_sample_custom_fields()
