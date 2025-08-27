@@ -397,7 +397,12 @@ class SeerSDK:
                 return res[0]
 
     def find_plates(
-        self, plate_id: str = None, plate_name: str = None, as_df: bool = False
+        self,
+        plate_id: str = None,
+        plate_name: str = None,
+        project_id: str = None,
+        project_name: str = None,
+        as_df: bool = False,
     ):
         """
         Fetches a list of plates for the authenticated user. If no `plate_id` is provided, returns all plates for the authenticated user. If `plate_id` is provided, returns the plate with the given `plate_id`, provided it exists.
@@ -406,6 +411,12 @@ class SeerSDK:
         ----------
         plate_id : str, optional
             ID of the plate to be fetched, defaulted to None.
+        plate_name : str, optional
+            Name of the plate to be fetched, defaulted to None.
+        project_id: str, optional
+            ID of the project to filter plates by, defaulted to None.
+        project_name : str, optional
+            Name of the project to filter plates by, defaulted to None.
         as_df: bool
             whether the result should be converted to a DataFrame, defaulted to None.
 
@@ -451,6 +462,19 @@ class SeerSDK:
             params = {"searchFields": "id", "searchItem": plate_id}
         elif plate_name:
             params = {"searchFields": "plate_name", "searchItem": plate_name}
+        elif project_id or project_name:
+            if project_id:
+                samples = self.find_samples(project_id=project_id, as_df=False)
+            else:
+                samples = self.find_samples(
+                    project_name=project_name, as_df=False
+                )
+            plate_ids = {
+                x.get("plate_uuid") for x in samples if "plate_uuid" in x
+            }
+            res = [self.get_plate(plate_id=x) for x in plate_ids]
+            return res if not as_df else dict_to_df(res)
+
         else:
             params = dict()
 
