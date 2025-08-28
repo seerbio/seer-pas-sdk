@@ -942,6 +942,9 @@ log(sdk.group_analysis_results(group_analysis_id, box_plot_info))
 
 <hr>
 
+###Get Analysis Protocol FASTA link
+
+Returns signed download links for the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly.
 ###Download Analysis Protocol FASTA
 
 Downloads the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly. Optionally, return signed download links instead of downloading.

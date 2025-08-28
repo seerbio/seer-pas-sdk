@@ -2267,8 +2267,8 @@ class SeerSDK:
 
         Returns
         -------
-        None
-            Downloads the file to the specified path.
+        str
+            Path to the downloaded file.
         """
 
         if not download_path:
@@ -2314,8 +2314,7 @@ class SeerSDK:
                 filename = filename[-1]
                 if not os.path.isdir(f"{name}/{filename}"):
                     os.makedirs(f"{name}/")
-        print(f"File {filename} downloaded successfully to {download_path}.")
-        return
+        return f'{download_path}/{filename}'
 
     def get_search_result_file_url(self, analysis_id: str, filename: str):
         """
@@ -2846,8 +2845,7 @@ class SeerSDK:
 
         Returns
         -------
-        message: dict[str, str]
-            Contains the 'message' whether the files were downloaded or not.
+        list[str] : the list of paths to the downloaded files.
         """
 
         urls = []
@@ -2890,6 +2888,8 @@ class SeerSDK:
                         "Could not download file. Please check if the backend is running."
                     )
                 urls.append(download_url.text)
+
+        downloads = []
         for i in range(len(urls)):
             filename = paths[i].split("/")[-1]
             url = urls[i]
@@ -2914,6 +2914,7 @@ class SeerSDK:
                             reporthook=download_hook(t),
                             data=None,
                         )
+                        downloads.append(f"{name}/{filename}")
                         break
                 except:
                     filename = filename.split("/")
@@ -2931,7 +2932,7 @@ class SeerSDK:
 
             print(f"Finished downloading {filename}\n")
 
-        return {"message": f"Files downloaded successfully to '{name}'"}
+        return downloads
 
     def get_group_analysis(
         self, analysis_id, group_analysis_id=None, **kwargs
@@ -3868,7 +3869,7 @@ class SeerSDK:
             analysis_id (str, optional): ID of the analysis. Defaults to None.
 
         Returns:
-            list[dict]: A list of dictionaries containing the filename and download URL.
+            list[dict]: A list of dictionaries containing the 'filename' and the 'url' to download the fasta file.
         """
 
         if not (bool(analysis_protocol_id) ^ bool(analysis_id)):
@@ -3954,7 +3955,7 @@ class SeerSDK:
             download_path (str, optional): Path to download the fasta file to. Defaults to current working directory.
 
         Returns:
-            list[dict] | None: If link is True, return a list of dictionaries containing the filename and download URL. Otherwise, return None.
+            list[str] : The path to the downloaded fasta file(s).
         """
 
         links = [
@@ -3967,6 +3968,7 @@ class SeerSDK:
         if not download_path:
             download_path = os.getcwd()
 
+        downloads = []
         for filename, url in links:
             print(f"Downloading {filename}")
             for _ in range(2):
@@ -3992,4 +3994,5 @@ class SeerSDK:
                     if not os.path.isdir(f"{download_path}"):
                         os.makedirs(f"{download_path}")
 
-            print(f"Downloaded file to {download_path}/{filename}")
+            downloads.append(f"{download_path}/{filename}")
+        return downloads
