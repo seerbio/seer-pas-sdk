@@ -791,7 +791,7 @@ If no `download_path` is specified or the `download_path` is invalid, the file w
 
 ###### <u>Params</u>
 * `paths` : (`list[str]`) List of paths to download.
-* `download_path` : (`str`) Path to download the analysis file to, defaulted to current working directory.
+* `download_path` : (`str`, optional) Path to download the analysis file to, defaulted to current working directory.
 * `space` : (`str`, optional) ID of the user group to which the file belongs, defaulted to None.
 
 ###### <u>Returns</u>

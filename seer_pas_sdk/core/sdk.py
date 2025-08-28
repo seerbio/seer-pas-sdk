@@ -2262,7 +2262,7 @@ class SeerSDK:
         filename : str
             Name of the file to be fetched. Files can be case insensitive and without file extensions.
 
-        download_path : str
+        download_path : str, optional
             String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid.
 
         Returns
@@ -2829,7 +2829,7 @@ class SeerSDK:
             return files.json()["filesList"]
 
     def download_ms_data_files(
-        self, paths: _List[str], download_path: str, space: str = None
+        self, paths: _List[str], download_path: str = "", space: str = None
     ):
         """
         Downloads all MS data files for paths passed in the params to the specified download path.
@@ -2838,8 +2838,8 @@ class SeerSDK:
         ----------
         paths : list[str]
             List of paths to download.
-        download_path : str
-            Path to download the files to.
+        download_path : str, optional
+            Path to download the files to. Defaults to current working directory.
         space : str, optional
             ID of the user group to which the files belongs, defaulted to None.
 
