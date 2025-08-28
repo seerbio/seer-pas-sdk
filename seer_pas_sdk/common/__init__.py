@@ -748,3 +748,13 @@ def get_version():
         except subprocess.CalledProcessError:
             v = "unknown"
     return f"{v}"
+
+
+def title_case_to_snake_case(s: str):
+    """
+    Converts a title case string to snake case.
+
+    """
+    s = s.replace(" ", "_").replace(".", "_").casefold()
+
+    return s

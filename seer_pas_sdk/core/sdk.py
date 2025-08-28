@@ -14,6 +14,8 @@ from ..common import *
 from ..auth import Auth
 from ..objects.volcanoplot import VolcanoPlotBuilder
 
+import warnings
+
 
 class SeerSDK:
     """
@@ -3984,6 +3986,10 @@ class SeerSDK:
     def get_search_data(
         self, analysis_id: str, analyte_type: str, rollup: str, engine: str
     ):
+        warnings.warn(
+            "This function is under acceptance testing. The interface may change in future releases.",
+            category=UserWarning,
+        )
         # 1. Get msrun data for analysis
         sample_ids = [
             s["id"] for s in self.find_samples(analysis_id=analysis_id)
@@ -4088,11 +4094,8 @@ class SeerSDK:
 
             else:
                 report["Peptide"] = report["Stripped.Sequence"]
-                report["Q Value"] = report["Q.Value"]
                 #  If analyte_type is peptide, attach retention time (RT, iRT)
-                report = report[
-                    ["File Name", "Peptide", "Q Value", "RT", "iRT"]
-                ]
+                report = report[["File Name", "Peptide", "RT", "iRT"]]
                 report.drop_duplicates(
                     subset=["File Name", "Peptide"], inplace=True
                 )
@@ -4108,11 +4111,15 @@ class SeerSDK:
                     "Peptide",
                     "Protein Group",
                     "Intensity Log10",
-                    "Q Value",
                     "RT",
                     "iRT",
                 ]
             # endif
+
+            if rollup == "np":
+                included_columns.insert(
+                    included_columns.index("Sample ID") + 1, "Nanoparticle"
+                )
 
             df["MsRun ID"] = df["File Name"].apply(
                 lambda x: (
@@ -4126,7 +4133,9 @@ class SeerSDK:
                     else None
                 )
             )
-            return df[included_columns]
+            df = df[included_columns]
+            df.columns = [title_case_to_snake_case(x) for x in df.columns]
+            return df
         else:
             # precursor
             # working only in report.tsv
@@ -4161,5 +4170,7 @@ class SeerSDK:
                 "IM",
                 "iIM",
             ]
+            df = search_results[included_columns]
+            df.columns = [title_case_to_snake_case(x) for x in df.columns]
 
-            return search_results[included_columns]
+            return df
