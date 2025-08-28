@@ -648,8 +648,8 @@ File Name                         Sample Name     Plate ID Well Nanoparticle Pro
 4  MYPROJECT_X4544_A_Orbitrap-1_2ug_60min_20190829...  Test-Sample-110A  MYPROJECT  A3     SP-0335      P56181-2          9.837                    0.992             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN       
 ```
 
-#### Download Search Output Files
-Downloads an indicated search output files for the given `analysis_id` to the specified `download_path`. If no `download_path` is specified or the `download_path` is invalid, the file will be downloaded to the current working directory.
+#### Download Search Output File
+Downloads an indicated search output file for the given `analysis_id` to the specified `download_path`. If no `download_path` is specified or the `download_path` is invalid, the file will be downloaded to the current working directory.
 
 ###### <u>Params</u>
 * `analysis_id`: (`str`) Unique ID of the analysis for which the data is to be downloaded.
@@ -657,7 +657,7 @@ Downloads an indicated search output files for the given `analysis_id` to the sp
 * `download_path`: (`str`) Path to download the analysis file to, defaulted to current working directory.
 
 ###### <u>Returns</u>
-None
+file : (`str`) File path of the downloaded file.
 
 ###### <u>Example</u>
 ```{python}
@@ -670,6 +670,8 @@ sdk.download_search_output_file(analysis_id, filename, download_path="testing/")
 ```
 Downloading file: Protein_Group_NP.tsv
 File Protein_Group_NP.tsv downloaded successfully to testing/Protein_Group_NP.tsv
+
+'testing/Protein_Group_NP.tsv'
 ```
 
 #### List Search Output Files
@@ -793,7 +795,7 @@ If no `download_path` is specified or the `download_path` is invalid, the file w
 * `space` : (`str`, optional) ID of the user group to which the file belongs, defaulted to None.
 
 ###### <u>Returns</u>
-(`dict[str, str]`) Message containing whether the file was downloaded or not.
+(`list[str]`) Contains the list of files downloaded to the specified path.
 
 ###### <u>Example</u>
 ```{python}
@@ -811,7 +813,7 @@ Finished downloading AgamSDKTest1.raw
 Downloading AgamSDKTest2.raw
 Finished downloading AgamSDKTest2.raw
 
-{'message': 'Files downloaded successfully to testing'}
+['testing/AgamSDKTest1.raw', 'testing/AgamSDKTest2.raw']
 ```
 
 <hr>
@@ -867,13 +869,16 @@ uniprot_id gene_name   coverage  n_samples     median  fraction_samples         
 
 ### Get Peptide Results Table
 Returns the peptide results table for given `analysis_id` or `analysis_name`.
+
 #### <u>Params</u>
 * `analysis_id`: (`str`, optional) The analysis ID, defaulted to None.
 * `analysis_name`: (`str`, optional) The analysis name, defaulted to None.
 * `grouping`: ('str', optional): group criteria of table result. Defaults to "condition".
 * `as_df`: (`bool`, optional) Whether the result should be converted to a DataFrame, defaulted to False.
+
 #### <u>Returns</u>
 * res: (`list[dict]` or `DataFrame`) A list of dictionaries or DataFrame containing the peptide results table.
+
 #### <u>Example</u>
 ```{python}
 #| eval: false
@@ -941,31 +946,22 @@ log(sdk.group_analysis_results(group_analysis_id, box_plot_info))
 ```
 
 <hr>
+### Download Analysis Protocol FASTA
 
-###Get Analysis Protocol FASTA link
+Downloads the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly.
 
-Returns signed download links for the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly.
-###Download Analysis Protocol FASTA
-
-Downloads the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly. Optionally, return signed download links instead of downloading.
-
-######<u>Params</u>
+###### <u>Params</u>
 * `analysis_protocol_id`: (`str`, optional) ID of the analysis protocol whose FASTA file(s) you want.
 
 * `analysis_id`: (`str`, optional) ID of the analysis whose protocol FASTA file(s) you want.
-
-* `link`: (`bool`, optional) If True, returns signed download links without downloading files. Defaults to False.
 
 * `download_path`: (`str`, optional) Directory to save files to. Defaults to the current working directory.
 
 Note: Provide either analysis_id or analysis_protocol_id (but not both).
 
-<br>
-######<u>Returns</u>
+###### <u>Returns</u>
 
-* `list[dict] | None` — If link=True, returns a list of dictionaries with filename and url. Otherwise downloads files to download_path and returns None.
-
-<br>
+* files: (`list[str]`) List of file paths where the FASTA files were downloaded, if downloading.
 
 ###### <u>Examples</u>
 
@@ -985,15 +981,44 @@ sdk.download_analysis_protocol_fasta(
     download_path="/path/to/fasta"
 )
 ```
+```
+['/path/to/fasta/uniprot_human_2023_08.fasta', '/path/to/fasta/contaminants.fasta']
 
-Get links only (no download):
+```
+<br>
+
+### Get Analysis Protocol FASTA link
+Returns signed download links for the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly.
+
+###### <u>Params</u>
+* `analysis_protocol_id`: (`str`, optional) ID of the analysis protocol whose FASTA file(s) you want.
+* `analysis_id`: (`str`, optional) ID of the analysis whose protocol FASTA file(s) you want.
+Note: Provide either analysis_id or analysis_protocol_id (but not both).
+
+###### <u>Returns</u>
+* links: (`list[dict]`) List of dictionaries containing filename and signed URL for each FASTA file.
+
+###### <u>Examples</u>
+Get by analysis ID:
 ```{python}
 #| eval: false
-links = sdk.download_analysis_protocol_fasta(
-    analysis_protocol_id="dc61a360-6b77-11ed-8ac3-37d35135f08e",
-    link=True
+sdk.get_analysis_protocol_fasta_link(
+    analysis_id="c80a0260-856e-11ee-b1b7-ff20dde1461b"
 )
-log(links)
+```
+
+```
+[
+  {"filename": "uniprot_human_2023_08.fasta", "url": "https://...signed..."},
+  {"filename": "contaminants.fasta", "url": "https://...signed..."}
+]
+```
+Get by analysis protocol ID:
+```{python}
+#| eval: false
+sdk.get_analysis_protocol_fasta_link(
+    analysis_protocol_id="dc61a360-6b77-11ed-8ac3-37d35135f08e"
+)
 ```
 ```
 [
@@ -1001,4 +1026,4 @@ log(links)
   {"filename": "contaminants.fasta", "url": "https://...signed..."}
 ]
 ```
-<br>
+<hr>

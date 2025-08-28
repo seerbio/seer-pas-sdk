@@ -2314,7 +2314,7 @@ class SeerSDK:
                 filename = filename[-1]
                 if not os.path.isdir(f"{name}/{filename}"):
                     os.makedirs(f"{name}/")
-        return f'{download_path}/{filename}'
+        return f"{download_path}/{filename}"
 
     def get_search_result_file_url(self, analysis_id: str, filename: str):
         """
