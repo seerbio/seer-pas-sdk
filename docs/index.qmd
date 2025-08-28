@@ -122,7 +122,7 @@ This is how a plate map file could be made:
 from seer_pas_sdk import PlateMap
 
 sample_plate_map_file = PlateMap(
-    ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],
+    ms_file_name =["TestFile1.raw", "TestFile2.raw"],
     sample_name = ["A111", "A112"], 
     sample_id = ["A111", "A112"], 
     well_location = ["C11", "D11"], 
@@ -143,7 +143,7 @@ sample_plate_map_file = PlateMap(
 
 # Or alternatively, this would be the same as the following (we've left some fields empty which would default them to `None`):
 another_plate_map_file = PlateMap(
-    ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],
+    ms_file_name =["TestFile1.raw", "TestFile2.raw"],
     sample_name = ["A111", "A112"], 
     sample_id = ["A111", "A112"], 
     well_location = ["C11", "D11"], 
@@ -334,7 +334,7 @@ example = sdk.find_msruns(sample_ids)
 log(example)
 ```
 ```
-[{'id': '81c6a180-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '812139c0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/AgamSDKTest2.raw', 'well_location': 'D11', 'nanoparticle': '', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:49.006Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:49.006Z', 'user_group': None, 'sample_id_tracking': 'A112', 'nanoparticle_id': '', 'control': '', 'control_id': '', 'date_sample_prep': '', 'sample_volume': '', 'peptide_concentration': '', 'peptide_mass_sample': '', 'dilution_factor': '', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}, {'id': '816a9ed0-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '803e05b0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/AgamSDKTest1.raw', 'well_location': 'C11', 'nanoparticle': 'NONE', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:48.408Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:48.408Z', 'user_group': None, 'sample_id_tracking': 'A111', 'nanoparticle_id': 'NONE', 'control': 'MPE Control', 'control_id': 'MPE Control', 'date_sample_prep': '', 'sample_volume': '20.0', 'peptide_concentration': '59.514', 'peptide_mass_sample': '8.57', 'dilution_factor': '1.0', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}]
+[{'id': '81c6a180-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '812139c0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/TestFile2.raw', 'well_location': 'D11', 'nanoparticle': '', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:49.006Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:49.006Z', 'user_group': None, 'sample_id_tracking': 'A112', 'nanoparticle_id': '', 'control': '', 'control_id': '', 'date_sample_prep': '', 'sample_volume': '', 'peptide_concentration': '', 'peptide_mass_sample': '', 'dilution_factor': '', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}, {'id': '816a9ed0-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '803e05b0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/TestFile1.raw', 'well_location': 'C11', 'nanoparticle': 'NONE', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:48.408Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:48.408Z', 'user_group': None, 'sample_id_tracking': 'A111', 'nanoparticle_id': 'NONE', 'control': 'MPE Control', 'control_id': 'MPE Control', 'date_sample_prep': '', 'sample_volume': '20.0', 'peptide_concentration': '59.514', 'peptide_mass_sample': '8.57', 'dilution_factor': '1.0', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}]
 ```
 
 There is also an option to return everything as a DataFrame instead:
@@ -769,7 +769,7 @@ folder_path = "2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449"
 log(sdk.list_ms_data_files(folder_path))
 ```
 ```
-['2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/plateMap_2bbdac30-66f7-11ee-abb2-359a84c72f54.csv', '2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest1.raw', '2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest2.raw']
+['2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/plateMap_2bbdac30-66f7-11ee-abb2-359a84c72f54.csv', '2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/TestFile1.raw', '2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/TestFile2.raw']
 ```
 
 If the folder path is invalid, the result is an empty list.
@@ -800,20 +800,20 @@ If no `download_path` is specified or the `download_path` is invalid, the file w
 ###### <u>Example</u>
 ```{python}
 #| eval: false
-download_paths = ["2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest1.raw", "2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest2.raw"]
+download_paths = ["2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/TestFile1.raw", "2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/TestFile2.raw"]
 
 log(sdk.download_ms_data_files(paths=download_paths, download_path="testing/"))
 ```
 ```
 Downloading files to "testing"
 
-Downloading AgamSDKTest1.raw
-Finished downloading AgamSDKTest1.raw
+Downloading TestFile1.raw
+Finished downloading TestFile1.raw
 
-Downloading AgamSDKTest2.raw
-Finished downloading AgamSDKTest2.raw
+Downloading TestFile2.raw
+Finished downloading TestFile2.raw
 
-['testing/AgamSDKTest1.raw', 'testing/AgamSDKTest2.raw']
+['testing/TestFile1.raw', 'testing/TestFile2.raw']
 ```
 
 <hr>
