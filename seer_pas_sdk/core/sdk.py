@@ -15,6 +15,8 @@ from ..auth import Auth
 from ..objects.volcanoplot import VolcanoPlotBuilder
 from ..objects.headers import *
 
+import warnings
+
 
 class SeerSDK:
     """
@@ -3994,3 +3996,195 @@ class SeerSDK:
             )
         if link:
             return links
+
+    def get_search_data(
+        self, analysis_id: str, analyte_type: str, rollup: str, engine: str
+    ):
+        warnings.warn(
+            "This function is under acceptance testing. The interface may change in future releases.",
+            category=UserWarning,
+        )
+        # 1. Get msrun data for analysis
+        sample_ids = [
+            s["id"] for s in self.find_samples(analysis_id=analysis_id)
+        ]
+        msruns = self.find_msruns(sample_ids=sample_ids)
+        file_to_msrun = {
+            os.path.basename(msrun["raw_file_path"]).split(".")[0]: msrun
+            for msrun in msruns
+        }
+
+        # 2. Get search results
+        # pull the np/panel file, or report.tsv for precursor mode
+        search_results = self.get_search_result(
+            analysis_id=analysis_id,
+            analyte_type=analyte_type,
+            rollup=rollup,
+        )
+        if analyte_type in ["protein", "peptide"]:
+            intensity_column = None
+            if engine.casefold() == "raw":
+                intensity_column = (
+                    "Intensities Log10"
+                    if "Intensities Log10" in search_results.columns
+                    else "Intensity (Log10)"
+                )
+            elif engine.casefold() == "diann":
+                intensity_column = (
+                    "DIA-NN Normalized Intensities Log10"
+                    if "DIA-NN Normalized Intensities Log10"
+                    in search_results.columns
+                    else "DIA-NN Intensity (Log10)"
+                )
+            elif engine.casefold() == "median":
+                if (
+                    not "Median Normalized Intensities Log10"
+                    in search_results.columns
+                ):
+                    raise ValueError(
+                        "Median normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later."
+                    )
+                intensity_column = "Median Normalized Intensities Log10"
+            elif engine.casefold() == "median80":
+                if (
+                    not "Median 80 Normalized Intensities Log10"
+                    in search_results.columns
+                ):
+                    raise ValueError(
+                        "Median 80 normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later."
+                    )
+                intensity_column = "Median 80 Normalized Intensities Log10"
+            elif engine.casefold() == "pepcal":
+                if (
+                    not "Pepcal Normalized Intensities Log10"
+                    in search_results.columns
+                ):
+                    raise ValueError(
+                        "Pepcal normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later with the Seer Peptide Calibrant option enabled."
+                    )
+                intensity_column = "Pepcal Normalized Intensities Log10"
+            else:
+                raise ValueError(
+                    f"Engine {engine} not supported. Supported engines are: raw, diann, median, median80, pepcal."
+                )
+
+            search_results["File Name"] = search_results["File Name"].apply(
+                lambda x: os.path.basename(x).split(".")[0]
+            )
+
+            search_results["Intensity Log10"] = search_results[
+                intensity_column
+            ]
+
+            # 3. Merge report to search results to get Q value and other properties
+            report = self.get_search_result(
+                analysis_id=analysis_id,
+                analyte_type="precursor",
+                rollup="np",
+            )
+            report["File Name"] = report["Run"]
+            report["Protein Group"] = report["Protein.Group"]
+
+            if analyte_type == "protein":
+                report["Q Value"] = report["Protein.Q.Value"]
+
+                report = report[["File Name", "Protein Group", "Q Value"]]
+                report.drop_duplicates(
+                    subset=["File Name", "Protein Group"], inplace=True
+                )
+                df = pd.merge(
+                    search_results,
+                    report,
+                    on=["File Name", "Protein Group"],
+                    how="left",
+                )
+                included_columns = [
+                    "MsRun ID",
+                    "Sample ID",
+                    "Protein Group",
+                    "Intensity Log10",
+                    "Q Value",
+                ]
+
+            else:
+                report["Peptide"] = report["Stripped.Sequence"]
+                #  If analyte_type is peptide, attach retention time (RT, iRT)
+                report = report[["File Name", "Peptide", "RT", "iRT"]]
+                report.drop_duplicates(
+                    subset=["File Name", "Peptide"], inplace=True
+                )
+                df = pd.merge(
+                    search_results,
+                    report,
+                    on=["File Name", "Peptide"],
+                    how="left",
+                )
+                included_columns = [
+                    "MsRun ID",
+                    "Sample ID",
+                    "Peptide",
+                    "Protein Group",
+                    "Intensity Log10",
+                    "RT",
+                    "iRT",
+                ]
+            # endif
+
+            if rollup == "np":
+                included_columns.insert(
+                    included_columns.index("Sample ID") + 1, "Nanoparticle"
+                )
+
+            df["MsRun ID"] = df["File Name"].apply(
+                lambda x: (
+                    file_to_msrun[x]["id"] if x in file_to_msrun else None
+                )
+            )
+            df["Sample ID"] = df["File Name"].apply(
+                lambda x: (
+                    file_to_msrun[x]["sample_id"]
+                    if x in file_to_msrun
+                    else None
+                )
+            )
+            df = df[included_columns]
+            df.columns = [title_case_to_snake_case(x) for x in df.columns]
+            return df
+        else:
+            # precursor
+            # working only in report.tsv
+            search_results["Intensity"] = search_results["Precursor.Quantity"]
+            search_results["MsRun ID"] = search_results["Run"].apply(
+                lambda x: (
+                    file_to_msrun[x]["id"] if x in file_to_msrun else None
+                )
+            )
+            search_results["Sample ID"] = search_results["Run"].apply(
+                lambda x: (
+                    file_to_msrun[x]["sample_id"]
+                    if x in file_to_msrun
+                    else None
+                )
+            )
+            search_results["Protein Group"] = search_results["Protein.Group"]
+            search_results["Peptide"] = search_results["Stripped.Sequence"]
+            search_results["Charge"] = search_results["Precursor.Charge"]
+            search_results["Q Value"] = search_results["Q.Value"]
+
+            included_columns = [
+                "MsRun ID",
+                "Sample ID",
+                "Protein Group",
+                "Peptide",
+                "Intensity",
+                "Q Value",
+                "Charge",
+                "RT",
+                "iRT",
+                "IM",
+                "iIM",
+            ]
+            df = search_results[included_columns]
+            df.columns = [title_case_to_snake_case(x) for x in df.columns]
+
+            return df
