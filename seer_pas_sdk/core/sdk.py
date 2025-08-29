@@ -4176,6 +4176,7 @@ class SeerSDK:
                 "Sample ID",
                 "Protein Group",
                 "Peptide",
+                "Precursor Id",
                 "Intensity",
                 "Q Value",
                 "Charge",
@@ -4197,4 +4198,99 @@ class SeerSDK:
 
         # include
         # protein group, (peptide sequence), protein names, gene names, biological process, molecular function, cellular component, global q value, library q value
+
+        # 1. for all modes, fetch protein np file to extract protein groups, protein names, gene names, biological process, molecular function, cellular component
+        search_results = self.get_search_result(
+            analysis_id=analysis_id, analyte_type="protein", rollup="np"
+        )
+
+        report_results = self.get_search_result(
+            analysis_id=analysis_id, analyte_type="precursor", rollup="np"
+        )
+
+        search_results["File Name"] = search_results["File Name"].apply(
+            lambda x: os.path.basename(x).split(".")[0]
+        )
+        search_results = search_results[
+            [
+                "File Name",
+                "Protein Group",
+                "Plate ID",
+                "Well",
+                "Nanoparticle",
+                "Protein Names",
+                "Gene Names",
+                "Biological Process",
+                "Molecular Function",
+                "Cellular Component",
+            ]
+        ]
+        report_results["File Name"] = report_results["Run"]
+        report_results["Protein Group"] = report_results["Protein.Group"]
+
+        if analyte_type == "protein":
+            report_results = report_results[
+                [
+                    "File Name",
+                    "Protein Group",
+                    "Protein.Ids",
+                    "Global.PG.Q.Value",
+                    "Library.PG.Q.Value",
+                ]
+            ]
+            report_results.drop_duplicates(
+                subset=["File Name", "Protein Group"], inplace=True
+            )
+            df = pd.merge(
+                search_results,
+                report_results,
+                on=["File Name", "Protein Group"],
+                how="left",
+            )
+            df.columns = [title_case_to_snake_case(x) for x in df.columns]
+        elif analyte_type == "peptide":
+            peptide_results = self.get_search_result(
+                analysis_id=analysis_id, analyte_type="peptide", rollup="np"
+            )
+            peptide_results["File Name"] = peptide_results["File Name"].apply(
+                lambda x: os.path.basename(x).split(".")[0]
+            )
+            peptide_results = peptide_results[
+                ["File Name", "Peptide", "Protein Group"]
+            ]
+            search_results = pd.merge(
+                peptide_results,
+                search_results,
+                on=["File Name", "Protein Group"],
+                how="left",
+            )
+            report_results["Peptide"] = report_results["Stripped.Sequence"]
+            report_results = report_results[
+                [
+                    "File Name",
+                    "Peptide",
+                    "Protein Group",
+                    "Protein.Ids",
+                    "Global.PG.Q.Value",
+                    "Library.PG.Q.Value",
+                ]
+            ]
+            report_results.drop_duplicates(
+                subset=["File Name", "Peptide"], inplace=True
+            )
+            df = pd.merge(
+                search_results,
+                report_results,
+                on=["File Name", "Peptide"],
+                how="left",
+            )
+
+        # 2. for peptide only, merge protein and peptide np files to get peptide sequence
+
+        # 3. for all modes, merge report.tsv for global q-value, library q-value. protein / peptide will be a left merge, precursor will be a right merge
+
+        # 3. for peptide, precursor, include peptide sequence
+
+        # 4. for precursor, include precursor id
+
         pass
