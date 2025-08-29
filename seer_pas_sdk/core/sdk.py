@@ -3986,6 +3986,20 @@ class SeerSDK:
     def get_search_data(
         self, analysis_id: str, analyte_type: str, rollup: str, engine: str
     ):
+        """
+        WARNING: This function is under acceptance testing. The interface may change in future releases.
+        Get search data for a given analysis ID.
+        Args:
+            analysis_id (str): ID of the analysis.
+            analyte_type (str): Type of analyte. Must be either 'protein', 'peptide', precursor.
+            rollup (str): Rollup type. Must be either 'np' or 'panel'.
+            engine (str): Search engine. Supported engines are: raw, diann, median, median80, pepcal.
+
+        Returns:
+            pd.DataFrame: A dataframe with each row containing the following columns:
+                          'msrun_id', 'sample_id', 'nanoparticle' (if rollup is 'np'), 'protein_group', 'peptide' (for peptide),
+                          'intensity_log10', 'q_value' (for protein), 'rt' and 'irt' (for peptide)
+        """
         warnings.warn(
             "This function is under acceptance testing. The interface may change in future releases.",
             category=UserWarning,
@@ -4174,3 +4188,13 @@ class SeerSDK:
             df.columns = [title_case_to_snake_case(x) for x in df.columns]
 
             return df
+
+    def get_search_data_analyte(self, analysis_id: str, analyte_type: str):
+        if analyte_type not in ["protein", "peptide", "precursor"]:
+            raise ValueError(
+                "Analyte type must be either 'protein', 'peptide', or 'precursor'."
+            )
+
+        # include
+        # protein group, (peptide sequence), protein names, gene names, biological process, molecular function, cellular component, global q value, library q value
+        pass
