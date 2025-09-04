@@ -4285,6 +4285,41 @@ class SeerSDK:
                 how="left",
             )
 
+            # TODO: merge report.tsv
+        else:
+            # precursor
+            search_results = search_results[
+                [
+                    "File Name",
+                    "Plate ID",
+                    "Well",
+                    "Nanoparticle",
+                    "Protein Names",
+                    "Gene Names",
+                    "Biological Process",
+                    "Molecular Function",
+                    "Cellular Component",
+                ]
+            ]
+            report_results = report_results[
+                [
+                    "File Name",
+                    "Precursor.Id",
+                    "Peptide",
+                    "Protein Group",
+                    "Protein.Ids",
+                    "Global.Q.Value",
+                    "Library.Q.Value",
+                ]
+            ]
+            df = pd.merge(
+                search_results,
+                report_results,
+                on=["File Name", "Protein Group"],
+                how="right",
+            )
+            df.columns = [title_case_to_snake_case(x) for x in df.columns]
+
         # 2. for peptide only, merge protein and peptide np files to get peptide sequence
 
         # 3. for all modes, merge report.tsv for global q-value, library q-value. protein / peptide will be a left merge, precursor will be a right merge
