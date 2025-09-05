@@ -4227,6 +4227,7 @@ class SeerSDK:
         ]
         report_results["File Name"] = report_results["Run"]
         report_results["Protein Group"] = report_results["Protein.Group"]
+        report_results["Peptide"] = report_results["Stripped.Sequence"]
 
         if analyte_type == "protein":
             report_results = report_results[
@@ -4235,7 +4236,7 @@ class SeerSDK:
                     "Protein Group",
                     "Protein.Ids",
                     "Global.PG.Q.Value",
-                    "Library.PG.Q.Value",
+                    "Lib.PG.Q.Value",
                 ]
             ]
             report_results.drop_duplicates(
@@ -4247,7 +4248,6 @@ class SeerSDK:
                 on=["File Name", "Protein Group"],
                 how="left",
             )
-            df.columns = [title_case_to_snake_case(x) for x in df.columns]
         elif analyte_type == "peptide":
             peptide_results = self.get_search_result(
                 analysis_id=analysis_id, analyte_type="peptide", rollup="np"
@@ -4264,15 +4264,12 @@ class SeerSDK:
                 on=["File Name", "Protein Group"],
                 how="left",
             )
-            report_results["Peptide"] = report_results["Stripped.Sequence"]
+
             report_results = report_results[
                 [
                     "File Name",
                     "Peptide",
-                    "Protein Group",
                     "Protein.Ids",
-                    "Global.PG.Q.Value",
-                    "Library.PG.Q.Value",
                 ]
             ]
             report_results.drop_duplicates(
@@ -4284,8 +4281,6 @@ class SeerSDK:
                 on=["File Name", "Peptide"],
                 how="left",
             )
-
-            # TODO: merge report.tsv
         else:
             # precursor
             search_results = search_results[
@@ -4294,6 +4289,7 @@ class SeerSDK:
                     "Plate ID",
                     "Well",
                     "Nanoparticle",
+                    "Protein Group",
                     "Protein Names",
                     "Gene Names",
                     "Biological Process",
@@ -4309,7 +4305,7 @@ class SeerSDK:
                     "Protein Group",
                     "Protein.Ids",
                     "Global.Q.Value",
-                    "Library.Q.Value",
+                    "Lib.Q.Value",
                 ]
             ]
             df = pd.merge(
@@ -4318,14 +4314,6 @@ class SeerSDK:
                 on=["File Name", "Protein Group"],
                 how="right",
             )
-            df.columns = [title_case_to_snake_case(x) for x in df.columns]
-
-        # 2. for peptide only, merge protein and peptide np files to get peptide sequence
-
-        # 3. for all modes, merge report.tsv for global q-value, library q-value. protein / peptide will be a left merge, precursor will be a right merge
-
-        # 3. for peptide, precursor, include peptide sequence
-
-        # 4. for precursor, include precursor id
-
-        pass
+        # endif
+        df.columns = [title_case_to_snake_case(x) for x in df.columns]
+        return df
