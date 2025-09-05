@@ -500,6 +500,8 @@ class SeerSDK:
                 if "user_group" in entry:
                     entry["space"] = spaces.get(entry["user_group"], "General")
                     del entry["user_group"]
+                if "id" in entry:
+                    entry["plate_uuid"] = entry["id"]
 
         if not res and as_df:
             return pd.DataFrame(columns=PLATE_COLUMNS)
@@ -642,10 +644,10 @@ class SeerSDK:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
                 plate_ids = {
-                    x["plate_id"]
+                    x["plate_uuid"]
                     for x in self.find_samples(project_id=res["id"])
                 }
-                res["plate_ids"] = list(plate_ids)
+                res["plate_uuids"] = list(plate_ids)
                 return res
         else:
             res = self.find_projects(project_name=project_name)
@@ -732,6 +734,10 @@ class SeerSDK:
             res = projects.json()["data"]
 
         spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+        plate_name_to_plate_uuid = {
+            x["plate_name"]: x["plate_uuid"]
+            for x in self.find_plates(as_df=False)
+        }
         for entry in res:
             if "tenant_id" in entry:
                 del entry["tenant_id"]
@@ -746,6 +752,11 @@ class SeerSDK:
             if "user_group" in entry:
                 entry["space"] = spaces.get(entry["user_group"], "General")
                 del entry["user_group"]
+
+            if "plates" in entry:
+                entry["plate_uuids"] = [
+                    plate_name_to_plate_uuid[x] for x in entry["plates"]
+                ]
 
         if not res and as_df:
             return pd.DataFrame(columns=PROJECT_COLUMNS)
@@ -1010,6 +1021,10 @@ class SeerSDK:
 
         if res_df.empty and as_df:
             return pd.DataFrame(columns=SAMPLE_COLUMNS)
+
+        plate_uuid_to_id = {
+            x["plate_uuid"]: x["plate_id"] for x in self.find_plates()
+        }
         # apply post processing
         if "tenant_id" in res_df.columns:
             res_df.drop(["tenant_id"], axis=1, inplace=True)
