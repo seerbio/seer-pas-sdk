@@ -1857,15 +1857,18 @@ class SeerSDK:
                 "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'."
             )
 
+        if analysis_id:
+            try:
+                return [self.get_analysis(analysis_id=analysis_id)]
+            except:
+                return []
+
         with self._get_auth_session("findanalyses") as s:
 
             params = {"all": "true"}
             if folder_id:
                 params["folder"] = folder_id
 
-            if analysis_id:
-                params["searchFields"] = "id"
-                params["searchItem"] = analysis_id
             if search_field:
                 params["searchFields"] = search_field
                 params["searchItem"] = search_item
