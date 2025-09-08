@@ -2353,8 +2353,7 @@ class SeerSDK:
                     break
             except:
                 dirname = f"{download_path}/{os.path.dirname(filename)}"
-                basename = os.path.basename(filename)
-                if not os.path.isdir(f"{dirname}/{basename}"):
+                if not os.path.isdir(f"{dirname}"):
                     os.makedirs(f"{dirname}/")
         return f"{download_path}/{filename}"
 
