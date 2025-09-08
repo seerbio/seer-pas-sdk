@@ -460,7 +460,9 @@ class SeerSDK:
 
         if project_id or project_name:
             if project_name and not project_id:
-                samples = self.find_samples(project_name=project_name, as_df=False)
+                samples = self.find_samples(
+                    project_name=project_name, as_df=False
+                )
             else:
                 samples = self.find_samples(project_id=project_id, as_df=False)
             plate_ids = {
@@ -983,7 +985,7 @@ class SeerSDK:
             project_id = projects[0]["id"]
 
         sample_params = {"all": "true"}
-        
+
         if project_id or plate_id:
             with self._get_auth_session("findsamples") as s:
                 if plate_id:

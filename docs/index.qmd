@@ -525,6 +525,7 @@ Fetches a list of samples for the authenticated user. Samples can be fetched wit
 ###### <u>Params</u>
 * `plate_id`: (`str`, optional) Unique ID of the plate to fetch samples from, defaulted to None.
 * `project_id`: (`str`, optional) Unique ID of the project to fetch samples from, defaulted to None.
+* `project_name`: (`str`, optional) Name of the project to fetch samples from, defaulted to None.
 * `analysis_id`: (`str`, optional) Unique ID of the analysis to fetch samples from, defaulted to None.
 * `analysis_name`: (`str`, optional) Name of the analysis to fetch samples from, defaulted to None.
 * `as_df`: (`bool`, optional) whether the result should be converted to a DataFrame, defaulted to False.
