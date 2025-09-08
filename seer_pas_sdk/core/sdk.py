@@ -458,25 +458,23 @@ class SeerSDK:
         URL = f"{self._auth.url}api/v1/plates"
         res = []
 
-        if not plate_id and not plate_name:
-            params = {"all": "true"}
-        elif plate_id:
-            params = {"searchFields": "id", "searchItem": plate_id}
-        elif plate_name:
-            params = {"searchFields": "plate_name", "searchItem": plate_name}
-        elif project_id or project_name:
-            if project_id:
-                samples = self.find_samples(project_id=project_id, as_df=False)
+        if project_id or project_name:
+            if project_name and not project_id:
+                samples = self.find_samples(project_name=project_name, as_df=False)
             else:
-                samples = self.find_samples(
-                    project_name=project_name, as_df=False
-                )
+                samples = self.find_samples(project_id=project_id, as_df=False)
             plate_ids = {
                 x.get("plate_uuid") for x in samples if "plate_uuid" in x
             }
             res = [self.get_plate(plate_id=x) for x in plate_ids]
             return res if not as_df else dict_to_df(res)
 
+        if not plate_id and not plate_name:
+            params = {"all": "true"}
+        elif plate_id:
+            params = {"searchFields": "id", "searchItem": plate_id}
+        elif plate_name:
+            params = {"searchFields": "plate_name", "searchItem": plate_name}
         else:
             params = dict()
 
@@ -902,6 +900,7 @@ class SeerSDK:
         self,
         plate_id: str = None,
         project_id: str = None,
+        project_name: str = None,
         analysis_id: str = None,
         analysis_name: str = None,
         as_df: bool = False,
@@ -913,8 +912,12 @@ class SeerSDK:
         ----------
         plate_id : str, optional
             ID of the plate for which samples are to be fetched, defaulted to None.
+        plate_name : str, optional
+            Name of the plate to be fetched, defaulted to None.
         project_id : str, optional
             ID of the project for which samples are to be fetched, defaulted to None.
+        project_name : str, optional
+            Name of the project to filter plates by, defaulted to None.
         analysis_id : str, optional
             ID of the analysis for which samples are to be fetched, defaulted to None.
         analysis_name : str, optional
@@ -970,8 +973,17 @@ class SeerSDK:
 
         res = []
         URL = f"{self._auth.url}api/v1/samples"
-        sample_params = {"all": "true"}
 
+        if project_name and not project_id:
+            projects = self.find_projects(project_name=project_name)
+            if not projects or len(projects) > 1:
+                raise ValueError(
+                    f"Project name '{project_name}' is invalid or ambiguous. Please specify a project_id."
+                )
+            project_id = projects[0]["id"]
+
+        sample_params = {"all": "true"}
+        
         if project_id or plate_id:
             with self._get_auth_session("findsamples") as s:
                 if plate_id:
