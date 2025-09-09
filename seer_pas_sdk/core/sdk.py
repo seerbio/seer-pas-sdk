@@ -1857,15 +1857,18 @@ class SeerSDK:
                 "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'."
             )
 
+        if analysis_id:
+            try:
+                return [self.get_analysis(analysis_id=analysis_id)]
+            except:
+                return []
+
         with self._get_auth_session("findanalyses") as s:
 
             params = {"all": "true"}
             if folder_id:
                 params["folder"] = folder_id
 
-            if analysis_id:
-                params["searchFields"] = "id"
-                params["searchItem"] = analysis_id
             if search_field:
                 params["searchFields"] = search_field
                 params["searchItem"] = search_item
@@ -2320,6 +2323,9 @@ class SeerSDK:
         if not download_path:
             download_path = os.getcwd()
 
+        if download_path.endswith("/"):
+            download_path = download_path.rstrip("/")
+
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
 
@@ -2327,7 +2333,6 @@ class SeerSDK:
             raise ValueError(
                 "Please specify a valid folder path as download path."
             )
-
         file = self.get_search_result_file_url(analysis_id, filename)
         file_url = file["url"]
         filename = file["filename"]
@@ -2353,13 +2358,9 @@ class SeerSDK:
                     )
                     break
             except:
-                filename = filename.split("/")
-                name += "/" + "/".join(
-                    [filename[i] for i in range(len(filename) - 1)]
-                )
-                filename = filename[-1]
-                if not os.path.isdir(f"{name}/{filename}"):
-                    os.makedirs(f"{name}/")
+                dirname = f"{download_path}/{os.path.dirname(filename)}"
+                if not os.path.isdir(f"{dirname}"):
+                    os.makedirs(f"{dirname}")
         return f"{download_path}/{filename}"
 
     def get_search_result_file_url(self, analysis_id: str, filename: str):
@@ -2379,12 +2380,19 @@ class SeerSDK:
         file_url: dict[str, str]
             Dictionary containing the 'url' and 'filename' of the file.
         """
+        pas_dirname = os.path.dirname(filename)
         if "." in filename:
             filename = ".".join(filename.split(".")[:-1])
         filename = filename.casefold()
 
+        if pas_dirname:
+            analysis_result_files = self.list_search_result_files(
+                analysis_id, folder=pas_dirname
+            )
+        else:
+            analysis_result_files = self.list_search_result_files(analysis_id)
+
         # Allow user to pass in filenames without an extension.
-        analysis_result_files = self.list_search_result_files(analysis_id)
         analysis_result_files_prefix_mapper = {
             (".".join(x.split(".")[:-1])).casefold(): x
             for x in analysis_result_files
@@ -2396,7 +2404,7 @@ class SeerSDK:
                 f"Filename {filename} not among the available analysis result files. Please use SeerSDK.list_search_result_files('{analysis_id}') to see available files for this analysis."
             )
 
-        analysis_metadata = self.find_analyses(analysis_id)[0]
+        analysis_metadata = self.get_analysis(analysis_id)
         if analysis_metadata.get("status") in ["Failed", None]:
             raise ValueError("Cannot generate links for failed searches.")
         with self._get_auth_session("getsearchresultfileurl") as s:
