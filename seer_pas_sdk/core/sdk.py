@@ -2323,6 +2323,9 @@ class SeerSDK:
         if not download_path:
             download_path = os.getcwd()
 
+        if download_path.endswith("/"):
+            download_path = download_path.rstrip("/")
+
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
 
