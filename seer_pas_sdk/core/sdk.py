@@ -1895,15 +1895,18 @@ class SeerSDK:
                 "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'."
             )
 
+        if analysis_id:
+            try:
+                return [self.get_analysis(analysis_id=analysis_id)]
+            except:
+                return []
+
         with self._get_auth_session("findanalyses") as s:
 
             params = {"all": "true"}
             if folder_id:
                 params["folder"] = folder_id
 
-            if analysis_id:
-                params["searchFields"] = "id"
-                params["searchItem"] = analysis_id
             if search_field:
                 params["searchFields"] = search_field
                 params["searchItem"] = search_item
@@ -2346,17 +2349,20 @@ class SeerSDK:
         filename : str
             Name of the file to be fetched. Files can be case insensitive and without file extensions.
 
-        download_path : str
+        download_path : str, optional
             String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid.
 
         Returns
         -------
-        None
-            Downloads the file to the specified path.
+        str
+            Path to the downloaded file.
         """
 
         if not download_path:
             download_path = os.getcwd()
+
+        if download_path.endswith("/"):
+            download_path = download_path.rstrip("/")
 
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
@@ -2365,7 +2371,6 @@ class SeerSDK:
             raise ValueError(
                 "Please specify a valid folder path as download path."
             )
-
         file = self.get_search_result_file_url(analysis_id, filename)
         file_url = file["url"]
         filename = file["filename"]
@@ -2391,15 +2396,10 @@ class SeerSDK:
                     )
                     break
             except:
-                filename = filename.split("/")
-                name += "/" + "/".join(
-                    [filename[i] for i in range(len(filename) - 1)]
-                )
-                filename = filename[-1]
-                if not os.path.isdir(f"{name}/{filename}"):
-                    os.makedirs(f"{name}/")
-        print(f"File {filename} downloaded successfully to {download_path}.")
-        return
+                dirname = f"{download_path}/{os.path.dirname(filename)}"
+                if not os.path.isdir(f"{dirname}"):
+                    os.makedirs(f"{dirname}")
+        return f"{download_path}/{filename}"
 
     def get_search_result_file_url(self, analysis_id: str, filename: str):
         """
@@ -2418,12 +2418,19 @@ class SeerSDK:
         file_url: dict[str, str]
             Dictionary containing the 'url' and 'filename' of the file.
         """
+        pas_dirname = os.path.dirname(filename)
         if "." in filename:
             filename = ".".join(filename.split(".")[:-1])
         filename = filename.casefold()
 
+        if pas_dirname:
+            analysis_result_files = self.list_search_result_files(
+                analysis_id, folder=pas_dirname
+            )
+        else:
+            analysis_result_files = self.list_search_result_files(analysis_id)
+
         # Allow user to pass in filenames without an extension.
-        analysis_result_files = self.list_search_result_files(analysis_id)
         analysis_result_files_prefix_mapper = {
             (".".join(x.split(".")[:-1])).casefold(): x
             for x in analysis_result_files
@@ -2435,7 +2442,7 @@ class SeerSDK:
                 f"Filename {filename} not among the available analysis result files. Please use SeerSDK.list_search_result_files('{analysis_id}') to see available files for this analysis."
             )
 
-        analysis_metadata = self.find_analyses(analysis_id)[0]
+        analysis_metadata = self.get_analysis(analysis_id)
         if analysis_metadata.get("status") in ["Failed", None]:
             raise ValueError("Cannot generate links for failed searches.")
         with self._get_auth_session("getsearchresultfileurl") as s:
@@ -2914,7 +2921,7 @@ class SeerSDK:
             return files.json()["filesList"]
 
     def download_ms_data_files(
-        self, paths: _List[str], download_path: str, space: str = None
+        self, paths: _List[str], download_path: str = "", space: str = None
     ):
         """
         Downloads all MS data files for paths passed in the params to the specified download path.
@@ -2923,15 +2930,14 @@ class SeerSDK:
         ----------
         paths : list[str]
             List of paths to download.
-        download_path : str
-            Path to download the files to.
+        download_path : str, optional
+            Path to download the files to. Defaults to current working directory.
         space : str, optional
             ID of the user group to which the files belongs, defaulted to None.
 
         Returns
         -------
-        message: dict[str, str]
-            Contains the 'message' whether the files were downloaded or not.
+        list[str] : the list of paths to the downloaded files.
         """
 
         urls = []
@@ -2974,6 +2980,8 @@ class SeerSDK:
                         "Could not download file. Please check if the backend is running."
                     )
                 urls.append(download_url.text)
+
+        downloads = []
         for i in range(len(urls)):
             filename = paths[i].split("/")[-1]
             url = urls[i]
@@ -2998,6 +3006,7 @@ class SeerSDK:
                             reporthook=download_hook(t),
                             data=None,
                         )
+                        downloads.append(f"{name}/{filename}")
                         break
                 except:
                     filename = filename.split("/")
@@ -3015,7 +3024,7 @@ class SeerSDK:
 
             print(f"Finished downloading {filename}\n")
 
-        return {"message": f"Files downloaded successfully to '{name}'"}
+        return downloads
 
     def get_group_analysis(
         self, analysis_id, group_analysis_id=None, **kwargs
@@ -3938,31 +3947,22 @@ class SeerSDK:
 
                 print(f"Downloaded file to {download_path}/{file}")
 
-    def download_analysis_protocol_fasta(
-        self,
-        analysis_protocol_id=None,
-        analysis_id=None,
-        link=False,
-        download_path=None,
+    def get_analysis_protocol_fasta_link(
+        self, analysis_protocol_id=None, analysis_id=None
     ):
-        """Download the fasta file associated with a given analysis protocol.
-
+        """Get the download link(s) for the fasta file(s) associated with a given analysis protocol.
         Args:
             analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
             analysis_id (str, optional): ID of the analysis. Defaults to None.
-            link (bool, optional): If True, return a list of download links instead of downloading the files. Defaults to False.
-            download_path (str, optional): Path to download the fasta file to. Defaults to current working directory.
 
         Returns:
-            list[dict] | None: If link is True, return a list of dictionaries containing the filename and download URL. Otherwise, return None.
+            list[dict]: A list of dictionaries containing the 'filename' and the 'url' to download the fasta file.
         """
+
         if not (bool(analysis_protocol_id) ^ bool(analysis_id)):
             raise ValueError(
                 "Please provide either an analysis ID or an analysis protocol ID."
             )
-
-        if not download_path:
-            download_path = os.getcwd()
 
         if not analysis_protocol_id:
             try:
@@ -3994,7 +3994,7 @@ class SeerSDK:
         with self._get_auth_session("getanalysisprotocolparameters") as s:
             response = s.get(URL)
             if response.status_code != 200:
-                raise ServerError("Request failed.")
+                raise ServerError("Failed to retrieve analysis protocol data.")
             response = response.json()
             if isinstance(response, dict):
                 response = response["editableParameters"]
@@ -4015,47 +4015,71 @@ class SeerSDK:
 
         URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
         links = []
-        missing_links = []
         for file in fasta_filenames:
             with self._get_auth_session("getanalysisprotocolfilesurl") as s:
                 filename = os.path.basename(file)
                 response = s.post(URL, json={"filepath": file})
                 if response.status_code != 200:
-                    print(f"Could not retrieve download link for {filename}.")
-                    missing_links.append(filename)
+                    print(
+                        f"ERROR: Could not retrieve download link for {filename}."
+                    )
                     continue
                 url = response.json()["url"]
-                if link:
-                    links.append({"filename": filename, "url": url})
-                    continue
-                print(f"Downloading {filename}")
-                for _ in range(2):
-                    try:
-                        with tqdm(
-                            unit="B",
-                            unit_scale=True,
-                            unit_divisor=1024,
-                            miniters=1,
-                            desc=f"Progress",
-                        ) as t:
-                            ssl._create_default_https_context = (
-                                ssl._create_unverified_context
-                            )
-                            urllib.request.urlretrieve(
-                                url,
-                                f"{download_path}/{filename}",
-                                reporthook=download_hook(t),
-                                data=None,
-                            )
-                            break
-                    except:
-                        if not os.path.isdir(f"{download_path}"):
-                            os.makedirs(f"{download_path}")
+                links.append({"filename": filename, "url": url})
+        return links
 
-                print(f"Downloaded file to {download_path}/{filename}")
-        if missing_links:
-            print(
-                f"Could not retrieve download links for the following files: {', '.join(missing_links)}"
+    def download_analysis_protocol_fasta(
+        self,
+        analysis_protocol_id=None,
+        analysis_id=None,
+        download_path=None,
+    ):
+        """Download the fasta file(s) associated with a given analysis protocol.
+
+        Args:
+            analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
+            analysis_id (str, optional): ID of the analysis. Defaults to None.
+            download_path (str, optional): Path to download the fasta file to. Defaults to current working directory.
+
+        Returns:
+            list[str] : The path to the downloaded fasta file(s).
+        """
+
+        links = [
+            (x["filename"], x["url"])
+            for x in self.get_analysis_protocol_fasta_link(
+                analysis_protocol_id=analysis_protocol_id,
+                analysis_id=analysis_id,
             )
-        if link:
-            return links
+        ]
+        if not download_path:
+            download_path = os.getcwd()
+
+        downloads = []
+        for filename, url in links:
+            print(f"Downloading {filename}")
+            for _ in range(2):
+                try:
+                    with tqdm(
+                        unit="B",
+                        unit_scale=True,
+                        unit_divisor=1024,
+                        miniters=1,
+                        desc=f"Progress",
+                    ) as t:
+                        ssl._create_default_https_context = (
+                            ssl._create_unverified_context
+                        )
+                        urllib.request.urlretrieve(
+                            url,
+                            f"{download_path}/{filename}",
+                            reporthook=download_hook(t),
+                            data=None,
+                        )
+                        break
+                except:
+                    if not os.path.isdir(f"{download_path}"):
+                        os.makedirs(f"{download_path}")
+
+            downloads.append(f"{download_path}/{filename}")
+        return downloads

@@ -122,7 +122,7 @@ This is how a plate map file could be made:
 from seer_pas_sdk import PlateMap
 
 sample_plate_map_file = PlateMap(
-    ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],
+    ms_file_name =["TestFile1.raw", "TestFile2.raw"],
     sample_name = ["A111", "A112"], 
     sample_id = ["A111", "A112"], 
     well_location = ["C11", "D11"], 
@@ -143,7 +143,7 @@ sample_plate_map_file = PlateMap(
 
 # Or alternatively, this would be the same as the following (we've left some fields empty which would default them to `None`):
 another_plate_map_file = PlateMap(
-    ms_file_name =["AgamSDKTest1.raw", "AgamSDKTest2.raw"],
+    ms_file_name =["TestFile1.raw", "TestFile2.raw"],
     sample_name = ["A111", "A112"], 
     sample_id = ["A111", "A112"], 
     well_location = ["C11", "D11"], 
@@ -337,7 +337,7 @@ example = sdk.find_msruns(sample_ids)
 log(example)
 ```
 ```
-[{'id': '81c6a180-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '812139c0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/AgamSDKTest2.raw', 'well_location': 'D11', 'nanoparticle': '', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:49.006Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:49.006Z', 'space': None, 'sample_id_tracking': 'A112', 'nanoparticle_id': '', 'control': '', 'control_id': '', 'date_sample_prep': '', 'sample_volume': '', 'peptide_concentration': '', 'peptide_mass_sample': '', 'dilution_factor': '', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}, {'id': '816a9ed0-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '803e05b0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/AgamSDKTest1.raw', 'well_location': 'C11', 'nanoparticle': 'NONE', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:48.408Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:48.408Z', 'space': None, 'sample_id_tracking': 'A111', 'nanoparticle_id': 'NONE', 'control': 'MPE Control', 'control_id': 'MPE Control', 'date_sample_prep': '', 'sample_volume': '20.0', 'peptide_concentration': '59.514', 'peptide_mass_sample': '8.57', 'dilution_factor': '1.0', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}]
+[{'id': '81c6a180-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '812139c0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/TestFile2.raw', 'well_location': 'D11', 'nanoparticle': '', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:49.006Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:49.006Z', 'user_group': None, 'sample_id_tracking': 'A112', 'nanoparticle_id': '', 'control': '', 'control_id': '', 'date_sample_prep': '', 'sample_volume': '', 'peptide_concentration': '', 'peptide_mass_sample': '', 'dilution_factor': '', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}, {'id': '816a9ed0-15e0-11ee-bdf1-bbaa73585acf', 'sample_id': '803e05b0-15e0-11ee-bdf1-bbaa73585acf', 'raw_file_path': '7ec8cad0-15e0-11ee-bdf1-bbaa73585acf/20230628182044224/TestFile1.raw', 'well_location': 'C11', 'nanoparticle': 'NONE', 'instrument_name': '', 'created_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'created_timestamp': '2023-06-28T18:20:48.408Z', 'last_modified_by': '04936dea-d255-4130-8e82-2f28938a8f9a', 'last_modified_timestamp': '2023-06-28T18:20:48.408Z', 'user_group': None, 'sample_id_tracking': 'A111', 'nanoparticle_id': 'NONE', 'control': 'MPE Control', 'control_id': 'MPE Control', 'date_sample_prep': '', 'sample_volume': '20.0', 'peptide_concentration': '59.514', 'peptide_mass_sample': '8.57', 'dilution_factor': '1.0', 'kit_id': None, 'injection_timestamp': None, 'ms_instrument_sn': None, 'recon_volume': None, 'gradient': None}]
 ```
 
 There is also an option to return everything as a DataFrame instead:
@@ -652,8 +652,8 @@ File Name                         Sample Name     Plate ID Well Nanoparticle Pro
 4  MYPROJECT_X4544_A_Orbitrap-1_2ug_60min_20190829...  Test-Sample-110A  MYPROJECT  A3     SP-0335      P56181-2          9.837                    0.992             Isoform of P56181, Isoform 2 of NADH dehydroge...   NDUFV3           NaN                NaN                NaN       
 ```
 
-#### Download Search Output Files
-Downloads an indicated search output files for the given `analysis_id` to the specified `download_path`. If no `download_path` is specified or the `download_path` is invalid, the file will be downloaded to the current working directory.
+#### Download Search Output File
+Downloads an indicated search output file for the given `analysis_id` to the specified `download_path`. If no `download_path` is specified or the `download_path` is invalid, the file will be downloaded to the current working directory.
 
 ###### <u>Params</u>
 * `analysis_id`: (`str`) Unique ID of the analysis for which the data is to be downloaded.
@@ -661,7 +661,7 @@ Downloads an indicated search output files for the given `analysis_id` to the sp
 * `download_path`: (`str`) Path to download the analysis file to, defaulted to current working directory.
 
 ###### <u>Returns</u>
-None
+file : (`str`) File path of the downloaded file.
 
 ###### <u>Example</u>
 ```{python}
@@ -674,6 +674,8 @@ sdk.download_search_output_file(analysis_id, filename, download_path="testing/")
 ```
 Downloading file: Protein_Group_NP.tsv
 File Protein_Group_NP.tsv downloaded successfully to testing/Protein_Group_NP.tsv
+
+'testing/Protein_Group_NP.tsv'
 ```
 
 #### List Search Output Files
@@ -771,7 +773,7 @@ folder_path = "2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449"
 log(sdk.list_ms_data_files(folder_path))
 ```
 ```
-['2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/plateMap_2bbdac30-66f7-11ee-abb2-359a84c72f54.csv', '2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest1.raw', '2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest2.raw']
+['2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/plateMap_2bbdac30-66f7-11ee-abb2-359a84c72f54.csv', '2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/TestFile1.raw', '2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/TestFile2.raw']
 ```
 
 If the folder path is invalid, the result is an empty list.
@@ -793,29 +795,29 @@ If no `download_path` is specified or the `download_path` is invalid, the file w
 
 ###### <u>Params</u>
 * `paths` : (`list[str]`) List of paths to download.
-* `download_path` : (`str`) Path to download the analysis file to, defaulted to current working directory.
+* `download_path` : (`str`, optional) Path to download the analysis file to, defaulted to current working directory.
 * `space` : (`str`, optional) ID of the user group to which the file belongs, defaulted to None.
 
 ###### <u>Returns</u>
-(`dict[str, str]`) Message containing whether the file was downloaded or not.
+(`list[str]`) Contains the list of files downloaded to the specified path.
 
 ###### <u>Example</u>
 ```{python}
 #| eval: false
-download_paths = ["2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest1.raw", "2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/AgamSDKTest2.raw"]
+download_paths = ["2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/TestFile1.raw", "2bbdac30-66f7-11ee-abb2-359a84c72f54/20231009225707449/TestFile2.raw"]
 
 log(sdk.download_ms_data_files(paths=download_paths, download_path="testing/"))
 ```
 ```
 Downloading files to "testing"
 
-Downloading AgamSDKTest1.raw
-Finished downloading AgamSDKTest1.raw
+Downloading TestFile1.raw
+Finished downloading TestFile1.raw
 
-Downloading AgamSDKTest2.raw
-Finished downloading AgamSDKTest2.raw
+Downloading TestFile2.raw
+Finished downloading TestFile2.raw
 
-{'message': 'Files downloaded successfully to testing'}
+['testing/TestFile1.raw', 'testing/TestFile2.raw']
 ```
 
 <hr>
@@ -948,28 +950,22 @@ log(sdk.group_analysis_results(group_analysis_id, box_plot_info))
 ```
 
 <hr>
+### Download Analysis Protocol FASTA
 
-###Download Analysis Protocol FASTA
+Downloads the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly.
 
-Downloads the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly. Optionally, return signed download links instead of downloading.
-
-######<u>Params</u>
+###### <u>Params</u>
 * `analysis_protocol_id`: (`str`, optional) ID of the analysis protocol whose FASTA file(s) you want.
 
 * `analysis_id`: (`str`, optional) ID of the analysis whose protocol FASTA file(s) you want.
-
-* `link`: (`bool`, optional) If True, returns signed download links without downloading files. Defaults to False.
 
 * `download_path`: (`str`, optional) Directory to save files to. Defaults to the current working directory.
 
 Note: Provide either analysis_id or analysis_protocol_id (but not both).
 
-<br>
-######<u>Returns</u>
+###### <u>Returns</u>
 
-* `list[dict] | None` — If link=True, returns a list of dictionaries with filename and url. Otherwise downloads files to download_path and returns None.
-
-<br>
+* files: (`list[str]`) List of file paths where the FASTA files were downloaded, if downloading.
 
 ###### <u>Examples</u>
 
@@ -989,15 +985,44 @@ sdk.download_analysis_protocol_fasta(
     download_path="/path/to/fasta"
 )
 ```
+```
+['/path/to/fasta/uniprot_human_2023_08.fasta', '/path/to/fasta/contaminants.fasta']
 
-Get links only (no download):
+```
+<br>
+
+### Get Analysis Protocol FASTA link
+Returns signed download links for the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly.
+
+###### <u>Params</u>
+* `analysis_protocol_id`: (`str`, optional) ID of the analysis protocol whose FASTA file(s) you want.
+* `analysis_id`: (`str`, optional) ID of the analysis whose protocol FASTA file(s) you want.
+Note: Provide either analysis_id or analysis_protocol_id (but not both).
+
+###### <u>Returns</u>
+* links: (`list[dict]`) List of dictionaries containing filename and signed URL for each FASTA file.
+
+###### <u>Examples</u>
+Get by analysis ID:
 ```{python}
 #| eval: false
-links = sdk.download_analysis_protocol_fasta(
-    analysis_protocol_id="dc61a360-6b77-11ed-8ac3-37d35135f08e",
-    link=True
+sdk.get_analysis_protocol_fasta_link(
+    analysis_id="c80a0260-856e-11ee-b1b7-ff20dde1461b"
 )
-log(links)
+```
+
+```
+[
+  {"filename": "uniprot_human_2023_08.fasta", "url": "https://...signed..."},
+  {"filename": "contaminants.fasta", "url": "https://...signed..."}
+]
+```
+Get by analysis protocol ID:
+```{python}
+#| eval: false
+sdk.get_analysis_protocol_fasta_link(
+    analysis_protocol_id="dc61a360-6b77-11ed-8ac3-37d35135f08e"
+)
 ```
 ```
 [
@@ -1005,4 +1030,4 @@ log(links)
   {"filename": "contaminants.fasta", "url": "https://...signed..."}
 ]
 ```
-<br>
+<hr>
