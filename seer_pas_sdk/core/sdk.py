@@ -502,8 +502,7 @@ class SeerSDK:
                     del entry["user_group"]
                 if "id" in entry:
                     entry["plate_uuid"] = entry["id"]
-
-        if not res and as_df:
+        if (not res) and as_df:
             return pd.DataFrame(columns=PLATE_COLUMNS)
         return res if not as_df else dict_to_df(res)
 
