@@ -3972,7 +3972,7 @@ class SeerSDK:
                 raise ValueError(f"Could not parse server response.")
 
         try:
-            analysis_protocol_engine = self.get_analysis_protocols(
+            analysis_protocol_engine = self.find_analysis_protocols(
                 analysis_protocol_id=analysis_protocol_id
             )[0]["analysis_engine"]
         except (IndexError, KeyError):
