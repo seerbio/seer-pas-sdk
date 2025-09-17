@@ -1779,6 +1779,11 @@ class SeerSDK:
                 if "user_group" in res:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
+                res["fasta"] = (
+                    ','.join(self._get_analysis_protocol_fasta_filenames(
+                        analysis_protocol_id=res.get("analysis_protocol_id")
+                    ))
+                )
                 return res
         else:
             res = self.find_analyses(analysis_name=analysis_name)
@@ -1954,6 +1959,12 @@ class SeerSDK:
                         res[entry]["user_group"], "General"
                     )
                     del res[entry]["user_group"]
+
+                res[entry]["fasta"] = ",".join(
+                    self._get_analysis_protocol_fasta_filenames(
+                        res[entry]["analysis_protocol_id"]
+                    )
+                )
 
             # recursive solution to get analyses in folders
             for folder in folders:
@@ -3946,35 +3957,11 @@ class SeerSDK:
 
                 print(f"Downloaded file to {download_path}/{file}")
 
-    def get_analysis_protocol_fasta_link(
-        self, analysis_protocol_id=None, analysis_id=None
-    ):
-        """Get the download link(s) for the fasta file(s) associated with a given analysis protocol.
-        Args:
-            analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
-            analysis_id (str, optional): ID of the analysis. Defaults to None.
-
-        Returns:
-            list[dict]: A list of dictionaries containing the 'filename' and the 'url' to download the fasta file.
-        """
-
-        if not (bool(analysis_protocol_id) ^ bool(analysis_id)):
-            raise ValueError(
-                "Please provide either an analysis ID or an analysis protocol ID."
-            )
-
-        if not analysis_protocol_id:
-            try:
-                analysis_protocol_id = self.get_analyses(analysis_id)[0][
-                    "analysis_protocol_id"
-                ]
-            except (IndexError, KeyError):
-                raise ValueError(f"Could not parse server response.")
-
+    def _get_analysis_protocol_fasta_filenames(self, analysis_protocol_id):
         try:
-            analysis_protocol_engine = self.find_analysis_protocols(
+            analysis_protocol_engine = self.get_analysis_protocol(
                 analysis_protocol_id=analysis_protocol_id
-            )[0]["analysis_engine"]
+            )["analysis_engine"]
         except (IndexError, KeyError):
             raise ValueError(f"Could not parse server response.")
 
@@ -4011,7 +3998,36 @@ class SeerSDK:
             )
             if not fasta_filenames:
                 raise ServerError("No fasta file name returned from server.")
+            return fasta_filenames
 
+    def get_analysis_protocol_fasta_link(
+        self, analysis_protocol_id=None, analysis_id=None
+    ):
+        """Get the download link(s) for the fasta file(s) associated with a given analysis protocol.
+        Args:
+            analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
+            analysis_id (str, optional): ID of the analysis. Defaults to None.
+
+        Returns:
+            list[dict]: A list of dictionaries containing the 'filename' and the 'url' to download the fasta file.
+        """
+
+        if not (bool(analysis_protocol_id) ^ bool(analysis_id)):
+            raise ValueError(
+                "Please provide either an analysis ID or an analysis protocol ID."
+            )
+
+        if not analysis_protocol_id:
+            try:
+                analysis_protocol_id = self.get_analyses(analysis_id)[0][
+                    "analysis_protocol_id"
+                ]
+            except (IndexError, KeyError):
+                raise ValueError(f"Could not parse server response.")
+
+        fasta_filenames = self._get_analysis_protocol_fasta_filenames(
+            analysis_protocol_id=analysis_protocol_id
+        )
         URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
         links = []
         for file in fasta_filenames:
