@@ -64,11 +64,11 @@ class SeerSDK:
             Boolean denoting whether the logout operation was successful.
         """
         if self._auth.has_valid_token():
-            try:
-                self._auth._logout()
-            except Exception as e:
-                return False
-        return True
+            self._auth._logout()
+            return True
+        else:
+            print("The user's session is expired. No action taken.")
+            return False
 
     def __del__(self):
         """
