@@ -4039,16 +4039,29 @@ class SeerSDK:
             return fasta_filenames
 
     def get_analysis_protocol_fasta_link(
-        self, analysis_protocol_id=None, analysis_id=None
+        self, analysis_protocol_id=None, analysis_id=None, analysis_name=None
     ):
         """Get the download link(s) for the fasta file(s) associated with a given analysis protocol.
         Args:
             analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
             analysis_id (str, optional): ID of the analysis. Defaults to None.
+            analysis_name (str, optional): Name of the analysis. Defaults to None.
 
         Returns:
             list[dict]: A list of dictionaries containing the 'filename' and the 'url' to download the fasta file.
         """
+        if analysis_name and (not analysis_id):
+            analyses = self.find_analyses(analysis_name=analysis_name)
+            if len(analyses) > 1:
+                raise ValueError(
+                    f"Multiple analyses found with name {analysis_name}. Please provide an analysis ID instead."
+                )
+            elif len(analyses) == 0:
+                raise ValueError(
+                    f"No analyses found with name {analysis_name}."
+                )
+            else:
+                analysis_id = analyses[0]["id"]
 
         if not (bool(analysis_protocol_id) ^ bool(analysis_id)):
             raise ValueError(
@@ -4057,10 +4070,10 @@ class SeerSDK:
 
         if not analysis_protocol_id:
             try:
-                analysis_protocol_id = self.get_analyses(analysis_id)[0][
-                    "analysis_protocol_id"
-                ]
-            except (IndexError, KeyError):
+                analysis_protocol_id = self.get_analysis(
+                    analysis_id=analysis_id
+                )["analysis_protocol_id"]
+            except KeyError:
                 raise ValueError(f"Could not parse server response.")
 
         fasta_filenames = self._get_analysis_protocol_fasta_filenames(
