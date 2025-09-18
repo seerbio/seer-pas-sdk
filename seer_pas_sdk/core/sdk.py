@@ -1795,11 +1795,22 @@ class SeerSDK:
                 if "user_group" in res:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
-                res["fasta"] = (
-                    ','.join(self._get_analysis_protocol_fasta_filenames(
-                        analysis_protocol_id=res.get("analysis_protocol_id")
-                    ))
-                )
+                if not res.get("is_folder") and res.get(
+                    "analysis_protocol_id"
+                ):
+                    try:
+                        res["fasta"] = ",".join(
+                            self._get_analysis_protocol_fasta_filenames(
+                                analysis_protocol_id=res.get(
+                                    "analysis_protocol_id"
+                                )
+                            )
+                        )
+                    except Exception as e:
+                        print("Warning: Could not fetch fasta files.")
+                        res["fasta"] = None
+                else:
+                    res["fasta"] = None
                 return res
         else:
             res = self.find_analyses(analysis_name=analysis_name)
@@ -1976,11 +1987,22 @@ class SeerSDK:
                     )
                     del res[entry]["user_group"]
 
-                res[entry]["fasta"] = ",".join(
-                    self._get_analysis_protocol_fasta_filenames(
-                        res[entry]["analysis_protocol_id"]
-                    )
-                )
+                if (not res[entry].get("is_folder")) and res[entry].get(
+                    "analysis_protocol_id"
+                ):
+                    try:
+                        res[entry]["fasta"] = ",".join(
+                            self._get_analysis_protocol_fasta_filenames(
+                                res[entry]["analysis_protocol_id"]
+                            )
+                        )
+                    except:
+                        print(
+                            f"Warning: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
+                        )
+                        res[entry]["fasta"] = None
+                else:
+                    res[entry]["fasta"] = None
 
             # recursive solution to get analyses in folders
             for folder in folders:
@@ -3978,7 +4000,7 @@ class SeerSDK:
             analysis_protocol_engine = self.get_analysis_protocol(
                 analysis_protocol_id=analysis_protocol_id
             )["analysis_engine"]
-        except (KeyError):
+        except KeyError:
             raise ServerError(f"Could not find analysis protocol parameters.")
 
         analysis_protocol_engine = analysis_protocol_engine.lower()
