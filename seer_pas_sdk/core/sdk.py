@@ -3979,7 +3979,7 @@ class SeerSDK:
 
         if not analysis_protocol_id:
             try:
-                analysis_protocol_id = self.get_analyses(analysis_id)[0][
+                analysis_protocol_id = self.find_analyses(analysis_id)[0][
                     "analysis_protocol_id"
                 ]
             except (IndexError, KeyError):
