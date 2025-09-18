@@ -54,6 +54,22 @@ class SeerSDK:
                 f"Could not log in.\nPlease check your credentials and/or instance: {e}."
             )
 
+    def logout(self):
+        """
+        Perform a logout operation for the current user of the SDK instance.
+
+        Returns
+        -------
+        success : bool
+            Boolean denoting whether the logout operation was successful.
+        """
+        if self._auth.has_valid_token():
+            self._auth._logout()
+            return True
+        else:
+            print("The user's session is expired. No action taken.")
+            return False
+
     def __del__(self):
         """
         Destructor for the SeerSDK class. Logs out the user when the object is deleted.
