@@ -54,6 +54,22 @@ class SeerSDK:
                 f"Could not log in.\nPlease check your credentials and/or instance: {e}."
             )
 
+    def logout(self):
+        """
+        Perform a logout operation for the current user of the SDK instance.
+
+        Returns
+        -------
+        success : bool
+            Boolean denoting whether the logout operation was successful.
+        """
+        if self._auth.has_valid_token():
+            self._auth._logout()
+            return True
+        else:
+            print("The user's session is expired. No action taken.")
+            return False
+
     def __del__(self):
         """
         Destructor for the SeerSDK class. Logs out the user when the object is deleted.
@@ -3962,8 +3978,8 @@ class SeerSDK:
             analysis_protocol_engine = self.get_analysis_protocol(
                 analysis_protocol_id=analysis_protocol_id
             )["analysis_engine"]
-        except (IndexError, KeyError):
-            raise ValueError(f"Could not parse server response.")
+        except (KeyError):
+            raise ServerError(f"Could not find analysis protocol parameters.")
 
         analysis_protocol_engine = analysis_protocol_engine.lower()
         if analysis_protocol_engine == "diann":
@@ -4047,6 +4063,7 @@ class SeerSDK:
         self,
         analysis_protocol_id=None,
         analysis_id=None,
+        analysis_name=None,
         download_path=None,
     ):
         """Download the fasta file(s) associated with a given analysis protocol.
@@ -4054,6 +4071,7 @@ class SeerSDK:
         Args:
             analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
             analysis_id (str, optional): ID of the analysis. Defaults to None.
+            analysis_name (str, optional): Name of the analysis. Defaults to None.
             download_path (str, optional): Path to download the fasta file to. Defaults to current working directory.
 
         Returns:
@@ -4065,6 +4083,7 @@ class SeerSDK:
             for x in self.get_analysis_protocol_fasta_link(
                 analysis_protocol_id=analysis_protocol_id,
                 analysis_id=analysis_id,
+                analysis_name=analysis_name,
             )
         ]
         if not download_path:
