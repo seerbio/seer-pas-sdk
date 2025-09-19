@@ -1462,6 +1462,15 @@ class SeerSDK:
                 if "user_group" in res:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
+                try:
+                    res["fasta"] = ",".join(
+                        self._get_analysis_protocol_fasta_filenames(
+                            analysis_protocol_id=res["id"],
+                            analysis_protocol_engine=res["analysis_engine"],
+                        )
+                    )
+                except:
+                    res["fasta"] = ""
                 return res
         else:
             res = self.find_analysis_protocols(
@@ -1575,6 +1584,18 @@ class SeerSDK:
                         res[entry]["user_group"], "General"
                     )
                     del res[entry]["user_group"]
+
+                try:
+                    res[entry]["fasta"] = ",".join(
+                        self._get_analysis_protocol_fasta_filenames(
+                            analysis_protocol_id=res[entry]["id"],
+                            analysis_protocol_engine=res[entry].get(
+                                "analysis_engine", None
+                            ),
+                        )
+                    )
+                except:
+                    res[entry]["fasta"] = ""
 
             if not res and as_df:
                 return pd.DataFrame(columns=ANALYSIS_PROTOCOL_COLUMNS)
@@ -1798,12 +1819,18 @@ class SeerSDK:
                 if not res.get("is_folder") and res.get(
                     "analysis_protocol_id"
                 ):
+                    analysis_protocol = self.get_analysis_protocol(
+                        analysis_protocol_id=res.get("analysis_protocol_id")
+                    )
                     try:
                         res["fasta"] = ",".join(
                             self._get_analysis_protocol_fasta_filenames(
                                 analysis_protocol_id=res.get(
                                     "analysis_protocol_id"
-                                )
+                                ),
+                                analysis_protocol_engine=analysis_protocol.get(
+                                    "analysis_engine", None
+                                ),
                             )
                         )
                     except Exception as e:
@@ -1962,6 +1989,7 @@ class SeerSDK:
 
             folders = []
             spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+            protocol_to_engine_map = dict()
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -1990,10 +2018,33 @@ class SeerSDK:
                 if (not res[entry].get("is_folder")) and res[entry].get(
                     "analysis_protocol_id"
                 ):
+                    if (
+                        res[entry]["analysis_protocol_id"]
+                        in protocol_to_engine_map
+                    ):
+                        analysis_protocol_engine = protocol_to_engine_map[
+                            res[entry]["analysis_protocol_id"]
+                        ]
+                    else:
+                        try:
+                            analysis_protocol = self.get_analysis_protocol(
+                                analysis_protocol_id=res[entry].get(
+                                    "analysis_protocol_id"
+                                )
+                            )
+                            analysis_protocol_engine = analysis_protocol.get(
+                                "analysis_engine", None
+                            )
+                            protocol_to_engine_map[
+                                res[entry]["analysis_protocol_id"]
+                            ] = analysis_protocol_engine
+                        except:
+                            analysis_protocol_engine = None
                     try:
                         res[entry]["fasta"] = ",".join(
                             self._get_analysis_protocol_fasta_filenames(
-                                res[entry]["analysis_protocol_id"]
+                                res[entry]["analysis_protocol_id"],
+                                analysis_protocol_engine=analysis_protocol_engine,
                             )
                         )
                     except:
@@ -3995,14 +4046,17 @@ class SeerSDK:
 
                 print(f"Downloaded file to {download_path}/{file}")
 
-    def _get_analysis_protocol_fasta_filenames(self, analysis_protocol_id):
-        try:
-            analysis_protocol_engine = self.get_analysis_protocol(
-                analysis_protocol_id=analysis_protocol_id
-            )["analysis_engine"]
-        except KeyError:
-            raise ServerError(f"Could not find analysis protocol parameters.")
-
+    def _get_analysis_protocol_fasta_filenames(
+        self, analysis_protocol_id: str, analysis_protocol_engine: str
+    ):
+        """
+        Helper function - Get the fasta file name(s) associated with a given analysis protocol and engine.
+            Args:
+                analysis_protocol_id (str): ID of the analysis protocol.
+                analysis_protocol_engine (str): Analysis engine of the analysis protocol.
+            Returns:
+                list[str]: A list of fasta file names associated with the analysis protocol.
+        """
         analysis_protocol_engine = analysis_protocol_engine.lower()
         if analysis_protocol_engine == "diann":
             URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/diann/{analysis_protocol_id}"
@@ -4012,8 +4066,12 @@ class SeerSDK:
             URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/msfragger/{analysis_protocol_id}"
         elif analysis_protocol_engine == "proteogenomics":
             URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/proteogenomics/{analysis_protocol_id}"
-        else:
+        elif analysis_protocol_engine == "maxquant":
             URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/{analysis_protocol_id}"
+        else:
+            raise ValueError(
+                f"Analysis protocol engine {analysis_protocol_engine} not supported for fasta download."
+            )
 
         with self._get_auth_session("getanalysisprotocolparameters") as s:
             response = s.get(URL)
@@ -4076,8 +4134,12 @@ class SeerSDK:
             except KeyError:
                 raise ValueError(f"Could not parse server response.")
 
-        fasta_filenames = self._get_analysis_protocol_fasta_filenames(
+        engine = self.get_analysis_protocol(
             analysis_protocol_id=analysis_protocol_id
+        ).get("analysis_engine", None)
+        fasta_filenames = self._get_analysis_protocol_fasta_filenames(
+            analysis_protocol_id=analysis_protocol_id,
+            analysis_protocol_engine=engine,
         )
         URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
         links = []

@@ -82,6 +82,7 @@ ANALYSIS_COLUMNS = [
     "number_sample",
     "total_file_size_mb",
     "msdatafile_extensions",
+    "fasta",
 ]
 
 ANALYSIS_PROTOCOL_COLUMNS = [
@@ -107,6 +108,7 @@ ANALYSIS_PROTOCOL_COLUMNS = [
     "last_modified_timestamp",
     "go_version",
     "space",
+    "fasta",
 ]
 
 MSRUN_COLUMNS = [
