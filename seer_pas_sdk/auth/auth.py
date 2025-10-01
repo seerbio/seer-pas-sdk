@@ -214,6 +214,7 @@ class Auth:
         if response.status_code == 200:
             return response.json()
         else:
+            print(response.text)
             raise ServerError("Could not refresh token")
 
     def get_token(self):
@@ -234,8 +235,6 @@ class Auth:
             raise ValueError(
                 "Check if the credentials are correct or if the backend is running or not."
             )
-
-        self.refresh_token = res.get("refresh_token", None)
         self.token_expiry = int(datetime.now().timestamp()) + res.get(
             "expiresIn", 0
         )
