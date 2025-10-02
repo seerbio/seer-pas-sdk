@@ -228,7 +228,7 @@ class Auth:
         if self.has_valid_token():
             return self.id_token, self.access_token
         else:
-            res = self._get_refresh_token()
+            res = self._refresh_token()
 
         if "id_token" not in res or "access_token" not in res:
             raise ValueError(
