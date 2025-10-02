@@ -191,14 +191,14 @@ class Auth:
         )
         return True
 
-    def _get_refresh_token(self):
-        """Refreshes the refresh token using the current refresh token.
+    def _refresh_token(self):
+        """Refreshes the token using the refresh token.
 
         Raises:
-            ServerError: If the refresh token could not be refreshed.
+            ServerError: If the token could not be refreshed.
 
         Returns:
-            dict: The response from the server containing the new refresh token.
+            dict: The response from the server containing the new token.
         """
         s = requests.Session()
         s.headers.update(
@@ -234,8 +234,6 @@ class Auth:
             raise ValueError(
                 "Check if the credentials are correct or if the backend is running or not."
             )
-
-        self.refresh_token = res.get("refresh_token", None)
         self.token_expiry = int(datetime.now().timestamp()) + res.get(
             "expiresIn", 0
         )
