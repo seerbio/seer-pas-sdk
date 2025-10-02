@@ -3065,7 +3065,6 @@ class SeerSDK:
 
         for path in paths:
             with self._get_auth_session("getmsdataindexurl") as s:
-
                 download_url = s.post(
                     URL,
                     json={
