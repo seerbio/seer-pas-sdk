@@ -13,6 +13,7 @@ from typing import List as _List, Tuple as _Tuple
 from ..common import *
 from ..auth import Auth
 from ..objects.volcanoplot import VolcanoPlotBuilder
+from ..objects.headers import *
 
 import warnings
 
@@ -54,6 +55,22 @@ class SeerSDK:
             raise ValueError(
                 f"Could not log in.\nPlease check your credentials and/or instance: {e}."
             )
+
+    def logout(self):
+        """
+        Perform a logout operation for the current user of the SDK instance.
+
+        Returns
+        -------
+        success : bool
+            Boolean denoting whether the logout operation was successful.
+        """
+        if self._auth.has_valid_token():
+            self._auth._logout()
+            return True
+        else:
+            print("The user's session is expired. No action taken.")
+            return False
 
     def __del__(self):
         """
@@ -292,7 +309,7 @@ class SeerSDK:
         -------
         >>> from seer_pas_sdk import SeerSDK
         >>> seer_sdk = SeerSDK()
-        >>> seer_sdk.find_plates()
+        >>> seer_sdk.get_plates()
         >>> [
                 { "id": ... },
                 { "id": ... },
@@ -385,6 +402,8 @@ class SeerSDK:
                 if "user_group" in res:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
+                if "id" in res:
+                    res["plate_uuid"] = res["id"]
                 return res
         else:
             res = self.find_plates(plate_name=plate_name)
@@ -398,7 +417,12 @@ class SeerSDK:
                 return res[0]
 
     def find_plates(
-        self, plate_id: str = None, plate_name: str = None, as_df: bool = False
+        self,
+        plate_id: str = None,
+        plate_name: str = None,
+        project_id: str = None,
+        project_name: str = None,
+        as_df: bool = False,
     ):
         """
         Fetches a list of plates for the authenticated user. If no `plate_id` is provided, returns all plates for the authenticated user. If `plate_id` is provided, returns the plate with the given `plate_id`, provided it exists.
@@ -407,6 +431,12 @@ class SeerSDK:
         ----------
         plate_id : str, optional
             ID of the plate to be fetched, defaulted to None.
+        plate_name : str, optional
+            Name of the plate to be fetched, defaulted to None.
+        project_id: str, optional
+            ID of the project to filter plates by, defaulted to None.
+        project_name : str, optional
+            Name of the project to filter plates by, defaulted to None.
         as_df: bool
             whether the result should be converted to a DataFrame, defaulted to None.
 
@@ -439,15 +469,30 @@ class SeerSDK:
             938  5b05d440-6610-11ea-96e3-d5a4dab4ebf6  ...       None
             939  9872e3f0-544e-11ea-ad9e-1991e0725494  ...       None
 
-        >>> seer_sdk.get_plate_metadata(id="YOUR_PLATE_ID_HERE")
+        >>> seer_sdk.find_plates(id="YOUR_PLATE_ID_HERE")
         >>> [{ "id": ... }]
         """
 
         URL = f"{self._auth.url}api/v1/plates"
         res = []
 
+        if project_id or project_name:
+            if project_name and not project_id:
+                samples = self.find_samples(
+                    project_name=project_name, as_df=False
+                )
+            else:
+                samples = self.find_samples(project_id=project_id, as_df=False)
+            plate_ids = {
+                x.get("plate_uuid") for x in samples if "plate_uuid" in x
+            }
+            res = [self.get_plate(plate_id=x) for x in plate_ids]
+            return res if not as_df else dict_to_df(res)
+
         if not plate_id and not plate_name:
             params = {"all": "true"}
+        elif plate_id:
+            params = {"searchFields": "id", "searchItem": plate_id}
         elif plate_name:
             params = {"searchFields": "plate_name", "searchItem": plate_name}
         else:
@@ -457,17 +502,15 @@ class SeerSDK:
         with self._get_auth_session("findplates") as s:
 
             plates = s.get(
-                f"{URL}/{plate_id}" if plate_id else URL,
+                URL,
                 params=params,
             )
             if plates.status_code != 200:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
                 )
-            if not plate_id:
-                res = plates.json()["data"]
-            else:
-                res = [plates.json()]
+
+            res = plates.json()["data"]
 
             for entry in res:
                 if "tenant_id" in entry:
@@ -475,6 +518,10 @@ class SeerSDK:
                 if "user_group" in entry:
                     entry["space"] = spaces.get(entry["user_group"], "General")
                     del entry["user_group"]
+                if "id" in entry:
+                    entry["plate_uuid"] = entry["id"]
+        if (not res) and as_df:
+            return pd.DataFrame(columns=PLATE_COLUMNS)
         return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
@@ -571,6 +618,7 @@ class SeerSDK:
                 entry["raw_file_path"] = entry["raw_file_path"][
                     location(entry["raw_file_path"]) :
                 ]
+
         return res if not as_df else dict_to_df(res)
 
     def get_project(self, project_id: str = None, project_name: str = None):
@@ -612,6 +660,11 @@ class SeerSDK:
                 if "user_group" in res:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
+                plate_ids = {
+                    x["plate_uuid"]
+                    for x in self.find_samples(project_id=res["id"])
+                }
+                res["plate_uuids"] = list(plate_ids)
                 return res
         else:
             res = self.find_projects(project_name=project_name)
@@ -697,10 +750,11 @@ class SeerSDK:
                 )
             res = projects.json()["data"]
 
-            if project_id and not res:
-                raise ValueError("Project ID is invalid.")
-
         spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+        plate_name_to_plate_uuid = {
+            x["plate_name"]: x["plate_uuid"]
+            for x in self.find_plates(as_df=False)
+        }
         for entry in res:
             if "tenant_id" in entry:
                 del entry["tenant_id"]
@@ -715,6 +769,14 @@ class SeerSDK:
             if "user_group" in entry:
                 entry["space"] = spaces.get(entry["user_group"], "General")
                 del entry["user_group"]
+
+            if "plates" in entry:
+                entry["plate_uuids"] = [
+                    plate_name_to_plate_uuid[x] for x in entry["plates"]
+                ]
+
+        if not res and as_df:
+            return pd.DataFrame(columns=PROJECT_COLUMNS)
         return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
@@ -834,7 +896,7 @@ class SeerSDK:
                 )
             else:
                 res_df = self._get_analysis_samples(
-                    analysis_name=analysis_name, as_df=True, is_name=True
+                    analysis_name=analysis_name, as_df=True
                 )
 
         # apply post processing
@@ -857,6 +919,7 @@ class SeerSDK:
         self,
         plate_id: str = None,
         project_id: str = None,
+        project_name: str = None,
         analysis_id: str = None,
         analysis_name: str = None,
         as_df: bool = False,
@@ -868,8 +931,12 @@ class SeerSDK:
         ----------
         plate_id : str, optional
             ID of the plate for which samples are to be fetched, defaulted to None.
+        plate_name : str, optional
+            Name of the plate to be fetched, defaulted to None.
         project_id : str, optional
             ID of the project for which samples are to be fetched, defaulted to None.
+        project_name : str, optional
+            Name of the project to filter plates by, defaulted to None.
         analysis_id : str, optional
             ID of the analysis for which samples are to be fetched, defaulted to None.
         analysis_name : str, optional
@@ -925,49 +992,70 @@ class SeerSDK:
 
         res = []
         URL = f"{self._auth.url}api/v1/samples"
+
+        if project_name and not project_id:
+            projects = self.find_projects(project_name=project_name)
+            if not projects or len(projects) > 1:
+                raise ValueError(
+                    f"Project name '{project_name}' is invalid or ambiguous. Please specify a project_id."
+                )
+            project_id = projects[0]["id"]
+
         sample_params = {"all": "true"}
 
         if project_id or plate_id:
             with self._get_auth_session("findsamples") as s:
                 if plate_id:
-                    try:
-                        self.find_plates(plate_id=plate_id)
-                    except:
-                        raise ValueError("Plate ID is invalid.")
+                    search_name = "plate_id"
+                    search_value = plate_id
                     sample_params["plateId"] = plate_id
 
                 else:
-                    try:
-                        self.find_projects(project_id=project_id)
-                    except:
-                        raise ValueError("Project ID is invalid.")
-
+                    search_name = "project_id"
+                    search_value = project_id
                     sample_params["projectId"] = project_id
 
             samples = s.get(URL, params=sample_params)
             if samples.status_code != 200:
                 raise ValueError(
-                    f"Failed to fetch sample data for plate ID: {plate_id}."
+                    f"Failed to fetch sample data for {search_name}: {search_value}."
                 )
             res = samples.json()["data"]
             if not res:
-                return [] if not as_df else dict_to_df(res)
+                return (
+                    [] if not as_df else pd.DataFrame(columns=SAMPLE_COLUMNS)
+                )
             res_df = dict_to_df(res)
 
             # API returns empty strings if not a control, replace with None for filtering purposes
             res_df["control"] = res_df["control"].apply(
                 lambda x: x if x else None
             )
-        else:
+        elif analysis_id or analysis_name:
             if analysis_id:
                 res_df = self._get_analysis_samples(
                     analysis_id=analysis_id, as_df=True
                 )
             else:
                 res_df = self._get_analysis_samples(
-                    analysis_name=analysis_name, as_df=True, is_name=True
+                    analysis_name=analysis_name, as_df=True
                 )
+        else:
+            with self._get_auth_session("findsamples") as s:
+                samples = s.get(URL, params=sample_params)
+                if samples.status_code != 200:
+                    raise ValueError(
+                        "Failed to fetch sample data for the authenticated user."
+                    )
+                res = samples.json()["data"]
+                res_df = dict_to_df(res)
 
+        if res_df.empty and as_df:
+            return pd.DataFrame(columns=SAMPLE_COLUMNS)
+
+        plate_uuid_to_id = {
+            x["plate_uuid"]: x["plate_id"] for x in self.find_plates()
+        }
         # apply post processing
         if "tenant_id" in res_df.columns:
             res_df.drop(["tenant_id"], axis=1, inplace=True)
@@ -978,6 +1066,11 @@ class SeerSDK:
                 lambda x: spaces.get(x, "General")
             )
             res_df.drop(["user_group"], axis=1, inplace=True)
+        if "plate_id" in res_df.columns:
+            res_df["plate_uuid"] = res_df["plate_id"]
+            res_df["plate_id"] = res_df["plate_uuid"].apply(
+                lambda x: plate_uuid_to_id.get(x, None)
+            )
 
         custom_columns = [
             x["field_name"] for x in self._get_sample_custom_fields()
@@ -990,6 +1083,8 @@ class SeerSDK:
             ]
         ]
 
+        if res_df.empty and as_df:
+            return pd.DataFrame(columns=SAMPLE_COLUMNS)
         return res_df.to_dict(orient="records") if not as_df else res_df
 
     def _filter_samples_metadata(
@@ -1217,6 +1312,9 @@ class SeerSDK:
             if "user_group" in entry:
                 entry["space"] = spaces.get(entry["user_group"], "General")
                 del entry["user_group"]
+
+        if not res and as_df:
+            return pd.DataFrame(columns=MSRUN_COLUMNS)
         return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
@@ -1366,6 +1464,15 @@ class SeerSDK:
                 if "user_group" in res:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
+                try:
+                    res["fasta"] = ",".join(
+                        self._get_analysis_protocol_fasta_filenames(
+                            analysis_protocol_id=res["id"],
+                            analysis_protocol_engine=res["analysis_engine"],
+                        )
+                    )
+                except:
+                    res["fasta"] = ""
                 return res
         else:
             res = self.find_analysis_protocols(
@@ -1439,6 +1546,10 @@ class SeerSDK:
                     "searchItem": analysis_protocol_name,
                 }
             )
+        elif analysis_protocol_id:
+            params.update(
+                {"searchFields": "id", "searchItem": analysis_protocol_id}
+            )
 
         with self._get_auth_session("findanalysisprotocols") as s:
 
@@ -1447,10 +1558,7 @@ class SeerSDK:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
                 )
-            if analysis_protocol_id:
-                res = protocols.json()["data"]
-            else:
-                res = protocols.json()["data"]
+            res = protocols.json()["data"]
 
             spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
             for entry in range(len(res)):
@@ -1479,6 +1587,20 @@ class SeerSDK:
                     )
                     del res[entry]["user_group"]
 
+                try:
+                    res[entry]["fasta"] = ",".join(
+                        self._get_analysis_protocol_fasta_filenames(
+                            analysis_protocol_id=res[entry]["id"],
+                            analysis_protocol_engine=res[entry].get(
+                                "analysis_engine", None
+                            ),
+                        )
+                    )
+                except:
+                    res[entry]["fasta"] = ""
+
+            if not res and as_df:
+                return pd.DataFrame(columns=ANALYSIS_PROTOCOL_COLUMNS)
             return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(
@@ -1687,7 +1809,7 @@ class SeerSDK:
                     raise ValueError(
                         "Invalid request. Please check your parameters."
                     )
-                res = analysis.json()
+                res = analysis.json()["analysis"]
                 spaces = {
                     x["id"]: x["usergroup_name"] for x in self.get_spaces()
                 }
@@ -1696,6 +1818,28 @@ class SeerSDK:
                 if "user_group" in res:
                     res["space"] = spaces.get(res["user_group"], "General")
                     del res["user_group"]
+                if not res.get("is_folder") and res.get(
+                    "analysis_protocol_id"
+                ):
+                    analysis_protocol = self.get_analysis_protocol(
+                        analysis_protocol_id=res.get("analysis_protocol_id")
+                    )
+                    try:
+                        res["fasta"] = ",".join(
+                            self._get_analysis_protocol_fasta_filenames(
+                                analysis_protocol_id=res.get(
+                                    "analysis_protocol_id"
+                                ),
+                                analysis_protocol_engine=analysis_protocol.get(
+                                    "analysis_engine", None
+                                ),
+                            )
+                        )
+                    except Exception as e:
+                        print("Warning: Could not fetch fasta files.")
+                        res["fasta"] = None
+                else:
+                    res["fasta"] = None
                 return res
         else:
             res = self.find_analyses(analysis_name=analysis_name)
@@ -1811,6 +1955,12 @@ class SeerSDK:
                 "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'."
             )
 
+        if analysis_id:
+            try:
+                return [self.get_analysis(analysis_id=analysis_id)]
+            except:
+                return []
+
         with self._get_auth_session("findanalyses") as s:
 
             params = {"all": "true"}
@@ -1831,31 +1981,25 @@ class SeerSDK:
             if plate_name:
                 params["plateName"] = plate_name
 
-            analyses = s.get(
-                f"{URL}/{analysis_id}" if analysis_id else URL, params=params
-            )
+            analyses = s.get(URL, params=params)
 
             if analyses.status_code != 200:
                 raise ValueError(
                     "Invalid request. Please check your parameters."
                 )
-            if not analysis_id:
-                res = analyses.json()["data"]
-
-            else:
-                res = [analyses.json()["analysis"]]
+            res = analyses.json()["data"]
 
             folders = []
             spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+            protocol_to_engine_map = dict()
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
 
                 if "parameter_file_path" in res[entry]:
-                    # Simple lambda function to find the third occurrence of '/' in the raw file path
+                    # Trim parameter file path to user visible attributes
                     location = lambda s: len(s) - len(s.split("/", 3)[-1])
 
-                    # Slicing the string from the location
                     res[entry]["parameter_file_path"] = res[entry][
                         "parameter_file_path"
                     ][location(res[entry]["parameter_file_path"]) :]
@@ -1873,6 +2017,46 @@ class SeerSDK:
                     )
                     del res[entry]["user_group"]
 
+                if (not res[entry].get("is_folder")) and res[entry].get(
+                    "analysis_protocol_id"
+                ):
+                    if (
+                        res[entry]["analysis_protocol_id"]
+                        in protocol_to_engine_map
+                    ):
+                        analysis_protocol_engine = protocol_to_engine_map[
+                            res[entry]["analysis_protocol_id"]
+                        ]
+                    else:
+                        try:
+                            analysis_protocol = self.get_analysis_protocol(
+                                analysis_protocol_id=res[entry].get(
+                                    "analysis_protocol_id"
+                                )
+                            )
+                            analysis_protocol_engine = analysis_protocol.get(
+                                "analysis_engine", None
+                            )
+                            protocol_to_engine_map[
+                                res[entry]["analysis_protocol_id"]
+                            ] = analysis_protocol_engine
+                        except:
+                            analysis_protocol_engine = None
+                    try:
+                        res[entry]["fasta"] = ",".join(
+                            self._get_analysis_protocol_fasta_filenames(
+                                res[entry]["analysis_protocol_id"],
+                                analysis_protocol_engine=analysis_protocol_engine,
+                            )
+                        )
+                    except:
+                        print(
+                            f"Warning: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
+                        )
+                        res[entry]["fasta"] = None
+                else:
+                    res[entry]["fasta"] = None
+
             # recursive solution to get analyses in folders
             for folder in folders:
                 res += self.find_analyses(folder_id=folder)
@@ -1881,6 +2065,8 @@ class SeerSDK:
                 res = [
                     analysis for analysis in res if not analysis["is_folder"]
                 ]
+            if not res and as_df:
+                return pd.DataFrame(columns=ANALYSIS_COLUMNS)
             return res if not as_df else dict_to_df(res)
 
     @deprecation.deprecated(deprecated_in="0.3.0", removed_in="2.0.0")
@@ -2264,17 +2450,20 @@ class SeerSDK:
         filename : str
             Name of the file to be fetched. Files can be case insensitive and without file extensions.
 
-        download_path : str
+        download_path : str, optional
             String flag denoting where the user wants the files downloaded. Can be local or absolute as long as the path is valid.
 
         Returns
         -------
-        None
-            Downloads the file to the specified path.
+        str
+            Path to the downloaded file.
         """
 
         if not download_path:
             download_path = os.getcwd()
+
+        if download_path.endswith("/"):
+            download_path = download_path.rstrip("/")
 
         if not analysis_id:
             raise ValueError("Analysis ID cannot be empty.")
@@ -2283,7 +2472,6 @@ class SeerSDK:
             raise ValueError(
                 "Please specify a valid folder path as download path."
             )
-
         file = self.get_search_result_file_url(analysis_id, filename)
         file_url = file["url"]
         filename = file["filename"]
@@ -2309,15 +2497,10 @@ class SeerSDK:
                     )
                     break
             except:
-                filename = filename.split("/")
-                name += "/" + "/".join(
-                    [filename[i] for i in range(len(filename) - 1)]
-                )
-                filename = filename[-1]
-                if not os.path.isdir(f"{name}/{filename}"):
-                    os.makedirs(f"{name}/")
-        print(f"File {filename} downloaded successfully to {download_path}.")
-        return
+                dirname = f"{download_path}/{os.path.dirname(filename)}"
+                if not os.path.isdir(f"{dirname}"):
+                    os.makedirs(f"{dirname}")
+        return f"{download_path}/{filename}"
 
     def get_search_result_file_url(self, analysis_id: str, filename: str):
         """
@@ -2336,12 +2519,19 @@ class SeerSDK:
         file_url: dict[str, str]
             Dictionary containing the 'url' and 'filename' of the file.
         """
+        pas_dirname = os.path.dirname(filename)
         if "." in filename:
             filename = ".".join(filename.split(".")[:-1])
         filename = filename.casefold()
 
+        if pas_dirname:
+            analysis_result_files = self.list_search_result_files(
+                analysis_id, folder=pas_dirname
+            )
+        else:
+            analysis_result_files = self.list_search_result_files(analysis_id)
+
         # Allow user to pass in filenames without an extension.
-        analysis_result_files = self.list_search_result_files(analysis_id)
         analysis_result_files_prefix_mapper = {
             (".".join(x.split(".")[:-1])).casefold(): x
             for x in analysis_result_files
@@ -2353,7 +2543,7 @@ class SeerSDK:
                 f"Filename {filename} not among the available analysis result files. Please use SeerSDK.list_search_result_files('{analysis_id}') to see available files for this analysis."
             )
 
-        analysis_metadata = self.find_analyses(analysis_id)[0]
+        analysis_metadata = self.get_analysis(analysis_id)
         if analysis_metadata.get("status") in ["Failed", None]:
             raise ValueError("Cannot generate links for failed searches.")
         with self._get_auth_session("getsearchresultfileurl") as s:
@@ -2832,7 +3022,7 @@ class SeerSDK:
             return files.json()["filesList"]
 
     def download_ms_data_files(
-        self, paths: _List[str], download_path: str, space: str = None
+        self, paths: _List[str], download_path: str = "", space: str = None
     ):
         """
         Downloads all MS data files for paths passed in the params to the specified download path.
@@ -2841,15 +3031,14 @@ class SeerSDK:
         ----------
         paths : list[str]
             List of paths to download.
-        download_path : str
-            Path to download the files to.
+        download_path : str, optional
+            Path to download the files to. Defaults to current working directory.
         space : str, optional
             ID of the user group to which the files belongs, defaulted to None.
 
         Returns
         -------
-        message: dict[str, str]
-            Contains the 'message' whether the files were downloaded or not.
+        list[str] : the list of paths to the downloaded files.
         """
 
         urls = []
@@ -2878,7 +3067,6 @@ class SeerSDK:
 
         for path in paths:
             with self._get_auth_session("getmsdataindexurl") as s:
-
                 download_url = s.post(
                     URL,
                     json={
@@ -2892,6 +3080,8 @@ class SeerSDK:
                         "Could not download file. Please check if the backend is running."
                     )
                 urls.append(download_url.text)
+
+        downloads = []
         for i in range(len(urls)):
             filename = paths[i].split("/")[-1]
             url = urls[i]
@@ -2916,6 +3106,7 @@ class SeerSDK:
                             reporthook=download_hook(t),
                             data=None,
                         )
+                        downloads.append(f"{name}/{filename}")
                         break
                 except:
                     filename = filename.split("/")
@@ -2933,7 +3124,7 @@ class SeerSDK:
 
             print(f"Finished downloading {filename}\n")
 
-        return {"message": f"Files downloaded successfully to '{name}'"}
+        return downloads
 
     def get_group_analysis(
         self, analysis_id, group_analysis_id=None, **kwargs
@@ -3761,11 +3952,6 @@ class SeerSDK:
                 except:
                     continue
 
-        if not resp:
-            raise ServerError(
-                f"Could not retrieve samples for analysis {analysis_id or analysis_name}."
-            )
-
         resp = pd.DataFrame(resp)
         resp.drop_duplicates(subset=["id"], inplace=True)
         return resp if as_df else resp.to_dict(orient="records")
@@ -3861,47 +4047,17 @@ class SeerSDK:
 
                 print(f"Downloaded file to {download_path}/{file}")
 
-    def download_analysis_protocol_fasta(
-        self,
-        analysis_protocol_id=None,
-        analysis_id=None,
-        link=False,
-        download_path=None,
+    def _get_analysis_protocol_fasta_filenames(
+        self, analysis_protocol_id: str, analysis_protocol_engine: str
     ):
-        """Download the fasta file associated with a given analysis protocol.
-
-        Args:
-            analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
-            analysis_id (str, optional): ID of the analysis. Defaults to None.
-            link (bool, optional): If True, return a list of download links instead of downloading the files. Defaults to False.
-            download_path (str, optional): Path to download the fasta file to. Defaults to current working directory.
-
-        Returns:
-            list[dict] | None: If link is True, return a list of dictionaries containing the filename and download URL. Otherwise, return None.
         """
-        if not (bool(analysis_protocol_id) ^ bool(analysis_id)):
-            raise ValueError(
-                "Please provide either an analysis ID or an analysis protocol ID."
-            )
-
-        if not download_path:
-            download_path = os.getcwd()
-
-        if not analysis_protocol_id:
-            try:
-                analysis_protocol_id = self.get_analyses(analysis_id)[0][
-                    "analysis_protocol_id"
-                ]
-            except (IndexError, KeyError):
-                raise ValueError(f"Could not parse server response.")
-
-        try:
-            analysis_protocol_engine = self.get_analysis_protocols(
-                analysis_protocol_id=analysis_protocol_id
-            )[0]["analysis_engine"]
-        except (IndexError, KeyError):
-            raise ValueError(f"Could not parse server response.")
-
+        Helper function - Get the fasta file name(s) associated with a given analysis protocol and engine.
+            Args:
+                analysis_protocol_id (str): ID of the analysis protocol.
+                analysis_protocol_engine (str): Analysis engine of the analysis protocol.
+            Returns:
+                list[str]: A list of fasta file names associated with the analysis protocol.
+        """
         analysis_protocol_engine = analysis_protocol_engine.lower()
         if analysis_protocol_engine == "diann":
             URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/diann/{analysis_protocol_id}"
@@ -3911,13 +4067,17 @@ class SeerSDK:
             URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/msfragger/{analysis_protocol_id}"
         elif analysis_protocol_engine == "proteogenomics":
             URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/proteogenomics/{analysis_protocol_id}"
-        else:
+        elif analysis_protocol_engine == "maxquant":
             URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/{analysis_protocol_id}"
+        else:
+            raise ValueError(
+                f"Analysis protocol engine {analysis_protocol_engine} not supported for fasta download."
+            )
 
         with self._get_auth_session("getanalysisprotocolparameters") as s:
             response = s.get(URL)
             if response.status_code != 200:
-                raise ServerError("Request failed.")
+                raise ServerError("Failed to retrieve analysis protocol data.")
             response = response.json()
             if isinstance(response, dict):
                 response = response["editableParameters"]
@@ -3935,50 +4095,123 @@ class SeerSDK:
             )
             if not fasta_filenames:
                 raise ServerError("No fasta file name returned from server.")
+            return fasta_filenames
 
+    def get_analysis_protocol_fasta_link(
+        self, analysis_protocol_id=None, analysis_id=None, analysis_name=None
+    ):
+        """Get the download link(s) for the fasta file(s) associated with a given analysis protocol.
+        Args:
+            analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
+            analysis_id (str, optional): ID of the analysis. Defaults to None.
+            analysis_name (str, optional): Name of the analysis. Defaults to None.
+
+        Returns:
+            list[dict]: A list of dictionaries containing the 'filename' and the 'url' to download the fasta file.
+        """
+        if analysis_name and (not analysis_id):
+            analyses = self.find_analyses(analysis_name=analysis_name)
+            if len(analyses) > 1:
+                raise ValueError(
+                    f"Multiple analyses found with name {analysis_name}. Please provide an analysis ID instead."
+                )
+            elif len(analyses) == 0:
+                raise ValueError(
+                    f"No analyses found with name {analysis_name}."
+                )
+            else:
+                analysis_id = analyses[0]["id"]
+
+        if not (bool(analysis_protocol_id) ^ bool(analysis_id)):
+            raise ValueError(
+                "Please provide either an analysis ID or an analysis protocol ID."
+            )
+
+        if not analysis_protocol_id:
+            try:
+                analysis_protocol_id = self.get_analysis(
+                    analysis_id=analysis_id
+                )["analysis_protocol_id"]
+            except KeyError:
+                raise ValueError(f"Could not parse server response.")
+
+        engine = self.get_analysis_protocol(
+            analysis_protocol_id=analysis_protocol_id
+        ).get("analysis_engine", None)
+        fasta_filenames = self._get_analysis_protocol_fasta_filenames(
+            analysis_protocol_id=analysis_protocol_id,
+            analysis_protocol_engine=engine,
+        )
         URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
         links = []
-        missing_links = []
         for file in fasta_filenames:
             with self._get_auth_session("getanalysisprotocolfilesurl") as s:
                 filename = os.path.basename(file)
                 response = s.post(URL, json={"filepath": file})
                 if response.status_code != 200:
-                    print(f"Could not retrieve download link for {filename}.")
-                    missing_links.append(filename)
+                    print(
+                        f"ERROR: Could not retrieve download link for {filename}."
+                    )
                     continue
                 url = response.json()["url"]
-                if link:
-                    links.append({"filename": filename, "url": url})
-                    continue
-                print(f"Downloading {filename}")
-                for _ in range(2):
-                    try:
-                        with tqdm(
-                            unit="B",
-                            unit_scale=True,
-                            unit_divisor=1024,
-                            miniters=1,
-                            desc=f"Progress",
-                        ) as t:
-                            ssl._create_default_https_context = (
-                                ssl._create_unverified_context
-                            )
-                            urllib.request.urlretrieve(
-                                url,
-                                f"{download_path}/{filename}",
-                                reporthook=download_hook(t),
-                                data=None,
-                            )
-                            break
-                    except:
-                        if not os.path.isdir(f"{download_path}"):
-                            os.makedirs(f"{download_path}")
+                links.append({"filename": filename, "url": url})
+        return links
 
-                print(f"Downloaded file to {download_path}/{filename}")
-        if missing_links:
-            print(
-                f"Could not retrieve download links for the following files: {', '.join(missing_links)}"
+    def download_analysis_protocol_fasta(
+        self,
+        analysis_protocol_id=None,
+        analysis_id=None,
+        analysis_name=None,
+        download_path=None,
+    ):
+        """Download the fasta file(s) associated with a given analysis protocol.
+
+        Args:
+            analysis_protocol_id (str,optional): ID of the analysis protocol. Defaults to None.
+            analysis_id (str, optional): ID of the analysis. Defaults to None.
+            analysis_name (str, optional): Name of the analysis. Defaults to None.
+            download_path (str, optional): Path to download the fasta file to. Defaults to current working directory.
+
+        Returns:
+            list[str] : The path to the downloaded fasta file(s).
+        """
+
+        links = [
+            (x["filename"], x["url"])
+            for x in self.get_analysis_protocol_fasta_link(
+                analysis_protocol_id=analysis_protocol_id,
+                analysis_id=analysis_id,
+                analysis_name=analysis_name,
             )
-        if link:
-            return links
+        ]
+        if not download_path:
+            download_path = os.getcwd()
+
+        downloads = []
+        for filename, url in links:
+            print(f"Downloading {filename}")
+            for _ in range(2):
+                try:
+                    with tqdm(
+                        unit="B",
+                        unit_scale=True,
+                        unit_divisor=1024,
+                        miniters=1,
+                        desc=f"Progress",
+                    ) as t:
+                        ssl._create_default_https_context = (
+                            ssl._create_unverified_context
+                        )
+                        urllib.request.urlretrieve(
+                            url,
+                            f"{download_path}/{filename}",
+                            reporthook=download_hook(t),
+                            data=None,
+                        )
+                        break
+                except:
+                    if not os.path.isdir(f"{download_path}"):
+                        os.makedirs(f"{download_path}")
+
+            downloads.append(f"{download_path}/{filename}")
+        return downloads
