@@ -15,6 +15,8 @@ from ..auth import Auth
 from ..objects.volcanoplot import VolcanoPlotBuilder
 from ..objects.headers import *
 
+import warnings
+
 
 class SeerSDK:
     """
