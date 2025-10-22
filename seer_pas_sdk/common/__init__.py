@@ -99,7 +99,7 @@ def dict_to_df(data):
 
 
 # Most cases appear to be a .tsv file.
-def url_to_df(url, is_tsv=True):
+def url_to_df(url, is_tsv=True, dtype={}):
     """
     Fetches a TSV/CSV file from a URL and returns as a Pandas DataFrame.
 
@@ -138,9 +138,9 @@ def url_to_df(url, is_tsv=True):
         return pd.DataFrame()
     url_content = io.StringIO(requests.get(url).content.decode("utf-8"))
     if is_tsv:
-        csv = pd.read_csv(url_content, sep="\t")
+        csv = pd.read_csv(url_content, sep="\t", dtype=dtype)
     else:
-        csv = pd.read_csv(url_content)
+        csv = pd.read_csv(url_content, dtype=dtype)
     return csv
 
 

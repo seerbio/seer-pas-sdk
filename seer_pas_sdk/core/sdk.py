@@ -2403,31 +2403,37 @@ class SeerSDK:
                 "Precursor data is not available for panel rollup, please select np rollup."
             )
 
+        dtype = {"Sample Name": str}
+
         if analyte_type == "protein":
             if rollup == "np":
                 return url_to_df(
                     self._get_search_result_protein_data(analysis_id)[
                         "npLink"
-                    ]["url"]
+                    ]["url"],
+                    dtype=dtype,
                 )
             elif rollup == "panel":
                 return url_to_df(
                     self._get_search_result_protein_data(analysis_id)[
                         "panelLink"
-                    ]["url"]
+                    ]["url"],
+                    dtype=dtype,
                 )
         elif analyte_type == "peptide":
             if rollup == "np":
                 return url_to_df(
                     self._get_search_result_peptide_data(analysis_id)[
                         "npLink"
-                    ]["url"]
+                    ]["url"],
+                    dtype=dtype,
                 )
             elif rollup == "panel":
                 return url_to_df(
                     self._get_search_result_peptide_data(analysis_id)[
                         "panelLink"
-                    ]["url"]
+                    ]["url"],
+                    dtype=dtype,
                 )
         else:
             return url_to_df(

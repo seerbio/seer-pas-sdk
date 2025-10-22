@@ -1467,9 +1467,9 @@ class _UnsupportedSDK(_SeerSDK):
         """
         # 1. Get msrun data for analysis
         samples = self.find_samples(analysis_id=analysis_id)
-        sample_ids = {s["sample_name"]: s["id"] for s in samples}
+        sample_name_to_id = {s["sample_name"]: s["id"] for s in samples}
         # for np rollup, a row represents an msrun
-        msruns = self.find_msruns(sample_ids=sample_ids.values())
+        msruns = self.find_msruns(sample_ids=sample_name_to_id.values())
         file_to_msrun = {
             os.path.basename(msrun["raw_file_path"]).split(".")[0]: msrun
             for msrun in msruns
@@ -1498,7 +1498,7 @@ class _UnsupportedSDK(_SeerSDK):
                     "DIA-NN Normalized Intensities Log10"
                     if "DIA-NN Normalized Intensities Log10"
                     in search_results.columns
-                    else "DIA-NN Intensity (Log10)"
+                    else "Normalized Intensity (Log10)"
                 )
             elif engine.casefold() == "median":
                 if (
@@ -1528,9 +1528,24 @@ class _UnsupportedSDK(_SeerSDK):
                 raise ValueError(
                     f"Engine {engine} not supported. Supported engines are: raw, diann, median, median80, pepcal."
                 )
-
+            breakpoint()
+            if rollup == "panel":
+                search_results.fillna({"Sample Name": ""}, inplace=True)
+                search_results["File Name"] = search_results[
+                    "Sample Name"
+                ].apply(
+                    lambda x: (
+                        os.path.basename(
+                            sample_to_msrun[sample_name_to_id[x]][
+                                "raw_file_path"
+                            ]
+                        ).split(".")[0]
+                        if x
+                        else None
+                    )
+                )
             search_results["File Name"] = search_results["File Name"].apply(
-                lambda x: os.path.basename(x).split(".")[0]
+                lambda x: os.path.basename(x).split(".")[0] if x else None
             )
 
             search_results["Intensity Log10"] = search_results[
@@ -1596,34 +1611,18 @@ class _UnsupportedSDK(_SeerSDK):
                     included_columns.index("Sample ID") + 1, "Nanoparticle"
                 )
 
-                df["MsRun ID"] = df["File Name"].apply(
-                    lambda x: (
-                        file_to_msrun[x]["id"] if x in file_to_msrun else None
-                    )
+            df["MsRun ID"] = df["File Name"].apply(
+                lambda x: (
+                    file_to_msrun[x]["id"] if x in file_to_msrun else None
                 )
-                df["Sample ID"] = df["File Name"].apply(
-                    lambda x: (
-                        file_to_msrun[x]["sample_id"]
-                        if x in file_to_msrun
-                        else None
-                    )
+            )
+            df["Sample ID"] = df["File Name"].apply(
+                lambda x: (
+                    file_to_msrun[x]["sample_id"]
+                    if x in file_to_msrun
+                    else None
                 )
-            else:
-                # panel rollup does not provide File Name column
-                df["MsRun ID"] = df["Sample Name"].apply(
-                    lambda x: (
-                        sample_to_msrun[x]["id"]
-                        if x in sample_to_msrun
-                        else None
-                    )
-                )
-                df["Sample ID"] = df["Sample Name"].apply(
-                    lambda x: (
-                        sample_to_msrun[x]["sample_id"]
-                        if x in sample_to_msrun
-                        else None
-                    )
-                )
+            )
             df = df[included_columns]
             df.columns = [title_case_to_snake_case(x) for x in df.columns]
             return df
