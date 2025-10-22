@@ -1449,299 +1449,253 @@ class _UnsupportedSDK(_SeerSDK):
 
         return result
 
+    def get_search_data(
+        self, analysis_id: str, analyte_type: str, rollup: str, engine: str
+    ):
+        """
+        Get search data for a given analysis ID.
+        Args:
+            analysis_id (str): ID of the analysis.
+            analyte_type (str): Type of analyte. Must be either 'protein', 'peptide', precursor.
+            rollup (str): Rollup type. Must be either 'np' or 'panel'.
+            engine (str): Search engine. Supported engines are: raw, diann, median, median80, pepcal.
 
-def get_search_data(
-    self, analysis_id: str, analyte_type: str, rollup: str, engine: str
-):
-    """
-    WARNING: This function is under acceptance testing. The interface may change in future releases.
-    Get search data for a given analysis ID.
-    Args:
-        analysis_id (str): ID of the analysis.
-        analyte_type (str): Type of analyte. Must be either 'protein', 'peptide', precursor.
-        rollup (str): Rollup type. Must be either 'np' or 'panel'.
-        engine (str): Search engine. Supported engines are: raw, diann, median, median80, pepcal.
+        Returns:
+            pd.DataFrame: A dataframe with each row containing the following columns:
+                            'msrun_id', 'sample_id', 'nanoparticle' (if rollup is 'np'), 'protein_group', 'peptide' (for peptide),
+                            'intensity_log10', 'q_value' (for protein), 'rt' and 'irt' (for peptide)
+        """
+        # 1. Get msrun data for analysis
+        samples = self.find_samples(analysis_id=analysis_id)
+        sample_ids = {s["sample_name"]: s["id"] for s in samples}
+        # for np rollup, a row represents an msrun
+        msruns = self.find_msruns(sample_ids=sample_ids.values())
+        file_to_msrun = {
+            os.path.basename(msrun["raw_file_path"]).split(".")[0]: msrun
+            for msrun in msruns
+        }
+        sample_to_msrun = {msrun["sample_id"]: msrun for msrun in msruns}
 
-    Returns:
-        pd.DataFrame: A dataframe with each row containing the following columns:
-                        'msrun_id', 'sample_id', 'nanoparticle' (if rollup is 'np'), 'protein_group', 'peptide' (for peptide),
-                        'intensity_log10', 'q_value' (for protein), 'rt' and 'irt' (for peptide)
-    """
-    # 1. Get msrun data for analysis
-    sample_ids = [s["id"] for s in self.find_samples(analysis_id=analysis_id)]
-    msruns = self.find_msruns(sample_ids=sample_ids)
-    file_to_msrun = {
-        os.path.basename(msrun["raw_file_path"]).split(".")[0]: msrun
-        for msrun in msruns
-    }
+        # for panel rollup, a row represents a sample
 
-    # 2. Get search results
-    # pull the np/panel file, or report.tsv for precursor mode
-    search_results = self.get_search_result(
-        analysis_id=analysis_id,
-        analyte_type=analyte_type,
-        rollup=rollup,
-    )
-    if analyte_type in ["protein", "peptide"]:
-        intensity_column = None
-        if engine.casefold() == "raw":
-            intensity_column = (
-                "Intensities Log10"
-                if "Intensities Log10" in search_results.columns
-                else "Intensity (Log10)"
+        # 2. Get search results
+        # pull the np/panel file, or report.tsv for precursor mode
+        search_results = self.get_search_result(
+            analysis_id=analysis_id,
+            analyte_type=analyte_type,
+            rollup=rollup,
+        )
+        if analyte_type in ["protein", "peptide"]:
+            intensity_column = None
+            if engine.casefold() == "raw":
+                intensity_column = (
+                    "Intensities Log10"
+                    if "Intensities Log10" in search_results.columns
+                    else "Intensity (Log10)"
+                )
+            elif engine.casefold() == "diann":
+                intensity_column = (
+                    "DIA-NN Normalized Intensities Log10"
+                    if "DIA-NN Normalized Intensities Log10"
+                    in search_results.columns
+                    else "DIA-NN Intensity (Log10)"
+                )
+            elif engine.casefold() == "median":
+                if (
+                    not "Median Normalized Intensities Log10"
+                    in search_results.columns
+                ):
+                    raise ValueError(
+                        "Median normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later."
+                    )
+                intensity_column = "Median Normalized Intensities Log10"
+            elif engine.casefold() == "median80":
+                if (
+                    not "Median80 Normalized Intensities Log10"
+                    in search_results.columns
+                ):
+                    raise ValueError(
+                        "Median80 normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later."
+                    )
+                intensity_column = "Median80 Normalized Intensities Log10"
+            elif engine.casefold() == "pepcal":
+                if not "PepCal Intensities Log10" in search_results.columns:
+                    raise ValueError(
+                        "Pepcal normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later with the Seer Peptide Calibrant option enabled."
+                    )
+                intensity_column = "Pepcal Intensities Log10"
+            else:
+                raise ValueError(
+                    f"Engine {engine} not supported. Supported engines are: raw, diann, median, median80, pepcal."
+                )
+
+            search_results["File Name"] = search_results["File Name"].apply(
+                lambda x: os.path.basename(x).split(".")[0]
             )
-        elif engine.casefold() == "diann":
-            intensity_column = (
-                "DIA-NN Normalized Intensities Log10"
-                if "DIA-NN Normalized Intensities Log10"
-                in search_results.columns
-                else "DIA-NN Intensity (Log10)"
+
+            search_results["Intensity Log10"] = search_results[
+                intensity_column
+            ]
+
+            # 3. Merge report to search results to get Q value and other properties
+            report = self.get_search_result(
+                analysis_id=analysis_id,
+                analyte_type="precursor",
+                rollup="np",
             )
-        elif engine.casefold() == "median":
-            if (
-                not "Median Normalized Intensities Log10"
-                in search_results.columns
-            ):
-                raise ValueError(
-                    "Median normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later."
+            report["File Name"] = report["Run"]
+            report["Protein Group"] = report["Protein.Group"]
+
+            if analyte_type == "protein":
+                report["Q Value"] = report["Protein.Q.Value"]
+
+                report = report[["File Name", "Protein Group", "Q Value"]]
+                report.drop_duplicates(
+                    subset=["File Name", "Protein Group"], inplace=True
                 )
-            intensity_column = "Median Normalized Intensities Log10"
-        elif engine.casefold() == "median80":
-            if (
-                not "Median 80 Normalized Intensities Log10"
-                in search_results.columns
-            ):
-                raise ValueError(
-                    "Median 80 normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later."
+                df = pd.merge(
+                    search_results,
+                    report,
+                    on=["File Name", "Protein Group"],
+                    how="left",
                 )
-            intensity_column = "Median 80 Normalized Intensities Log10"
-        elif engine.casefold() == "pepcal":
-            if (
-                not "Pepcal Normalized Intensities Log10"
-                in search_results.columns
-            ):
-                raise ValueError(
-                    "Pepcal normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later with the Seer Peptide Calibrant option enabled."
+                included_columns = [
+                    "MsRun ID",
+                    "Sample ID",
+                    "Protein Group",
+                    "Intensity Log10",
+                    "Q Value",
+                ]
+
+            else:
+                report["Peptide"] = report["Stripped.Sequence"]
+                #  If analyte_type is peptide, attach retention time (RT, iRT)
+                report = report[["File Name", "Peptide", "RT", "iRT"]]
+                report.drop_duplicates(
+                    subset=["File Name", "Peptide"], inplace=True
                 )
-            intensity_column = "Pepcal Normalized Intensities Log10"
+                df = pd.merge(
+                    search_results,
+                    report,
+                    on=["File Name", "Peptide"],
+                    how="left",
+                )
+                included_columns = [
+                    "MsRun ID",
+                    "Sample ID",
+                    "Peptide",
+                    "Protein Group",
+                    "Intensity Log10",
+                    "RT",
+                    "iRT",
+                ]
+            # endif
+
+            if rollup == "np":
+                included_columns.insert(
+                    included_columns.index("Sample ID") + 1, "Nanoparticle"
+                )
+
+                df["MsRun ID"] = df["File Name"].apply(
+                    lambda x: (
+                        file_to_msrun[x]["id"] if x in file_to_msrun else None
+                    )
+                )
+                df["Sample ID"] = df["File Name"].apply(
+                    lambda x: (
+                        file_to_msrun[x]["sample_id"]
+                        if x in file_to_msrun
+                        else None
+                    )
+                )
+            else:
+                # panel rollup does not provide File Name column
+                df["MsRun ID"] = df["Sample Name"].apply(
+                    lambda x: (
+                        sample_to_msrun[x]["id"]
+                        if x in sample_to_msrun
+                        else None
+                    )
+                )
+                df["Sample ID"] = df["Sample Name"].apply(
+                    lambda x: (
+                        sample_to_msrun[x]["sample_id"]
+                        if x in sample_to_msrun
+                        else None
+                    )
+                )
+            df = df[included_columns]
+            df.columns = [title_case_to_snake_case(x) for x in df.columns]
+            return df
         else:
-            raise ValueError(
-                f"Engine {engine} not supported. Supported engines are: raw, diann, median, median80, pepcal."
+            # precursor
+            # working only in report.tsv
+            search_results["Intensity"] = search_results["Precursor.Quantity"]
+            search_results["MsRun ID"] = search_results["Run"].apply(
+                lambda x: (
+                    file_to_msrun[x]["id"] if x in file_to_msrun else None
+                )
             )
+            search_results["Sample ID"] = search_results["Run"].apply(
+                lambda x: (
+                    file_to_msrun[x]["sample_id"]
+                    if x in file_to_msrun
+                    else None
+                )
+            )
+            search_results["Protein Group"] = search_results["Protein.Group"]
+            search_results["Peptide"] = search_results["Stripped.Sequence"]
+            search_results["Charge"] = search_results["Precursor.Charge"]
+            search_results["Precursor Id"] = search_results["Precursor.Id"]
+            search_results["Q Value"] = search_results["Q.Value"]
+
+            included_columns = [
+                "MsRun ID",
+                "Sample ID",
+                "Protein Group",
+                "Peptide",
+                "Precursor Id",
+                "Intensity",
+                "Q Value",
+                "Charge",
+                "RT",
+                "iRT",
+                "IM",
+                "iIM",
+            ]
+            df = search_results[included_columns]
+            df.columns = [title_case_to_snake_case(x) for x in df.columns]
+
+            return df
+
+    def get_search_data_analyte(self, analysis_id: str, analyte_type: str):
+        if analyte_type not in ["protein", "peptide", "precursor"]:
+            raise ValueError(
+                "Analyte type must be either 'protein', 'peptide', or 'precursor'."
+            )
+
+        # include
+        # protein group, (peptide sequence), protein names, gene names, biological process, molecular function, cellular component, global q value, library q value
+
+        # 1. for all modes, fetch protein np file to extract protein groups, protein names, gene names, biological process, molecular function, cellular component
+        search_results = self.get_search_result(
+            analysis_id=analysis_id, analyte_type="protein", rollup="np"
+        )
+
+        report_results = self.get_search_result(
+            analysis_id=analysis_id, analyte_type="precursor", rollup="np"
+        )
 
         search_results["File Name"] = search_results["File Name"].apply(
             lambda x: os.path.basename(x).split(".")[0]
         )
-
-        search_results["Intensity Log10"] = search_results[intensity_column]
-
-        # 3. Merge report to search results to get Q value and other properties
-        report = self.get_search_result(
-            analysis_id=analysis_id,
-            analyte_type="precursor",
-            rollup="np",
-        )
-        report["File Name"] = report["Run"]
-        report["Protein Group"] = report["Protein.Group"]
-
-        if analyte_type == "protein":
-            report["Q Value"] = report["Protein.Q.Value"]
-
-            report = report[["File Name", "Protein Group", "Q Value"]]
-            report.drop_duplicates(
-                subset=["File Name", "Protein Group"], inplace=True
-            )
-            df = pd.merge(
-                search_results,
-                report,
-                on=["File Name", "Protein Group"],
-                how="left",
-            )
-            included_columns = [
-                "MsRun ID",
-                "Sample ID",
-                "Protein Group",
-                "Intensity Log10",
-                "Q Value",
-            ]
-
-        else:
-            report["Peptide"] = report["Stripped.Sequence"]
-            #  If analyte_type is peptide, attach retention time (RT, iRT)
-            report = report[["File Name", "Peptide", "RT", "iRT"]]
-            report.drop_duplicates(
-                subset=["File Name", "Peptide"], inplace=True
-            )
-            df = pd.merge(
-                search_results,
-                report,
-                on=["File Name", "Peptide"],
-                how="left",
-            )
-            included_columns = [
-                "MsRun ID",
-                "Sample ID",
-                "Peptide",
-                "Protein Group",
-                "Intensity Log10",
-                "RT",
-                "iRT",
-            ]
-        # endif
-
-        if rollup == "np":
-            included_columns.insert(
-                included_columns.index("Sample ID") + 1, "Nanoparticle"
-            )
-
-        df["MsRun ID"] = df["File Name"].apply(
-            lambda x: (file_to_msrun[x]["id"] if x in file_to_msrun else None)
-        )
-        df["Sample ID"] = df["File Name"].apply(
-            lambda x: (
-                file_to_msrun[x]["sample_id"] if x in file_to_msrun else None
-            )
-        )
-        df = df[included_columns]
-        df.columns = [title_case_to_snake_case(x) for x in df.columns]
-        return df
-    else:
-        # precursor
-        # working only in report.tsv
-        search_results["Intensity"] = search_results["Precursor.Quantity"]
-        search_results["MsRun ID"] = search_results["Run"].apply(
-            lambda x: (file_to_msrun[x]["id"] if x in file_to_msrun else None)
-        )
-        search_results["Sample ID"] = search_results["Run"].apply(
-            lambda x: (
-                file_to_msrun[x]["sample_id"] if x in file_to_msrun else None
-            )
-        )
-        search_results["Protein Group"] = search_results["Protein.Group"]
-        search_results["Peptide"] = search_results["Stripped.Sequence"]
-        search_results["Charge"] = search_results["Precursor.Charge"]
-        search_results["Q Value"] = search_results["Q.Value"]
-
-        included_columns = [
-            "MsRun ID",
-            "Sample ID",
-            "Protein Group",
-            "Peptide",
-            "Precursor Id",
-            "Intensity",
-            "Q Value",
-            "Charge",
-            "RT",
-            "iRT",
-            "IM",
-            "iIM",
-        ]
-        df = search_results[included_columns]
-        df.columns = [title_case_to_snake_case(x) for x in df.columns]
-
-        return df
-
-
-def get_search_data_analyte(self, analysis_id: str, analyte_type: str):
-    if analyte_type not in ["protein", "peptide", "precursor"]:
-        raise ValueError(
-            "Analyte type must be either 'protein', 'peptide', or 'precursor'."
-        )
-
-    # include
-    # protein group, (peptide sequence), protein names, gene names, biological process, molecular function, cellular component, global q value, library q value
-
-    # 1. for all modes, fetch protein np file to extract protein groups, protein names, gene names, biological process, molecular function, cellular component
-    search_results = self.get_search_result(
-        analysis_id=analysis_id, analyte_type="protein", rollup="np"
-    )
-
-    report_results = self.get_search_result(
-        analysis_id=analysis_id, analyte_type="precursor", rollup="np"
-    )
-
-    search_results["File Name"] = search_results["File Name"].apply(
-        lambda x: os.path.basename(x).split(".")[0]
-    )
-    search_results = search_results[
-        [
-            "File Name",
-            "Protein Group",
-            "Plate ID",
-            "Well",
-            "Nanoparticle",
-            "Protein Names",
-            "Gene Names",
-            "Biological Process",
-            "Molecular Function",
-            "Cellular Component",
-        ]
-    ]
-    report_results["File Name"] = report_results["Run"]
-    report_results["Protein Group"] = report_results["Protein.Group"]
-    report_results["Peptide"] = report_results["Stripped.Sequence"]
-
-    if analyte_type == "protein":
-        report_results = report_results[
-            [
-                "File Name",
-                "Protein Group",
-                "Protein.Ids",
-                "Global.PG.Q.Value",
-                "Lib.PG.Q.Value",
-            ]
-        ]
-        report_results.drop_duplicates(
-            subset=["File Name", "Protein Group"], inplace=True
-        )
-        df = pd.merge(
-            search_results,
-            report_results,
-            on=["File Name", "Protein Group"],
-            how="left",
-        )
-    elif analyte_type == "peptide":
-        peptide_results = self.get_search_result(
-            analysis_id=analysis_id, analyte_type="peptide", rollup="np"
-        )
-        peptide_results["File Name"] = peptide_results["File Name"].apply(
-            lambda x: os.path.basename(x).split(".")[0]
-        )
-        peptide_results = peptide_results[
-            ["File Name", "Peptide", "Protein Group"]
-        ]
-        search_results = pd.merge(
-            peptide_results,
-            search_results,
-            on=["File Name", "Protein Group"],
-            how="left",
-        )
-
-        report_results = report_results[
-            [
-                "File Name",
-                "Peptide",
-                "Protein.Ids",
-            ]
-        ]
-        report_results.drop_duplicates(
-            subset=["File Name", "Peptide"], inplace=True
-        )
-        df = pd.merge(
-            search_results,
-            report_results,
-            on=["File Name", "Peptide"],
-            how="left",
-        )
-    else:
-        # precursor
         search_results = search_results[
             [
                 "File Name",
+                "Protein Group",
                 "Plate ID",
                 "Well",
                 "Nanoparticle",
-                "Protein Group",
                 "Protein Names",
                 "Gene Names",
                 "Biological Process",
@@ -1749,23 +1703,95 @@ def get_search_data_analyte(self, analysis_id: str, analyte_type: str):
                 "Cellular Component",
             ]
         ]
-        report_results = report_results[
-            [
-                "File Name",
-                "Precursor.Id",
-                "Peptide",
-                "Protein Group",
-                "Protein.Ids",
-                "Global.Q.Value",
-                "Lib.Q.Value",
+        report_results["File Name"] = report_results["Run"]
+        report_results["Protein Group"] = report_results["Protein.Group"]
+        report_results["Peptide"] = report_results["Stripped.Sequence"]
+
+        if analyte_type == "protein":
+            report_results = report_results[
+                [
+                    "File Name",
+                    "Protein Group",
+                    "Protein.Ids",
+                    "Global.PG.Q.Value",
+                    "Lib.PG.Q.Value",
+                ]
             ]
-        ]
-        df = pd.merge(
-            search_results,
-            report_results,
-            on=["File Name", "Protein Group"],
-            how="right",
-        )
-    # endif
-    df.columns = [title_case_to_snake_case(x) for x in df.columns]
-    return df
+            report_results.drop_duplicates(
+                subset=["File Name", "Protein Group"], inplace=True
+            )
+            df = pd.merge(
+                search_results,
+                report_results,
+                on=["File Name", "Protein Group"],
+                how="left",
+            )
+        elif analyte_type == "peptide":
+            peptide_results = self.get_search_result(
+                analysis_id=analysis_id, analyte_type="peptide", rollup="np"
+            )
+            peptide_results["File Name"] = peptide_results["File Name"].apply(
+                lambda x: os.path.basename(x).split(".")[0]
+            )
+            peptide_results = peptide_results[
+                ["File Name", "Peptide", "Protein Group"]
+            ]
+            search_results = pd.merge(
+                peptide_results,
+                search_results,
+                on=["File Name", "Protein Group"],
+                how="left",
+            )
+
+            report_results = report_results[
+                [
+                    "File Name",
+                    "Peptide",
+                    "Protein.Ids",
+                ]
+            ]
+            report_results.drop_duplicates(
+                subset=["File Name", "Peptide"], inplace=True
+            )
+            df = pd.merge(
+                search_results,
+                report_results,
+                on=["File Name", "Peptide"],
+                how="left",
+            )
+        else:
+            # precursor
+            search_results = search_results[
+                [
+                    "File Name",
+                    "Plate ID",
+                    "Well",
+                    "Nanoparticle",
+                    "Protein Group",
+                    "Protein Names",
+                    "Gene Names",
+                    "Biological Process",
+                    "Molecular Function",
+                    "Cellular Component",
+                ]
+            ]
+            report_results = report_results[
+                [
+                    "File Name",
+                    "Precursor.Id",
+                    "Peptide",
+                    "Protein Group",
+                    "Protein.Ids",
+                    "Global.Q.Value",
+                    "Lib.Q.Value",
+                ]
+            ]
+            df = pd.merge(
+                search_results,
+                report_results,
+                on=["File Name", "Protein Group"],
+                how="right",
+            )
+        # endif
+        df.columns = [title_case_to_snake_case(x) for x in df.columns]
+        return df
