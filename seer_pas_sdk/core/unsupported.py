@@ -1528,7 +1528,6 @@ class _UnsupportedSDK(_SeerSDK):
                 raise ValueError(
                     f"Engine {engine} not supported. Supported engines are: raw, diann, median, median80, pepcal."
                 )
-            breakpoint()
             if rollup == "panel":
                 search_results.fillna({"Sample Name": ""}, inplace=True)
                 search_results["File Name"] = search_results[
