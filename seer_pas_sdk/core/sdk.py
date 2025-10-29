@@ -2119,16 +2119,18 @@ class SeerSDK:
             else:
                 if not pg:
                     return {
-                        "protein_np": url_to_df(protein_data["npLink"]["url"]),
-                        "protein_panel": url_to_df(
+                        "protein_np": download_df(
+                            protein_data["npLink"]["url"]
+                        ),
+                        "protein_panel": download_df(
                             protein_data["panelLink"]["url"]
                         ),
                     }
                 else:
-                    protein_np = url_to_df(
+                    protein_np = download_df(
                         protein_data["npLink"]["url"]
                     ).query(f"`Protein Group` == '{pg}'")
-                    protein_panel = url_to_df(
+                    protein_panel = download_df(
                         protein_data["panelLink"]["url"]
                     ).query(f"`Protein Group` == '{pg}'")
 
@@ -2195,16 +2197,18 @@ class SeerSDK:
             else:
                 if not peptide:
                     return {
-                        "peptide_np": url_to_df(peptide_data["npLink"]["url"]),
-                        "peptide_panel": url_to_df(
+                        "peptide_np": download_df(
+                            peptide_data["npLink"]["url"]
+                        ),
+                        "peptide_panel": download_df(
                             peptide_data["panelLink"]["url"]
                         ),
                     }
                 else:
-                    peptide_np = url_to_df(
+                    peptide_np = download_df(
                         peptide_data["npLink"]["url"]
                     ).query(f"Peptide == '{peptide}'")
-                    peptide_panel = url_to_df(
+                    peptide_panel = download_df(
                         peptide_data["panelLink"]["url"]
                     ).query(f"Peptide == '{peptide}'")
 
@@ -2403,18 +2407,19 @@ class SeerSDK:
                 "Precursor data is not available for panel rollup, please select np rollup."
             )
 
+        # cast Sample Name to str to ensure correct interpretation of sample names like '001'
         dtype = {"Sample Name": str}
 
         if analyte_type == "protein":
             if rollup == "np":
-                return url_to_df(
+                return download_df(
                     self._get_search_result_protein_data(analysis_id)[
                         "npLink"
                     ]["url"],
                     dtype=dtype,
                 )
             elif rollup == "panel":
-                return url_to_df(
+                return download_df(
                     self._get_search_result_protein_data(analysis_id)[
                         "panelLink"
                     ]["url"],
@@ -2422,21 +2427,21 @@ class SeerSDK:
                 )
         elif analyte_type == "peptide":
             if rollup == "np":
-                return url_to_df(
+                return download_df(
                     self._get_search_result_peptide_data(analysis_id)[
                         "npLink"
                     ]["url"],
                     dtype=dtype,
                 )
             elif rollup == "panel":
-                return url_to_df(
+                return download_df(
                     self._get_search_result_peptide_data(analysis_id)[
                         "panelLink"
                     ]["url"],
                     dtype=dtype,
                 )
         else:
-            return url_to_df(
+            return download_df(
                 self.get_search_result_file_url(
                     analysis_id, filename="report.tsv"
                 )["url"]
@@ -2694,7 +2699,7 @@ class SeerSDK:
                     continue
 
         links = {
-            k: url_to_df(v, is_tsv=k.endswith(".tsv"))
+            k: download_df(v, is_tsv=k.endswith(".tsv"))
             for k, v in links.items()
         }
         if download_path:
@@ -2776,17 +2781,17 @@ class SeerSDK:
             analysis_id, link=True
         )
         links = {
-            "peptide_np": url_to_df(peptide_data["npLink"]["url"]),
-            "peptide_panel": url_to_df(peptide_data["panelLink"]["url"]),
-            "protein_np": url_to_df(protein_data["npLink"]["url"]),
-            "protein_panel": url_to_df(protein_data["panelLink"]["url"]),
+            "peptide_np": download_df(peptide_data["npLink"]["url"]),
+            "peptide_panel": download_df(peptide_data["panelLink"]["url"]),
+            "protein_np": download_df(protein_data["npLink"]["url"]),
+            "protein_panel": download_df(protein_data["panelLink"]["url"]),
         }
 
         if diann_report:
             diann_report_url = self._get_search_result_file_url(
                 analysis_id, "report.tsv"
             )
-            links["diann_report"] = url_to_df(diann_report_url["url"])
+            links["diann_report"] = download_df(diann_report_url["url"])
 
         if download_path:
             name = f"{download_path}/downloads/{analysis_id}"

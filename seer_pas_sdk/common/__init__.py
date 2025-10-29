@@ -99,7 +99,7 @@ def dict_to_df(data):
 
 
 # Most cases appear to be a .tsv file.
-def url_to_df(url, is_tsv=True, dtype={}):
+def download_df(url, is_tsv=True, dtype={}):
     """
     Fetches a TSV/CSV file from a URL and returns as a Pandas DataFrame.
 
@@ -110,6 +110,9 @@ def url_to_df(url, is_tsv=True, dtype={}):
 
     is_tsv : bool
         True if the file is a TSV file, False if it is a CSV file.
+
+    dtype : dict
+        Data type conversion when intaking columns. e.g. {'a': str, 'b': np.float64}
 
     Returns
     -------
@@ -123,7 +126,7 @@ def url_to_df(url, is_tsv=True, dtype={}):
 
     Examples
     --------
-    >>> csv = url_to_df("link_to_csv_file")
+    >>> csv = download_df("link_to_csv_file")
     >>> print(csv)
     >>>     Sample ID  Sample name  Well location  MS file name
         0           1  SampleName1              1  SDKTest1.raw
