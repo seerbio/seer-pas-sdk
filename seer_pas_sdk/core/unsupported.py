@@ -1450,18 +1450,22 @@ class _UnsupportedSDK(_SeerSDK):
         return result
 
     def get_search_data(
-        self, analysis_id: str, analyte_type: str, rollup: str, engine: str
+        self,
+        analysis_id: str,
+        analyte_type: str,
+        rollup: str,
+        norm_method: str = "pepcal",
     ):
         """
-        Get search data for a given analysis ID.
+        Get analyte intensities data for a given PAS analysis.
         Args:
             analysis_id (str): ID of the analysis.
-            analyte_type (str): Type of analyte. Must be either 'protein', 'peptide', precursor.
-            rollup (str): Rollup type. Must be either 'np' or 'panel'.
-            engine (str): Search engine. Supported engines are: raw, diann, median, median80, pepcal.
+            analyte_type (str): Type of the analyte. Must be either 'protein', 'peptide', precursor.
+            rollup (str): Intensities rollup method. Must be either 'np' or 'panel'.
+            norm_method (str): Search engine. Supported engines are: raw, engine, median, median80, pepcal. Default is 'pepcal'.
 
         Returns:
-            pd.DataFrame: A dataframe with each row containing the following columns:
+            pd.DataFrame: A dataframe with each row containing the analyte intensity measurement:
                             'msrun_id', 'sample_id', 'nanoparticle' (if rollup is 'np'), 'protein_group', 'peptide' (for 'peptide' and 'precursor' analyte types), 'charge' (for 'precursor' analyte type),
                             'intensity_log10', 'protein_group_q_value', 'q_value' (for 'precursor' analyte type), 'rt' and 'irt' (for 'peptide' and 'precursor' analyte types)
         """
@@ -1487,20 +1491,24 @@ class _UnsupportedSDK(_SeerSDK):
         )
         if analyte_type in ["protein", "peptide"]:
             intensity_column = None
-            if engine.casefold() == "raw":
+            if norm_method == "raw":
                 intensity_column = (
                     "Intensities Log10"
                     if "Intensities Log10" in search_results.columns
                     else "Intensity (Log10)"
                 )
-            elif engine.casefold() == "diann":
+            elif norm_method == "engine":
                 intensity_column = (
                     "DIA-NN Normalized Intensities Log10"
                     if "DIA-NN Normalized Intensities Log10"
                     in search_results.columns
                     else "Normalized Intensity (Log10)"
                 )
-            elif engine.casefold() == "median":
+                if intensity_column not in search_results.columns:
+                    raise ValueError(
+                        "Error finding engine normalized intensities in search results. This is only supported for DIA-NN currently."
+                    )
+            elif norm_method == "median":
                 if (
                     not "Median Normalized Intensities Log10"
                     in search_results.columns
@@ -1509,7 +1517,7 @@ class _UnsupportedSDK(_SeerSDK):
                         "Median normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later."
                     )
                 intensity_column = "Median Normalized Intensities Log10"
-            elif engine.casefold() == "median80":
+            elif norm_method == "median80":
                 if (
                     not "Median80 Normalized Intensities Log10"
                     in search_results.columns
@@ -1518,15 +1526,15 @@ class _UnsupportedSDK(_SeerSDK):
                         "Median80 normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later."
                     )
                 intensity_column = "Median80 Normalized Intensities Log10"
-            elif engine.casefold() == "pepcal":
+            elif norm_method == "pepcal":
                 if not "PepCal Intensities Log10" in search_results.columns:
                     raise ValueError(
-                        "Pepcal normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later with the Seer Peptide Calibrant option enabled."
+                        "Pepcal normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later with the Seer Peptide Calibrant option enabled. \n Please retry using different norm_method, such as 'median'"
                     )
                 intensity_column = "Pepcal Intensities Log10"
             else:
                 raise ValueError(
-                    f"Engine {engine} not supported. Supported engines are: raw, diann, median, median80, pepcal."
+                    f"norm_method = {norm_method} is not supported. Supported normalization methods are: raw, pepcal, engine, median, median80."
                 )
             if rollup == "panel":
                 search_results.fillna({"Sample Name": ""}, inplace=True)
@@ -1561,9 +1569,11 @@ class _UnsupportedSDK(_SeerSDK):
             report["Protein Group"] = report["Protein.Group"]
 
             if analyte_type == "protein":
-                report["Q Value"] = report["Protein.Q.Value"]
+                report["Protein Q Value"] = report["Protein.Q.Value"]
 
-                report = report[["File Name", "Protein Group", "Q Value"]]
+                report = report[
+                    ["File Name", "Protein Group", "Protein Q Value"]
+                ]
                 report.drop_duplicates(
                     subset=["File Name", "Protein Group"], inplace=True
                 )
@@ -1578,7 +1588,7 @@ class _UnsupportedSDK(_SeerSDK):
                     "Sample ID",
                     "Protein Group",
                     "Intensity Log10",
-                    "Q Value",
+                    "Protein Q Value",
                 ]
 
             else:
@@ -1645,16 +1655,20 @@ class _UnsupportedSDK(_SeerSDK):
             search_results["Peptide"] = search_results["Stripped.Sequence"]
             search_results["Charge"] = search_results["Precursor.Charge"]
             search_results["Precursor Id"] = search_results["Precursor.Id"]
-            search_results["Q Value"] = search_results["Q.Value"]
+            search_results["Precursor Q Value"] = search_results["Q.Value"]
+            search_results["Protein Q Value"] = search_results[
+                "Protein.Q.Value"
+            ]
 
             included_columns = [
                 "MsRun ID",
                 "Sample ID",
                 "Protein Group",
+                "Protein Q Value",
                 "Peptide",
                 "Precursor Id",
                 "Intensity",
-                "Q Value",
+                "Precursor Q Value",
                 "Charge",
                 "RT",
                 "iRT",
@@ -1666,10 +1680,10 @@ class _UnsupportedSDK(_SeerSDK):
 
             return df
 
-    def get_search_data_analyte(self, analysis_id: str, analyte_type: str):
+    def get_search_data_analytes(self, analysis_id: str, analyte_type: str):
         if analyte_type not in ["protein", "peptide", "precursor"]:
             raise ValueError(
-                "Analyte type must be either 'protein', 'peptide', or 'precursor'."
+                f"Unknown analyte_type = {analyte_type}. Supported analytes are 'protein', 'peptide', or 'precursor'."
             )
 
         # include
