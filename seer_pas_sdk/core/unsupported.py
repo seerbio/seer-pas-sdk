@@ -1462,8 +1462,8 @@ class _UnsupportedSDK(_SeerSDK):
 
         Returns:
             pd.DataFrame: A dataframe with each row containing the following columns:
-                            'msrun_id', 'sample_id', 'nanoparticle' (if rollup is 'np'), 'protein_group', 'peptide' (for peptide),
-                            'intensity_log10', 'q_value' (for protein), 'rt' and 'irt' (for peptide)
+                            'msrun_id', 'sample_id', 'nanoparticle' (if rollup is 'np'), 'protein_group', 'peptide' (for 'peptide' and 'precursor' analyte types), 'charge' (for 'precursor' analyte type),
+                            'intensity_log10', 'protein_group_q_value', 'q_value' (for 'precursor' analyte type), 'rt' and 'irt' (for 'peptide' and 'precursor' analyte types)
         """
         # 1. Get msrun data for analysis
         samples = self.find_samples(analysis_id=analysis_id)
