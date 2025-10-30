@@ -2404,7 +2404,7 @@ class SeerSDK:
 
         if analyte_type == "precursor" and rollup == "panel":
             raise ValueError(
-                "Precursor data is not available for panel rollup, please select np rollup."
+                "Precursor data is not available for panel rollup, use rollup = 'np' to get precursor data."
             )
 
         # cast Sample Name to str to ensure correct interpretation of sample names like '001'
