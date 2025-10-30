@@ -2394,7 +2394,7 @@ class SeerSDK:
 
         if analyte_type not in ["protein", "peptide", "precursor"]:
             raise ValueError(
-                "Invalid data type. Please choose between 'protein', 'peptide', or 'precursor'."
+                "Unknown analyte_type = '{analyte_type}'. Supported types are 'protein', 'peptide', or 'precursor'."
             )
 
         if rollup not in ["np", "panel"]:
