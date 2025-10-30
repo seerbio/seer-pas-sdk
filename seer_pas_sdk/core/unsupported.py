@@ -1780,7 +1780,6 @@ class _UnsupportedSDK(_SeerSDK):
                     "Genes",
                     "First.Protein.Description",
                     "Modified.Sequence",
-                    "Stripped.Sequence",
                     "Proteotypic",
                     "Global.Q.Value",
                     "Global.PG.Q.Value",
@@ -1808,7 +1807,6 @@ class _UnsupportedSDK(_SeerSDK):
                     "Genes",
                     "First.Protein.Description",
                     "Modified.Sequence",
-                    "Stripped.Sequence",
                     "Proteotypic",
                     "Global.Q.Value",
                     "Global.PG.Q.Value",
@@ -1820,6 +1818,9 @@ class _UnsupportedSDK(_SeerSDK):
                     "Cellular Component",
                 ]
             ]
+            df.rename(
+                columns={"Modified.Sequence": "Modified.Peptide"}, inplace=True
+            )
         # endif
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
         return df
