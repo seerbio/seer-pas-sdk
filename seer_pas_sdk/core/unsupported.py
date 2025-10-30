@@ -1506,7 +1506,7 @@ class _UnsupportedSDK(_SeerSDK):
                 )
                 if intensity_column not in search_results.columns:
                     raise ValueError(
-                        "Error finding engine normalized intensities in search results. This is only supported for DIA-NN currently."
+                        "Engine normalized intensities not found in search results. This is only supported for DIA-NN currently."
                     )
             elif norm_method == "median":
                 if (
