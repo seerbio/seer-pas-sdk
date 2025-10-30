@@ -2399,7 +2399,7 @@ class SeerSDK:
 
         if rollup not in ["np", "panel"]:
             raise ValueError(
-                "Invalid file. Please choose between 'np', 'panel'."
+                "Unknown rollup = '{rollup}'. Supported rollup types are 'np' and 'panel'."
             )
 
         if analyte_type == "precursor" and rollup == "panel":
