@@ -1527,11 +1527,13 @@ class _UnsupportedSDK(_SeerSDK):
                     )
                 intensity_column = "Median80 Normalized Intensities Log10"
             elif norm_method == "pepcal":
-                if not "PepCal Intensities Log10" in search_results.columns:
+                if not ("PepCal Intensities Log10" in search_results.columns):
                     raise ValueError(
                         "Pepcal normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later with the Seer Peptide Calibrant option enabled. \n Please retry using different norm_method, such as 'median'"
                     )
-                intensity_column = "Pepcal Intensities Log10"
+
+                intensity_column = "PepCal Intensities Log10"
+
             else:
                 raise ValueError(
                     f"norm_method = {norm_method} is not supported. Supported normalization methods are: raw, pepcal, engine, median, median80."
@@ -1743,10 +1745,7 @@ class _UnsupportedSDK(_SeerSDK):
             )
 
             report_results = report_results[
-                [
-                    "Peptide",
-                    "Protein.Ids",
-                ]
+                ["Peptide", "Protein.Ids", "Protein.Group"]
             ]
             report_results.drop_duplicates(subset=["Peptide"], inplace=True)
             df = pd.merge(
@@ -1773,12 +1772,14 @@ class _UnsupportedSDK(_SeerSDK):
             report_results = report_results[
                 [
                     "Precursor.Id",
+                    "Precursor.Charge",
                     "Peptide",
                     "Protein Group",
                     "Protein.Ids",
                     "Global.Q.Value",
                     "Global.PG.Q.Value",
                     "Lib.Q.Value",
+                    "Lib.PG.Q.Value",
                 ]
             ]
             report_results.drop_duplicates(
@@ -1793,12 +1794,14 @@ class _UnsupportedSDK(_SeerSDK):
             df = df[
                 [
                     "Precursor.Id",
+                    "Precursor.Charge",
                     "Peptide",
                     "Protein Group",
                     "Protein.Ids",
                     "Global.Q.Value",
                     "Global.PG.Q.Value",
                     "Lib.Q.Value",
+                    "Lib.PG.Q.Value",
                     "Gene Names",
                     "Biological Process",
                     "Molecular Function",
