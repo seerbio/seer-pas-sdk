@@ -99,7 +99,7 @@ def dict_to_df(data):
 
 
 # Most cases appear to be a .tsv file.
-def url_to_df(url, is_tsv=True):
+def download_df(url, is_tsv=True, dtype={}):
     """
     Fetches a TSV/CSV file from a URL and returns as a Pandas DataFrame.
 
@@ -110,6 +110,9 @@ def url_to_df(url, is_tsv=True):
 
     is_tsv : bool
         True if the file is a TSV file, False if it is a CSV file.
+
+    dtype : dict
+        Data type conversion when intaking columns. e.g. {'a': str, 'b': np.float64}
 
     Returns
     -------
@@ -123,7 +126,7 @@ def url_to_df(url, is_tsv=True):
 
     Examples
     --------
-    >>> csv = url_to_df("link_to_csv_file")
+    >>> csv = download_df("link_to_csv_file")
     >>> print(csv)
     >>>     Sample ID  Sample name  Well location  MS file name
         0           1  SampleName1              1  SDKTest1.raw
@@ -138,9 +141,9 @@ def url_to_df(url, is_tsv=True):
         return pd.DataFrame()
     url_content = io.StringIO(requests.get(url).content.decode("utf-8"))
     if is_tsv:
-        csv = pd.read_csv(url_content, sep="\t")
+        csv = pd.read_csv(url_content, sep="\t", dtype=dtype)
     else:
-        csv = pd.read_csv(url_content)
+        csv = pd.read_csv(url_content, dtype=dtype)
     return csv
 
 
@@ -748,3 +751,13 @@ def get_version():
         except subprocess.CalledProcessError:
             v = "unknown"
     return f"{v}"
+
+
+def title_case_to_snake_case(s: str):
+    """
+    Converts a title case string to snake case.
+
+    """
+    s = s.replace(" ", "_").replace(".", "_").casefold()
+
+    return s
