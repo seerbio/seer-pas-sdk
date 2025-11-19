@@ -909,7 +909,7 @@ class _UnsupportedSDK(_SeerSDK):
                 result_files = result_files["files"]
             except Exception:
                 raise ServerError(
-                    "Bad response from PAS server. Please ensure you are using the latest version of SeerSDK."
+                    "Unexpected response from PAS server. Please ensure you are using the latest version of SeerSDK."
                 )
         # omit tenant_id from return file path
         for result in result_files:
