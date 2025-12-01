@@ -904,8 +904,13 @@ class _UnsupportedSDK(_SeerSDK):
 
             if file_response.status_code != 200:
                 raise ServerError("Could not upload MS Files to PAS.")
-            result_files = file_response.json()["files"]
-
+            result_files = file_response.json()
+            try:
+                result_files = result_files["files"]
+            except Exception:
+                raise ServerError(
+                    "Unexpected response from PAS server. Please ensure you are using the latest version of SeerSDK."
+                )
         # omit tenant_id from return file path
         for result in result_files:
             result["filePath"] = "/".join(result["filePath"].split("/")[1:])
