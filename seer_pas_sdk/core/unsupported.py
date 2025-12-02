@@ -841,6 +841,17 @@ class _UnsupportedSDK(_SeerSDK):
             raise ValueError(
                 "Please leave the 'filenames' parameter empty when working with .d.zip files. SeerSDK.rename_d_zip_file() is available for this use case."
             )
+
+        if ".d.zip" in extensions:
+            invalid_d_zip_files = []
+            for file in ms_data_files:
+                if not validate_d_zip_file:
+                    invalid_d_zip_files.append(file)
+            if invalid_d_zip_files:
+                raise ValueError(
+                    f"The following .d.zip files are invalid: {', '.join(invalid_d_zip_files)}. Please check your files."
+                )
+
         # Step 2: Use active tenant to fetch the tenant_id.
         tenant_id = self.get_active_tenant_id()
 

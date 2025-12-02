@@ -678,15 +678,16 @@ def camel_case(s):
     # Join the string, ensuring the first letter is lowercase
     return "".join([s[0].lower(), s[1:]])
 
+
 def validate_d_zip_file(file):
     """
-    Verify whether a .d.zip file aligns with Seer requirements for PAS upload. 
+    Verify whether a .d.zip file aligns with Seer requirements for PAS upload.
 
     Parameters
     ----------
     file : str
         The name of the zip file.
-    
+
     Returns
     -------
     bool
@@ -697,12 +698,12 @@ def validate_d_zip_file(file):
         return False
 
     basename = os.path.basename(file)
-    d_name = basename[:-4]  # Remove the .zip extension    
+    d_name = basename[:-4]  # Remove the .zip extension
 
     try:
         with zipfile.ZipFile(file, "r") as zf:
             names = zf.namelist()
-            
+
     except:
         return False
 
@@ -710,17 +711,16 @@ def validate_d_zip_file(file):
         return False
 
     # Find top level files
-    root_entries = [n for n in names if '/' not in n.rstrip('/')]
-    if len(root_entries) > 0: 
+    root_entries = [n for n in names if "/" not in n.rstrip("/")]
+    if len(root_entries) > 0:
         return False
-    
+
     # find folders
-    top_level = {n.split('/')[0] for n in names}
+    top_level = {n.split("/")[0] for n in names}
     if len(top_level) != 1 or d_name not in top_level:
         return False
-    
-    return True
 
+    return True
 
 
 def rename_d_zip_file(source, destination):
