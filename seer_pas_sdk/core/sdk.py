@@ -1857,10 +1857,10 @@ class SeerSDK:
     def find_analyses(
         self,
         analysis_id: str = None,
-        folder_id: str = None,
-        show_folders: bool = True,
-        analysis_only: bool = True,
-        project_id: str = None,
+        folder_id: str = None,  # change to folder_path
+        show_folders: bool = True,  # remove, make default recursive
+        analysis_only: bool = True,  # remove, always analysis only
+        project_id: str = None,  # (project_name) expand to accept a human readable name in addition to a uuid
         plate_name: str = None,
         as_df=False,
         **kwargs,
@@ -1875,8 +1875,14 @@ class SeerSDK:
         analysis_id : str, optional
             ID of the analysis to be fetched, defaulted to None.
 
+        analysis_name : str, optional
+            name of the analysis to be fetched, defaulted to None. Results will be matched on substring basis.
+
         folder_id : str, optional
             ID of the folder to be fetched, defaulted to None.
+
+        folder_name : str, optional
+            folder path to be fetched, defaulted to None.
 
         show_folders : bool, optional
             Mark True if folder contents are to be returned in the response, i.e. recursive search, defaulted to True.
@@ -1895,8 +1901,8 @@ class SeerSDK:
         as_df : bool, optional
             whether the result should be converted to a DataFrame, defaulted to False.
 
-        **kwargs : dict, optional
-            Search keyword parameters to be passed in. Acceptable values are 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'.
+        **kwargs : dict, optional (drop)
+            Search keyword parameters to be passed in. Acceptable values are 'analysis_name' (keep), 'folder_name' (keep), 'analysis_protocol_name' (drop), 'description', 'notes', or 'number_msdatafile' (drop).
 
         Returns
         -------
@@ -1932,6 +1938,8 @@ class SeerSDK:
 
         search_field = None
         search_item = None
+
+        # TODO: kwargs will be scaled back to only support analysis_name (synonymous to folder_name)
         if kwargs:
             if len(kwargs.keys()) > 1:
                 raise ValueError("Please include only one search parameter.")
@@ -1952,7 +1960,7 @@ class SeerSDK:
             "number_msdatafile",
         ]:
             raise ValueError(
-                "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'."
+                "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description' (drop), 'notes'(drop), or 'number_msdatafile'(drop)."
             )
 
         if analysis_id:
