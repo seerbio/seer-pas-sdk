@@ -712,7 +712,7 @@ def validate_d_zip_file(file):
 
     # check for files at the root level
     root_entries = [n for n in names if "/" not in n.rstrip("/")]
-    if len(root_entries) > 0:
+    if root_entries:
         return False
 
     # find folders
