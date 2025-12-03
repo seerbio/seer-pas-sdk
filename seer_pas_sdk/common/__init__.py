@@ -681,7 +681,7 @@ def camel_case(s):
 
 def validate_d_zip_file(file):
     """
-    Verify whether a .d.zip file aligns with Seer requirements for PAS upload.
+    Return True if a .d.zip file aligns with Seer requirements for PAS upload.
 
     Parameters
     ----------
@@ -710,7 +710,7 @@ def validate_d_zip_file(file):
     if not names:
         return False
 
-    # Find top level files
+    # check for files at the root level
     root_entries = [n for n in names if "/" not in n.rstrip("/")]
     if len(root_entries) > 0:
         return False

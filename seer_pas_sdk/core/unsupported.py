@@ -845,7 +845,7 @@ class _UnsupportedSDK(_SeerSDK):
         if ".d.zip" in extensions:
             invalid_d_zip_files = []
             for file in ms_data_files:
-                if not validate_d_zip_file:
+                if not validate_d_zip_file(file):
                     invalid_d_zip_files.append(file)
             if invalid_d_zip_files:
                 raise ValueError(
