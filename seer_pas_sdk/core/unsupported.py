@@ -4,6 +4,7 @@ seer_pas_sdk.core.unsupported -- in development
 
 import os
 import shutil
+from pathlib import Path
 
 from typing import List as _List
 
@@ -827,20 +828,29 @@ class _UnsupportedSDK(_SeerSDK):
             )
 
         # Step 1: Check if paths and file extensions are valid.
+        invalid_d_zip_files = []
         for file in ms_data_files:
             if not valid_ms_data_file(file):
                 raise ValueError(
                     "Invalid file or file format. Please check your file."
                 )
+            if file.endswith(".d.zip") and (not validate_d_zip_file(file)):
+                invalid_d_zip_files.append(file)
+
+        if invalid_d_zip_files:
+            raise ValueError(
+                f"The following .d.zip files are invalid: {', '.join(invalid_d_zip_files)}. Please check your files."
+            )
 
         extensions = set(
-            [os.path.splitext(file.lower())[1] for file in ms_data_files]
+            ["".join(Path(file).suffixes) for file in ms_data_files]
         )
 
         if filenames and ".d.zip" in extensions:
             raise ValueError(
                 "Please leave the 'filenames' parameter empty when working with .d.zip files. SeerSDK.rename_d_zip_file() is available for this use case."
             )
+
         # Step 2: Use active tenant to fetch the tenant_id.
         tenant_id = self.get_active_tenant_id()
 
