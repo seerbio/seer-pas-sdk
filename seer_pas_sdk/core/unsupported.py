@@ -833,9 +833,9 @@ class _UnsupportedSDK(_SeerSDK):
                 raise ValueError(
                     "Invalid file or file format. Please check your file."
                 )
-            if (file.endswith('.d.zip') and (not validate_d_zip_file(file))):
+            if file.endswith(".d.zip") and (not validate_d_zip_file(file)):
                 invalid_d_zip_files.append(file)
-        
+
         if invalid_d_zip_files:
             raise ValueError(
                 f"The following .d.zip files are invalid: {', '.join(invalid_d_zip_files)}. Please check your files."
