@@ -4,6 +4,7 @@ seer_pas_sdk.core.unsupported -- in development
 
 import os
 import shutil
+from pathlib import Path
 
 from typing import List as _List
 
@@ -842,10 +843,10 @@ class _UnsupportedSDK(_SeerSDK):
             )
 
         extensions = set(
-            [os.path.splitext(file.lower())[1] for file in ms_data_files]
+            ["".join(Path(file).suffixes) for file in ms_data_files]
         )
 
-        if filenames and ".zip" in extensions:
+        if filenames and ".d.zip" in extensions:
             raise ValueError(
                 "Please leave the 'filenames' parameter empty when working with .d.zip files. SeerSDK.rename_d_zip_file() is available for this use case."
             )
