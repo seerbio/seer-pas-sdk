@@ -698,7 +698,9 @@ def validate_d_zip_file(file):
         return False
 
     basename = os.path.basename(file)
-    d_name = basename[:-4]  # Remove the .zip extension to get the .d folder name
+
+    # Remove the .zip extension to get the .d folder name
+    d_name = basename[:-4]
 
     try:
         with zipfile.ZipFile(file, "r") as zf:
