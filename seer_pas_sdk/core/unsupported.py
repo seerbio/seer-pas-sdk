@@ -1748,6 +1748,12 @@ class _UnsupportedSDK(_SeerSDK):
                 analysis_id=analysis_id, analyte_type="peptide", rollup="np"
             )
             peptide_results = peptide_results[["Peptide", "Protein Group"]]
+
+            # assert that each peptide maps to at most one protein group
+            peptide_results = peptide_results.groupby(
+                "Peptide", as_index=False
+            ).agg({"Protein Group": "first"})
+
             search_results = pd.merge(
                 peptide_results,
                 search_results,
@@ -1756,9 +1762,8 @@ class _UnsupportedSDK(_SeerSDK):
             )
             report_results = report_results[
                 ["Peptide", "Protein.Ids"]
-            ]
-            report_results.drop_duplicates(subset=["Peptide"], inplace=True)
-            
+            ].drop_duplicates(subset=["Peptide"])
+
             df = pd.merge(
                 search_results,
                 report_results,
