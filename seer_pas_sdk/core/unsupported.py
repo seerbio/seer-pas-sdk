@@ -1697,7 +1697,7 @@ class _UnsupportedSDK(_SeerSDK):
         )
 
         if rollup == "panel":
-            df.drop(columns=["msrun_id"], inplace=True)
+            df.drop(columns=["msrun_id"], inplace=True, errors="ignore")
         return df
 
     def get_search_data_analytes(self, analysis_id: str, analyte_type: str):
