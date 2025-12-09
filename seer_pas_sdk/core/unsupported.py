@@ -1483,6 +1483,7 @@ class _UnsupportedSDK(_SeerSDK):
         # 1. Get msrun data for analysis
         samples = self.find_samples(analysis_id=analysis_id)
         sample_name_to_id = {s["sample_name"]: s["id"] for s in samples}
+        sample_uuid_to_id = {s["id"]: s["sample_id"] for s in samples}
         # for np rollup, a row represents an msrun
         msruns = self.find_msruns(sample_ids=sample_name_to_id.values())
         file_to_msrun = {
@@ -1646,8 +1647,7 @@ class _UnsupportedSDK(_SeerSDK):
                 )
             )
             df = df[included_columns]
-            df.columns = [title_case_to_snake_case(x) for x in df.columns]
-            return df
+
         else:
             # precursor
             # working only in report.tsv
@@ -1689,9 +1689,16 @@ class _UnsupportedSDK(_SeerSDK):
                 "iIM",
             ]
             df = search_results[included_columns]
-            df.columns = [title_case_to_snake_case(x) for x in df.columns]
 
-            return df
+        df.columns = [title_case_to_snake_case(x) for x in df.columns]
+        df["sample_uuid"] = df["sample_id"]
+        df["sample_id"] = df["sample_uuid"].apply(
+            lambda x: sample_uuid_to_id.get(x)
+        )
+
+        if rollup == "panel":
+            df.drop(columns=["msrun_id"], inplace=True)
+        return df
 
     def get_search_data_analytes(self, analysis_id: str, analyte_type: str):
         if analyte_type not in ["protein", "peptide", "precursor"]:
