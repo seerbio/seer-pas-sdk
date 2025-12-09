@@ -4156,14 +4156,17 @@ class SeerSDK:
 
         links = {}
         for file in fasta_filenames:
+            filename = os.path.basename(file)
             try:
                 url = self._get_analysis_protocol_fasta_url(
                     analysis_protocol_fasta_name=file
                 )
             except ServerError:
-                print(f"ERROR: Could not retrieve download link for {file}.")
+                print(
+                    f"ERROR: Could not retrieve download link for {filename}."
+                )
                 continue
-            filename = os.path.basename(file)
+
             links[filename] = url
         return links
 
