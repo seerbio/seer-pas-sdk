@@ -1688,7 +1688,7 @@ class _UnsupportedSDK(_SeerSDK):
                 "IM",
                 "iIM",
             ]
-            df = search_results[included_columns]
+            df = pd.DataFrame(search_results[included_columns])
 
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
         df["sample_uuid"] = df["sample_id"]
