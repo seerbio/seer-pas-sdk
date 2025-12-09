@@ -1754,17 +1754,18 @@ class _UnsupportedSDK(_SeerSDK):
                 on=["Protein Group"],
                 how="left",
             )
-
             report_results = report_results[
-                ["Peptide", "Protein.Ids", "Protein.Group"]
+                ["Peptide", "Protein.Ids"]
             ]
             report_results.drop_duplicates(subset=["Peptide"], inplace=True)
+            
             df = pd.merge(
                 search_results,
                 report_results,
                 on=["Peptide"],
                 how="left",
             )
+            df.drop_duplicates(subset="Peptide", inplace=True)
         else:
             # precursor
             search_results = search_results[
