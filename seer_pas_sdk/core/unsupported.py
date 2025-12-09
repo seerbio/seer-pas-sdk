@@ -1749,7 +1749,7 @@ class _UnsupportedSDK(_SeerSDK):
             )
             peptide_results = peptide_results[["Peptide", "Protein Group"]]
 
-            # assert that each peptide maps to at most one protein group
+            # deduplicate peptides mapping to multiple protein groups by taking the first protein group
             peptide_results = peptide_results.groupby(
                 "Peptide", as_index=False
             ).agg({"Protein Group": "first"})
@@ -1770,7 +1770,6 @@ class _UnsupportedSDK(_SeerSDK):
                 on=["Peptide"],
                 how="left",
             )
-            df.drop_duplicates(subset="Peptide", inplace=True)
         else:
             # precursor
             search_results = search_results[
