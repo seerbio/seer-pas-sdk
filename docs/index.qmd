@@ -578,10 +578,17 @@ log(analysis)
 
 
 ### Find Analyses
-Returns a list of analyses objects for the authenticated user. If no `analysis_id` is provided, returns all analyses for the authenticated user.
+Returns a list of analyses objects for the authenticated user. If `None` is provided for all query arguments, returns all analyses available to the user within the active tenant.
 
 ###### <u>Params</u>
-`analysis_id`: (`str`, optional) Unique ID of the analysis to be fetched, defaulted to None.
+* `analysis_id`: (`str`, optional) Unique ID of the analysis to be fetched, defaulted to None.
+* `analysis_name`: (`str`, optional) Name of the analysis to be fetched, defaulted to None. Results will be matched on a substring basis.
+* `folder_id`: (`str`, optional) Unique ID of the folder to fetch analyses from, defaulted to None.
+* `folder_name`: (`str`, optional) Name of the folder to fetch analyses from, defaulted to None.
+* `project_id`: (`str`, optional) Unique ID of the project to filter the result set of analyses, defaulted to None.
+* `project_name`: (`str`, optional) Name of the project to filter the result set of analyses, defaulted to None.
+* `plate_name`: (`str`, optional) Name of a plate to filter the result set of analyses, defaulted to None.
+* `as_df`: (`bool`, optional) Whether the result should be converted to a DataFrame, defaulted to False.
 <br>
 
 ###### <u>Returns</u>
