@@ -1854,6 +1854,21 @@ class SeerSDK:
             else:
                 return res[0]
 
+    def _lookup_analysis_folders(self):
+        """
+        Helper function to map analysis folder ids to names.
+        """
+        with self._get_auth_session("getanalysisfolders") as s:
+            URL = f"{self._auth.url}api/v1/analyses"
+            params = {"all": "true", "folderonly": "true"}
+            folders = s.get(URL, params=params)
+            if folders.status_code != 200:
+                raise ValueError(
+                    "Failed to fetch analysis folders. Please check your connection."
+                )
+            res = folders.json()["data"]
+            return res
+
     def find_analyses(
         self,
         analysis_id: str = None,
@@ -1930,9 +1945,16 @@ class SeerSDK:
             except:
                 return []
 
+        analysis_folders = self._lookup_analysis_folders()
+        analysis_folder_id_to_name = {
+            x["id"]: x["analysis_name"] for x in analysis_folders
+        }
+        analysis_folder_name_to_id = {
+            v: k for k, v in analysis_folder_id_to_name.items()
+        }
+
         if folder_name and not folder_id:
-            folder_object = self.get_analysis(analysis_name=folder_name)
-            folder_id = folder_object.get("id", None)
+            folder_id = analysis_folder_name_to_id.get(folder_name, None)
             if not folder_id:
                 raise ValueError(f"No folder found with name '{folder_name}'.")
 
@@ -1963,6 +1985,7 @@ class SeerSDK:
 
             spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
             protocol_to_engine_map = dict()
+
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -1975,15 +1998,23 @@ class SeerSDK:
                         "parameter_file_path"
                     ][location(res[entry]["parameter_file_path"]) :]
 
+                if (
+                    "folder_id" in res[entry]
+                    and res[entry]["folder_id"] is not None
+                ):
+                    res[entry]["folder_name"] = analysis_folder_id_to_name.get(
+                        res[entry]["folder_id"], None
+                    )
+                    res[entry]["folder_uuid"] = res[entry]["folder_id"]
+                    del res[entry]["folder_id"]
+
                 if "user_group" in res[entry]:
                     res[entry]["space"] = spaces.get(
                         res[entry]["user_group"], "General"
                     )
                     del res[entry]["user_group"]
 
-                if (not res[entry].get("is_folder")) and res[entry].get(
-                    "analysis_protocol_id"
-                ):
+                if res[entry].get("analysis_protocol_id"):
                     if (
                         res[entry]["analysis_protocol_id"]
                         in protocol_to_engine_map
