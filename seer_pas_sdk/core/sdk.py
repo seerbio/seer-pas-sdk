@@ -1981,7 +1981,7 @@ class SeerSDK:
 
             folders = []
             spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
-            cache_protocol_to_fasta = {}
+            protocol_to_fasta = {}
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -2014,8 +2014,8 @@ class SeerSDK:
                     local_analysis_protocol_id = res[entry].get(
                         "analysis_protocol_id"
                     )
-                    if local_analysis_protocol_id in cache_protocol_to_fasta:
-                        res[entry]["fasta"] = cache_protocol_to_fasta[
+                    if local_analysis_protocol_id in protocol_to_fasta:
+                        res[entry]["fasta"] = protocol_to_fasta[
                             local_analysis_protocol_id
                         ]
                     else:
@@ -2025,9 +2025,9 @@ class SeerSDK:
                                     local_analysis_protocol_id
                                 )
                             )
-                            cache_protocol_to_fasta[
-                                local_analysis_protocol_id
-                            ] = res[entry]["fasta"]
+                            protocol_to_fasta[local_analysis_protocol_id] = (
+                                res[entry]["fasta"]
+                            )
                         except:
                             print(
                                 f"Warning: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
