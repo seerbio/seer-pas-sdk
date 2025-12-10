@@ -1890,13 +1890,13 @@ class SeerSDK:
             ID of the analysis to be fetched, defaulted to None.
 
         analysis_name : str, optional
-            name of the analysis to be fetched, defaulted to None. Results will be matched on substring basis.
+            Name of the analysis to be fetched, defaulted to None. Results will be matched on substring basis.
 
         folder_id : str, optional
             ID of the folder to be fetched, defaulted to None.
 
         folder_name : str, optional
-            folder path to be fetched, defaulted to None.
+            Folder path to be fetched, defaulted to None.
 
         project_id : str, optional
             ID of the project to be fetched, defaulted to None.
@@ -1905,7 +1905,7 @@ class SeerSDK:
             Name of the plate to be fetched, defaulted to None.
 
         as_df : bool, optional
-            whether the result should be converted to a DataFrame, defaulted to False.
+            Whether the result should be converted to a DataFrame, defaulted to False.
 
         Returns
         -------
@@ -1942,7 +1942,7 @@ class SeerSDK:
         if analysis_id:
             try:
                 return [self.get_analysis(analysis_id=analysis_id)]
-            except:
+            except Exception:
                 return []
 
         analysis_folders = self._lookup_analysis_folders()
@@ -2046,7 +2046,7 @@ class SeerSDK:
                                 analysis_protocol_engine=analysis_protocol_engine,
                             )
                         )
-                    except:
+                    except Exception:
                         print(
                             f"Warning: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
                         )
