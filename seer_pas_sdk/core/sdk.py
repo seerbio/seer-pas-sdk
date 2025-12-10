@@ -1981,7 +1981,7 @@ class SeerSDK:
 
             folders = []
             spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
-            protocol_to_engine_map = dict()
+            cache_protocol_to_fasta = {}
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -2010,18 +2010,29 @@ class SeerSDK:
                 if (not res[entry].get("is_folder")) and res[entry].get(
                     "analysis_protocol_id"
                 ):
-
-                    try:
-                        res[entry]["fasta"] = ",".join(
-                            self._get_analysis_protocol_fasta_filenames(
-                                res[entry]["analysis_protocol_id"]
+                    # analysis_protocol_id for this result row
+                    local_analysis_protocol_id = res[entry].get(
+                        "analysis_protocol_id"
+                    )
+                    if local_analysis_protocol_id in cache_protocol_to_fasta:
+                        res[entry]["fasta"] = cache_protocol_to_fasta[
+                            local_analysis_protocol_id
+                        ]
+                    else:
+                        try:
+                            res[entry]["fasta"] = ",".join(
+                                self._get_analysis_protocol_fasta_filenames(
+                                    local_analysis_protocol_id
+                                )
                             )
-                        )
-                    except:
-                        print(
-                            f"Warning: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
-                        )
-                        res[entry]["fasta"] = None
+                            cache_protocol_to_fasta[
+                                local_analysis_protocol_id
+                            ] = res[entry]["fasta"]
+                        except:
+                            print(
+                                f"Warning: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
+                            )
+                            res[entry]["fasta"] = None
                 else:
                     res[entry]["fasta"] = None
 
