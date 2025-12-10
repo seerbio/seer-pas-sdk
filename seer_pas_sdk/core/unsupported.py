@@ -1750,9 +1750,11 @@ class _UnsupportedSDK(_SeerSDK):
             peptide_results = peptide_results[["Peptide", "Protein Group"]]
 
             # deduplicate peptides mapping to multiple protein groups by taking the first protein group
-            peptide_results = peptide_results.groupby(
-                "Peptide", as_index=False
-            ).agg({"Protein Group": "first"})
+            peptide_results = (
+                peptide_results.sort_values(["Peptide", "Protein Group"])
+                .groupby("Peptide")
+                .agg({"Protein Group": "first"})
+            )
 
             search_results = pd.merge(
                 peptide_results,
@@ -1803,6 +1805,9 @@ class _UnsupportedSDK(_SeerSDK):
                     "Lib.PG.Q.Value",
                 ]
             ]
+            report_results.sort_values(["Peptide", "Protein Group"]).groupby(
+                "Peptide", index=False
+            ).agg({"Protein Group": "first"})
             report_results.drop_duplicates(
                 subset=["Protein Group"], inplace=True
             )
