@@ -1873,16 +1873,15 @@ class SeerSDK:
         self,
         analysis_id: str = None,
         analysis_name: str = None,
-        folder_id: str = None,  # change to folder_path
+        folder_id: str = None,
         folder_name: str = None,
-        project_id: str = None,  # (project_name) expand to accept a human readable name in addition to a uuid
+        project_id: str = None,
+        project_name: str = None,
         plate_name: str = None,
         as_df=False,
     ):
         """
-        Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
-        Search parameters may be passed in as keyword arguments to filter the results. Acceptable values are 'analysis_name', 'folder_name', 'description', 'notes', or 'number_msdatafile'.
-        Only search on a single field is supported.
+        Returns a list of analyses objects for the authenticated user. If None is provided for all query arguments, returns all analyses for the authenticated user.
 
         Parameters
         ----------
@@ -1893,16 +1892,19 @@ class SeerSDK:
             Name of the analysis to be fetched, defaulted to None. Results will be matched on substring basis.
 
         folder_id : str, optional
-            ID of the folder to be fetched, defaulted to None.
+            Unique ID of an analysis folder to filter results, defaulted to None.
 
         folder_name : str, optional
-            Folder path to be fetched, defaulted to None.
+            Name of an analysis folder to filter results, defaulted to None.
 
         project_id : str, optional
-            ID of the project to be fetched, defaulted to None.
+            Unique ID of an analysis folder to filter results, defaulted to None.
+
+        project_name : str, optional
+            Name of a project to filter results, defaulted to None.
 
         plate_name : str, optional
-            Name of the plate to be fetched, defaulted to None.
+            Name of a plate to filter results, defaulted to None.
 
         as_df : bool, optional
             Whether the result should be converted to a DataFrame, defaulted to False.
@@ -1957,6 +1959,14 @@ class SeerSDK:
             folder_id = analysis_folder_name_to_id.get(folder_name, None)
             if not folder_id:
                 raise ValueError(f"No folder found with name '{folder_name}'.")
+
+        if project_name and not project_id:
+            project = self.get_project(project_name=project_name)
+            if not project:
+                raise ValueError(
+                    f"No project found with name '{project_name}'."
+                )
+            project_id = project["id"]
 
         with self._get_auth_session("findanalyses") as s:
 
