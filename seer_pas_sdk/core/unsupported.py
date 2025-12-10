@@ -1809,7 +1809,6 @@ class _UnsupportedSDK(_SeerSDK):
                     "Protein.Ids",
                     "Protein.Names",
                     "Genes",
-                    "First.Protein.Description",
                     "Modified.Sequence",
                     "Proteotypic",
                     "Global.Q.Value",
@@ -1822,7 +1821,6 @@ class _UnsupportedSDK(_SeerSDK):
                 "Protein Group",
                 "Protein.Ids",
                 "Protein.Names",
-                "First.Protein.Description",
                 "Genes",
             ]
             report_results = report_results.sort_values(
@@ -1866,7 +1864,6 @@ class _UnsupportedSDK(_SeerSDK):
                     "Protein.Ids",
                     "Protein.Names",
                     "Genes",
-                    "First.Protein.Description",
                     "Modified.Sequence",
                     "Proteotypic",
                     "Global.Q.Value",
