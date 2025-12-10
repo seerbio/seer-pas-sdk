@@ -2014,7 +2014,9 @@ class SeerSDK:
                     )
                     del res[entry]["user_group"]
 
-                if res[entry].get("analysis_protocol_id"):
+                if (not res[entry].get("is_folder")) and res[entry].get(
+                    "analysis_protocol_id"
+                ):
                     if (
                         res[entry]["analysis_protocol_id"]
                         in protocol_to_engine_map
