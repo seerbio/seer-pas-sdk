@@ -4145,11 +4145,11 @@ class SeerSDK:
         )
 
         links = {}
-        for file in fasta_filenames:
-            filename = os.path.basename(file)
+        for filepath in fasta_filenames:
+            filename = os.path.basename(filepath)
             try:
                 url = self._get_analysis_protocol_fasta_url(
-                    analysis_protocol_fasta_name=file
+                    analysis_protocol_fasta_name=filepath
                 )
             except ServerError:
                 print(
