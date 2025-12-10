@@ -2010,28 +2010,7 @@ class SeerSDK:
                 if (not res[entry].get("is_folder")) and res[entry].get(
                     "analysis_protocol_id"
                 ):
-                    if (
-                        res[entry]["analysis_protocol_id"]
-                        in protocol_to_engine_map
-                    ):
-                        analysis_protocol_engine = protocol_to_engine_map[
-                            res[entry]["analysis_protocol_id"]
-                        ]
-                    else:
-                        try:
-                            analysis_protocol = self.get_analysis_protocol(
-                                analysis_protocol_id=res[entry].get(
-                                    "analysis_protocol_id"
-                                )
-                            )
-                            analysis_protocol_engine = analysis_protocol.get(
-                                "analysis_engine", None
-                            )
-                            protocol_to_engine_map[
-                                res[entry]["analysis_protocol_id"]
-                            ] = analysis_protocol_engine
-                        except:
-                            analysis_protocol_engine = None
+
                     try:
                         res[entry]["fasta"] = ",".join(
                             self._get_analysis_protocol_fasta_filenames(
