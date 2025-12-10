@@ -1857,13 +1857,12 @@ class SeerSDK:
     def find_analyses(
         self,
         analysis_id: str = None,
+        analysis_name: str = None,
         folder_id: str = None,  # change to folder_path
-        show_folders: bool = True,  # remove, make default recursive
-        analysis_only: bool = True,  # remove, always analysis only
+        folder_name: str = None,
         project_id: str = None,  # (project_name) expand to accept a human readable name in addition to a uuid
         plate_name: str = None,
         as_df=False,
-        **kwargs,
     ):
         """
         Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
@@ -1884,14 +1883,6 @@ class SeerSDK:
         folder_name : str, optional
             folder path to be fetched, defaulted to None.
 
-        show_folders : bool, optional
-            Mark True if folder contents are to be returned in the response, i.e. recursive search, defaulted to True.
-            Will be disabled if an analysis id is provided.
-
-        analysis_only : bool, optional
-            Mark True if only analyses objects are to be returned in the response, defaulted to True.
-            If marked false, folder objects will also be included in the response.
-
         project_id : str, optional
             ID of the project to be fetched, defaulted to None.
 
@@ -1900,9 +1891,6 @@ class SeerSDK:
 
         as_df : bool, optional
             whether the result should be converted to a DataFrame, defaulted to False.
-
-        **kwargs : dict, optional (drop)
-            Search keyword parameters to be passed in. Acceptable values are 'analysis_name' (keep), 'folder_name' (keep), 'analysis_protocol_name' (drop), 'description', 'notes', or 'number_msdatafile' (drop).
 
         Returns
         -------
@@ -1936,52 +1924,28 @@ class SeerSDK:
         URL = f"{self._auth.url}api/v1/analyses"
         res = []
 
-        search_field = None
-        search_item = None
-
-        # TODO: kwargs will be scaled back to only support analysis_name (synonymous to folder_name)
-        if kwargs:
-            if len(kwargs.keys()) > 1:
-                raise ValueError("Please include only one search parameter.")
-            search_field = list(kwargs.keys())[0]
-            search_item = kwargs[search_field]
-
-            if not search_item:
-                raise ValueError(
-                    f"Please provide a non null value for {search_field}"
-                )
-
-        if search_field and search_field not in [
-            "analysis_name",
-            "folder_name",
-            "analysis_protocol_name",
-            "description",
-            "notes",
-            "number_msdatafile",
-        ]:
-            raise ValueError(
-                "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description' (drop), 'notes'(drop), or 'number_msdatafile'(drop)."
-            )
-
         if analysis_id:
             try:
                 return [self.get_analysis(analysis_id=analysis_id)]
             except:
                 return []
 
+        if folder_name and not folder_id:
+            folder_object = self.get_analysis(analysis_name=folder_name)
+            folder_id = folder_object.get("id", None)
+            if not folder_id:
+                raise ValueError(f"No folder found with name '{folder_name}'.")
+
         with self._get_auth_session("findanalyses") as s:
 
-            params = {"all": "true"}
+            params = {"all": "true", "analysisonly": "true"}
             if folder_id:
                 params["folder"] = folder_id
 
-            if search_field:
-                params["searchFields"] = search_field
-                params["searchItem"] = search_item
+            if analysis_name:
+                params["searchFields"] = "analysis_name"
+                params["searchItem"] = analysis_name
                 del params["all"]
-
-                if search_field == "folder_name":
-                    params["searchFields"] = "analysis_name"
 
             if project_id:
                 params["projectId"] = project_id
@@ -1997,7 +1961,6 @@ class SeerSDK:
                 )
             res = analyses.json()["data"]
 
-            folders = []
             spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
             protocol_to_engine_map = dict()
             for entry in range(len(res)):
@@ -2011,13 +1974,6 @@ class SeerSDK:
                     res[entry]["parameter_file_path"] = res[entry][
                         "parameter_file_path"
                     ][location(res[entry]["parameter_file_path"]) :]
-
-                if (
-                    show_folders
-                    and not analysis_id
-                    and res[entry]["is_folder"]
-                ):
-                    folders.append(res[entry]["id"])
 
                 if "user_group" in res[entry]:
                     res[entry]["space"] = spaces.get(
@@ -2065,14 +2021,6 @@ class SeerSDK:
                 else:
                     res[entry]["fasta"] = None
 
-            # recursive solution to get analyses in folders
-            for folder in folders:
-                res += self.find_analyses(folder_id=folder)
-
-            if analysis_only:
-                res = [
-                    analysis for analysis in res if not analysis["is_folder"]
-                ]
             if not res and as_df:
                 return pd.DataFrame(columns=ANALYSIS_COLUMNS)
             return res if not as_df else dict_to_df(res)
