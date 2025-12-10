@@ -1744,34 +1744,50 @@ class _UnsupportedSDK(_SeerSDK):
                 how="left",
             )
         elif analyte_type == "peptide":
-            peptide_results = self.get_search_result(
-                analysis_id=analysis_id, analyte_type="peptide", rollup="np"
-            )
-            peptide_results = peptide_results[["Peptide", "Protein Group"]]
-
-            # deduplicate peptides mapping to multiple protein groups by taking the first protein group
-            peptide_results = (
-                peptide_results.sort_values(["Peptide", "Protein Group"])
-                .groupby("Peptide")
-                .agg({"Protein Group": "first"})
+            report_results = report_results.sort_values(
+                [
+                    "Peptide",
+                    "Global.PG.Q.Value",
+                    "Lib.PG.Q.Value",
+                    "Protein Group",
+                ]
             )
 
-            search_results = pd.merge(
-                peptide_results,
+            columns_to_broadcast = ["Protein Group", "Protein.Ids"]
+            # broadcast chosen values across grouped rows
+            broadcasted = (
+                report_results.groupby("Peptide")
+                .apply(
+                    lambda x: pd.Series(
+                        {
+                            col: x.iloc[0][col]
+                            for col in columns_to_broadcast + ["Peptide"]
+                        }
+                    )
+                )
+                .reset_index(drop=True)
+            )
+            report_results = (
+                report_results.drop(columns=columns_to_broadcast)
+                .merge(broadcasted, on="Peptide", how="left")
+                .drop_duplicates(subset=["Peptide"])
+            )
+
+            df = pd.merge(
+                report_results,
                 search_results,
                 on=["Protein Group"],
                 how="left",
             )
-            report_results = report_results[
-                ["Peptide", "Protein.Ids"]
-            ].drop_duplicates(subset=["Peptide"])
-
-            df = pd.merge(
-                search_results,
-                report_results,
-                on=["Peptide"],
-                how="left",
-            )
+            df = df[
+                [
+                    "Peptide",
+                    "Protein Group",
+                    "Protein.Ids",
+                    "Protein Names",
+                    "Gene Names",
+                ]
+            ]
         else:
             # precursor
             search_results = search_results[
@@ -1779,9 +1795,6 @@ class _UnsupportedSDK(_SeerSDK):
                     "Protein Group",
                     "Protein Names",
                     "Gene Names",
-                    "Biological Process",
-                    "Molecular Function",
-                    "Cellular Component",
                 ]
             ]
             search_results.drop_duplicates(
@@ -1805,11 +1818,38 @@ class _UnsupportedSDK(_SeerSDK):
                     "Lib.PG.Q.Value",
                 ]
             ]
-            report_results.sort_values(["Peptide", "Protein Group"]).groupby(
-                "Peptide", index=False
-            ).agg({"Protein Group": "first"})
-            report_results.drop_duplicates(
-                subset=["Protein Group"], inplace=True
+            columns_to_broadcast = [
+                "Protein Group",
+                "Protein.Ids",
+                "Protein.Names",
+                "First.Protein.Description",
+                "Genes",
+            ]
+            report_results = report_results.sort_values(
+                [
+                    "Peptide",
+                    "Global.PG.Q.Value",
+                    "Lib.PG.Q.Value",
+                    "Protein Group",
+                ]
+            )
+            # broadcast chosen values across grouped rows
+            broadcasted = (
+                report_results.groupby("Peptide")
+                .apply(
+                    lambda x: pd.Series(
+                        {
+                            col: x.iloc[0][col]
+                            for col in columns_to_broadcast + ["Peptide"]
+                        }
+                    )
+                )
+                .reset_index(drop=True)
+            )
+            report_results = (
+                report_results.drop(columns=columns_to_broadcast)
+                .merge(broadcasted, on="Peptide", how="left")
+                .drop_duplicates(subset=["Peptide", "Precursor.Charge"])
             )
             df = pd.merge(
                 report_results,
@@ -1834,9 +1874,6 @@ class _UnsupportedSDK(_SeerSDK):
                     "Lib.Q.Value",
                     "Lib.PG.Q.Value",
                     "Gene Names",
-                    "Biological Process",
-                    "Molecular Function",
-                    "Cellular Component",
                 ]
             ]
             df.rename(
