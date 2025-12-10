@@ -679,6 +679,52 @@ def camel_case(s):
     return "".join([s[0].lower(), s[1:]])
 
 
+def validate_d_zip_file(file):
+    """
+    Return True if a .d.zip file aligns with Seer requirements for PAS upload.
+
+    Parameters
+    ----------
+    file : str
+        The name of the zip file.
+
+    Returns
+    -------
+    bool
+        True if the .d.zip file is valid, False otherwise.
+    """
+
+    if not file.lower().endswith(".d.zip"):
+        return False
+
+    basename = os.path.basename(file)
+
+    # Remove the .zip extension to get the .d folder name
+    d_name = basename[:-4]
+
+    try:
+        with zipfile.ZipFile(file, "r") as zf:
+            names = zf.namelist()
+
+    except:
+        return False
+
+    if not names:
+        return False
+
+    # check for files at the root level
+    root_entries = [n for n in names if "/" not in n.rstrip("/")]
+    if root_entries:
+        return False
+
+    # find folders
+    top_level = {n.split("/")[0] for n in names}
+    if len(top_level) != 1 or d_name not in top_level:
+        return False
+
+    return True
+
+
 def rename_d_zip_file(source, destination):
     """
     Renames a .d.zip file. The function extracts the contents of the source zip file, renames the inner .d folder, and rezips the contents into the destination zip file.
