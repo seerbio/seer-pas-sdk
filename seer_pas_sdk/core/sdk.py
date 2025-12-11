@@ -1467,10 +1467,11 @@ class SeerSDK:
                 try:
                     res["fasta"] = ",".join(
                         self._get_analysis_protocol_fasta_filenames(
-                            analysis_protocol_id=res["id"]
+                            analysis_protocol_id=res["id"],
+                            analysis_protocol_engine=res["analysis_engine"],
                         )
                     )
-                except:
+                except Exception:
                     res["fasta"] = ""
                 return res
         else:
@@ -4038,7 +4039,7 @@ class SeerSDK:
                 print(f"Downloaded file to {download_path}/{file}")
 
     def _get_analysis_protocol_fasta_filenames(
-        self, analysis_protocol_id: str
+        self, analysis_protocol_id: str, analysis_protocol_engine: str = None
     ):
         """
         Helper function - Get the fasta file name(s) associated with a given analysis protocol and engine.
@@ -4048,13 +4049,14 @@ class SeerSDK:
             Returns:
                 list[str]: A list of fasta file names associated with the analysis protocol.
         """
-        analysis_protocol_engine = self.get_analysis_protocol(
-            analysis_protocol_id=analysis_protocol_id
-        ).get("analysis_engine")
         if not analysis_protocol_engine:
-            raise ValueError(
-                f"Could not retrieve analysis protocol engine for analysis protocol {analysis_protocol_id}."
-            )
+            analysis_protocol_engine = self.get_analysis_protocol(
+                analysis_protocol_id=analysis_protocol_id
+            ).get("analysis_engine")
+            if not analysis_protocol_engine:
+                raise ValueError(
+                    f"Could not retrieve analysis protocol engine for analysis protocol {analysis_protocol_id}."
+                )
         analysis_protocol_engine = analysis_protocol_engine.lower()
         if analysis_protocol_engine == "diann":
             URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/diann/{analysis_protocol_id}"
@@ -4141,7 +4143,7 @@ class SeerSDK:
             analysis_protocol_id = analysis.get("analysis_protocol_id")
 
         fasta_filenames = self._get_analysis_protocol_fasta_filenames(
-            analysis_protocol_id=analysis_protocol_id,
+            analysis_protocol_id=analysis_protocol_id
         )
 
         links = {}
