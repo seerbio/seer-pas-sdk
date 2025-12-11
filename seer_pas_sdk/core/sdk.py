@@ -2029,7 +2029,10 @@ class SeerSDK:
                         try:
                             res[entry]["fasta"] = ",".join(
                                 self._get_analysis_protocol_fasta_filenames(
-                                    local_analysis_protocol_id
+                                    local_analysis_protocol_id,
+                                    analysis_protocol_engine=res[entry].get(
+                                        "analysis_engine"
+                                    ),
                                 )
                             )
                             protocol_to_fasta[local_analysis_protocol_id] = (
@@ -4183,17 +4186,22 @@ class SeerSDK:
             )
             analysis_protocol_id = analysis.get("analysis_protocol_id")
 
-        filenames = self._get_analysis_protocol_fasta_filenames(
+        filepaths = self._get_analysis_protocol_fasta_filenames(
             analysis_protocol_id=analysis_protocol_id
         )
         if not download_path:
             download_path = os.getcwd()
 
         downloads = []
-        for filename in filenames:
+        for filepath in filepaths:
+            # run sequentially to avoid signed url expiration
             url = self._get_analysis_protocol_fasta_url(
-                analysis_protocol_fasta_name=filename
+                analysis_protocol_fasta_name=filepath
             )
+            filename = os.path.basename(filepath)
+
+            # relative path of the file after download
+            local_filename = f"{download_path}/{filename}"
             print(f"Downloading {filename}")
             for _ in range(2):
                 try:
@@ -4209,7 +4217,7 @@ class SeerSDK:
                         )
                         urllib.request.urlretrieve(
                             url,
-                            f"{download_path}/{filename}",
+                            local_filename,
                             reporthook=download_hook(t),
                             data=None,
                         )
@@ -4218,5 +4226,5 @@ class SeerSDK:
                     if not os.path.isdir(f"{download_path}"):
                         os.makedirs(f"{download_path}")
 
-            downloads.append(f"{download_path}/{filename}")
+            downloads.append(local_filename)
         return downloads
