@@ -1854,49 +1854,60 @@ class SeerSDK:
             else:
                 return res[0]
 
+    def _lookup_analysis_folders(self):
+        """
+        Helper function to map analysis folder ids to names.
+        """
+        with self._get_auth_session("getanalysisfolders") as s:
+            URL = f"{self._auth.url}api/v1/analyses"
+            params = {"all": "true", "folderonly": "true"}
+            folders = s.get(URL, params=params)
+            if folders.status_code != 200:
+                raise ValueError(
+                    "Failed to fetch analysis folders. Please check your connection."
+                )
+            res = folders.json()["data"]
+            return res
+
     def find_analyses(
         self,
         analysis_id: str = None,
+        analysis_name: str = None,
         folder_id: str = None,
-        show_folders: bool = True,
-        analysis_only: bool = True,
+        folder_name: str = None,
         project_id: str = None,
+        project_name: str = None,
         plate_name: str = None,
         as_df=False,
-        **kwargs,
     ):
         """
-        Returns a list of analyses objects for the authenticated user. If no id is provided, returns all analyses for the authenticated user.
-        Search parameters may be passed in as keyword arguments to filter the results. Acceptable values are 'analysis_name', 'folder_name', 'description', 'notes', or 'number_msdatafile'.
-        Only search on a single field is supported.
+        Returns a list of analyses objects for the authenticated user. If None is provided for all query arguments, returns all analyses for the authenticated user.
 
         Parameters
         ----------
         analysis_id : str, optional
             ID of the analysis to be fetched, defaulted to None.
 
+        analysis_name : str, optional
+            Name of the analysis to be fetched, defaulted to None. Results will be matched on substring basis.
+
         folder_id : str, optional
-            ID of the folder to be fetched, defaulted to None.
+            Unique ID of an analysis folder to filter results, defaulted to None.
 
-        show_folders : bool, optional
-            Mark True if folder contents are to be returned in the response, i.e. recursive search, defaulted to True.
-            Will be disabled if an analysis id is provided.
-
-        analysis_only : bool, optional
-            Mark True if only analyses objects are to be returned in the response, defaulted to True.
-            If marked false, folder objects will also be included in the response.
+        folder_name : str, optional
+            Name of an analysis folder to filter results, defaulted to None.
 
         project_id : str, optional
-            ID of the project to be fetched, defaulted to None.
+            Unique ID of an analysis folder to filter results, defaulted to None.
+
+        project_name : str, optional
+            Name of a project to filter results, defaulted to None.
 
         plate_name : str, optional
-            Name of the plate to be fetched, defaulted to None.
+            Name of a plate to filter results, defaulted to None.
 
         as_df : bool, optional
-            whether the result should be converted to a DataFrame, defaulted to False.
-
-        **kwargs : dict, optional
-            Search keyword parameters to be passed in. Acceptable values are 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'.
+            Whether the result should be converted to a DataFrame, defaulted to False.
 
         Returns
         -------
@@ -1930,50 +1941,43 @@ class SeerSDK:
         URL = f"{self._auth.url}api/v1/analyses"
         res = []
 
-        search_field = None
-        search_item = None
-        if kwargs:
-            if len(kwargs.keys()) > 1:
-                raise ValueError("Please include only one search parameter.")
-            search_field = list(kwargs.keys())[0]
-            search_item = kwargs[search_field]
-
-            if not search_item:
-                raise ValueError(
-                    f"Please provide a non null value for {search_field}"
-                )
-
-        if search_field and search_field not in [
-            "analysis_name",
-            "folder_name",
-            "analysis_protocol_name",
-            "description",
-            "notes",
-            "number_msdatafile",
-        ]:
-            raise ValueError(
-                "Invalid search field. Please choose between 'analysis_name', 'folder_name', 'analysis_protocol_name', 'description', 'notes', or 'number_msdatafile'."
-            )
-
         if analysis_id:
             try:
                 return [self.get_analysis(analysis_id=analysis_id)]
-            except:
+            except Exception:
                 return []
+
+        analysis_folders = self._lookup_analysis_folders()
+        analysis_folder_id_to_name = {
+            x["id"]: x["analysis_name"] for x in analysis_folders
+        }
+        analysis_folder_name_to_id = {
+            v: k for k, v in analysis_folder_id_to_name.items()
+        }
+
+        if folder_name and not folder_id:
+            folder_id = analysis_folder_name_to_id.get(folder_name, None)
+            if not folder_id:
+                raise ValueError(f"No folder found with name '{folder_name}'.")
+
+        if project_name and not project_id:
+            project = self.get_project(project_name=project_name)
+            if not project:
+                raise ValueError(
+                    f"No project found with name '{project_name}'."
+                )
+            project_id = project["id"]
 
         with self._get_auth_session("findanalyses") as s:
 
-            params = {"all": "true"}
+            params = {"all": "true", "analysisonly": "true"}
             if folder_id:
                 params["folder"] = folder_id
 
-            if search_field:
-                params["searchFields"] = search_field
-                params["searchItem"] = search_item
+            if analysis_name:
+                params["searchFields"] = "analysis_name"
+                params["searchItem"] = analysis_name
                 del params["all"]
-
-                if search_field == "folder_name":
-                    params["searchFields"] = "analysis_name"
 
             if project_id:
                 params["projectId"] = project_id
@@ -1989,9 +1993,9 @@ class SeerSDK:
                 )
             res = analyses.json()["data"]
 
-            folders = []
             spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
             protocol_to_engine_map = dict()
+
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -2005,11 +2009,14 @@ class SeerSDK:
                     ][location(res[entry]["parameter_file_path"]) :]
 
                 if (
-                    show_folders
-                    and not analysis_id
-                    and res[entry]["is_folder"]
+                    "folder_id" in res[entry]
+                    and res[entry]["folder_id"] is not None
                 ):
-                    folders.append(res[entry]["id"])
+                    res[entry]["folder_name"] = analysis_folder_id_to_name.get(
+                        res[entry]["folder_id"], None
+                    )
+                    res[entry]["folder_uuid"] = res[entry]["folder_id"]
+                    del res[entry]["folder_id"]
 
                 if "user_group" in res[entry]:
                     res[entry]["space"] = spaces.get(
@@ -2049,7 +2056,7 @@ class SeerSDK:
                                 analysis_protocol_engine=analysis_protocol_engine,
                             )
                         )
-                    except:
+                    except Exception:
                         print(
                             f"Warning: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
                         )
@@ -2057,14 +2064,6 @@ class SeerSDK:
                 else:
                     res[entry]["fasta"] = None
 
-            # recursive solution to get analyses in folders
-            for folder in folders:
-                res += self.find_analyses(folder_id=folder)
-
-            if analysis_only:
-                res = [
-                    analysis for analysis in res if not analysis["is_folder"]
-                ]
             if not res and as_df:
                 return pd.DataFrame(columns=ANALYSIS_COLUMNS)
             return res if not as_df else dict_to_df(res)
