@@ -1744,6 +1744,14 @@ class _UnsupportedSDK(_SeerSDK):
                 how="left",
             )
         elif analyte_type == "peptide":
+
+            # The below logic performs the following:
+            # 1. orders each peptide group by Global.PG.Q.Value, Lib.PG.Q.Value, and Protein Group (ascending)
+            # 2. for each peptide group, select the first row to find the precursor with the lowest Q values
+            # 3. broadcasts the associated protein group columns across all rows with the same peptide.
+            #
+            # This ensures that for each peptide, we retain consistent protein information while avoiding duplication.
+
             report_results = report_results.sort_values(
                 [
                     "Peptide",
@@ -1754,7 +1762,6 @@ class _UnsupportedSDK(_SeerSDK):
             )
 
             columns_to_broadcast = ["Protein Group", "Protein.Ids"]
-            # broadcast chosen values across grouped rows
             broadcasted = (
                 report_results.groupby("Peptide")
                 .apply(
@@ -1817,6 +1824,13 @@ class _UnsupportedSDK(_SeerSDK):
                     "Lib.PG.Q.Value",
                 ]
             ]
+
+            # The below logic performs the following:
+            # 1. orders each peptide group by Global.PG.Q.Value, Lib.PG.Q.Value, and Protein Group (ascending)
+            # 2. for each peptide group, select the first row to find the precursor with the lowest Q values
+            # 3. broadcasts the associated protein group columns across all rows with the same peptide.
+            #
+            # This ensures that for each peptide, we retain consistent protein information while avoiding duplication.
             columns_to_broadcast = [
                 "Protein Group",
                 "Protein.Ids",
@@ -1829,9 +1843,8 @@ class _UnsupportedSDK(_SeerSDK):
                     "Global.PG.Q.Value",
                     "Lib.PG.Q.Value",
                     "Protein Group",
-                ]
+                ],
             )
-            # broadcast chosen values across grouped rows
             broadcasted = (
                 report_results.groupby("Peptide")
                 .apply(
