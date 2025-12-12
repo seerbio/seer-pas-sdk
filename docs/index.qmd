@@ -962,11 +962,9 @@ log(sdk.group_analysis_results(group_analysis_id, box_plot_info))
 Downloads the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly.
 
 ###### <u>Params</u>
-* `analysis_protocol_id`: (`str`, optional) ID of the analysis protocol whose FASTA file(s) you want.
-
-* `analysis_id`: (`str`, optional) ID of the analysis whose protocol FASTA file(s) you want.
-
-* `download_path`: (`str`, optional) Directory to save files to. Defaults to the current working directory.
+* `analysis_protocol_id`: (`str`, optional) The unique ID of the analysis protocol associated with the FASTA files to download.
+* `analysis_id`: (`str`, optional) The unique ID of the analysis whose protocol FASTA file(s) will be downloaded.
+* `analysis_name`: (`str`, optional) The name of the analysis whose protocol FASTA file(s) will be downloaded.
 
 Note: Provide either analysis_id or analysis_protocol_id (but not both).
 
@@ -984,6 +982,10 @@ sdk.download_analysis_protocol_fasta(
 )
 ```
 
+```
+['./uniprot_human_2023_08.fasta', './contaminants.fasta']
+```
+
 Download by analysis protocol ID to a specific folder:
 ```{python}
 #| eval: false
@@ -998,16 +1000,20 @@ sdk.download_analysis_protocol_fasta(
 ```
 <br>
 
-### Get Analysis Protocol FASTA link
-Returns signed download links for the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly.
+### Get Analysis Protocol FASTA URLs
+Returns download URLs for the FASTA file(s) associated with an analysis protocol. You can specify an analysis_id (the function will resolve the protocol automatically) or provide an analysis_protocol_id directly.
+
+Download URLs are valid for 15 minutes after generation.
 
 ###### <u>Params</u>
-* `analysis_protocol_id`: (`str`, optional) ID of the analysis protocol whose FASTA file(s) you want.
-* `analysis_id`: (`str`, optional) ID of the analysis whose protocol FASTA file(s) you want.
-Note: Provide either analysis_id or analysis_protocol_id (but not both).
+* `analysis_protocol_id`: (`str`, optional) The unique ID of the analysis protocol associated with the FASTA files.
+* `analysis_id`: (`str`, optional) The unique ID of the analysis whose protocol FASTA file(s) should be retrieved.
+* `analysis_name`: (`str`, optional) The name of the analysis whose protocol FASTA file(s) should be retrieved.
+
+If both parameters are provided, `analysis_protocol_id` takes precedence.
 
 ###### <u>Returns</u>
-* links: (`list[dict]`) List of dictionaries containing filename and signed URL for each FASTA file.
+* links: (`dict`) Dictionary containing filename and signed URL as key-value pairs for the FASTA files linked to the protocol.
 
 ###### <u>Examples</u>
 Get by analysis ID:
@@ -1019,10 +1025,8 @@ sdk.get_analysis_protocol_fasta_link(
 ```
 
 ```
-[
-  {"filename": "uniprot_human_2023_08.fasta", "url": "https://...signed..."},
-  {"filename": "contaminants.fasta", "url": "https://...signed..."}
-]
+  {"uniprot_human_2023_08.fasta" : "https://...signed...",
+  "contaminants.fasta" : "https://...signed..."}
 ```
 Get by analysis protocol ID:
 ```{python}
@@ -1033,8 +1037,8 @@ sdk.get_analysis_protocol_fasta_link(
 ```
 ```
 [
-  {"filename": "uniprot_human_2023_08.fasta", "url": "https://...signed..."},
-  {"filename": "contaminants.fasta", "url": "https://...signed..."}
+  {"uniprot_human_2023_08.fasta" : "https://...signed...",
+   "contaminants.fasta" : "https://...signed..."}
 ]
 ```
 <hr>

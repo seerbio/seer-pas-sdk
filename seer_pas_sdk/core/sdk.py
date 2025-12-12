@@ -1471,7 +1471,7 @@ class SeerSDK:
                             analysis_protocol_engine=res["analysis_engine"],
                         )
                     )
-                except:
+                except Exception:
                     res["fasta"] = ""
                 return res
         else:
@@ -1590,10 +1590,7 @@ class SeerSDK:
                 try:
                     res[entry]["fasta"] = ",".join(
                         self._get_analysis_protocol_fasta_filenames(
-                            analysis_protocol_id=res[entry]["id"],
-                            analysis_protocol_engine=res[entry].get(
-                                "analysis_engine", None
-                            ),
+                            analysis_protocol_id=res[entry]["id"]
                         )
                     )
                 except:
@@ -1821,18 +1818,12 @@ class SeerSDK:
                 if not res.get("is_folder") and res.get(
                     "analysis_protocol_id"
                 ):
-                    analysis_protocol = self.get_analysis_protocol(
-                        analysis_protocol_id=res.get("analysis_protocol_id")
-                    )
                     try:
                         res["fasta"] = ",".join(
                             self._get_analysis_protocol_fasta_filenames(
                                 analysis_protocol_id=res.get(
                                     "analysis_protocol_id"
-                                ),
-                                analysis_protocol_engine=analysis_protocol.get(
-                                    "analysis_engine", None
-                                ),
+                                )
                             )
                         )
                     except Exception as e:
@@ -1994,8 +1985,7 @@ class SeerSDK:
             res = analyses.json()["data"]
 
             spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
-            protocol_to_engine_map = dict()
-
+            protocol_to_fasta = {}
             for entry in range(len(res)):
                 if "tenant_id" in res[entry]:
                     del res[entry]["tenant_id"]
@@ -2027,40 +2017,31 @@ class SeerSDK:
                 if (not res[entry].get("is_folder")) and res[entry].get(
                     "analysis_protocol_id"
                 ):
-                    if (
-                        res[entry]["analysis_protocol_id"]
-                        in protocol_to_engine_map
-                    ):
-                        analysis_protocol_engine = protocol_to_engine_map[
-                            res[entry]["analysis_protocol_id"]
+                    # analysis_protocol_id for this result row
+                    local_analysis_protocol_id = res[entry].get(
+                        "analysis_protocol_id"
+                    )
+                    if local_analysis_protocol_id in protocol_to_fasta:
+                        res[entry]["fasta"] = protocol_to_fasta[
+                            local_analysis_protocol_id
                         ]
                     else:
                         try:
-                            analysis_protocol = self.get_analysis_protocol(
-                                analysis_protocol_id=res[entry].get(
-                                    "analysis_protocol_id"
+                            res[entry]["fasta"] = ",".join(
+                                self._get_analysis_protocol_fasta_filenames(
+                                    local_analysis_protocol_id,
+                                    analysis_protocol_engine=res[entry].get(
+                                        "analysis_engine"
+                                    ),
                                 )
                             )
-                            analysis_protocol_engine = analysis_protocol.get(
-                                "analysis_engine", None
+                            protocol_to_fasta[local_analysis_protocol_id] = (
+                                res[entry]["fasta"]
                             )
-                            protocol_to_engine_map[
-                                res[entry]["analysis_protocol_id"]
-                            ] = analysis_protocol_engine
                         except:
-                            analysis_protocol_engine = None
-                    try:
-                        res[entry]["fasta"] = ",".join(
-                            self._get_analysis_protocol_fasta_filenames(
-                                res[entry]["analysis_protocol_id"],
-                                analysis_protocol_engine=analysis_protocol_engine,
+                            print(
+                                f"Warning: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
                             )
-                        )
-                    except Exception:
-                        print(
-                            f"Warning: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
-                        )
-                        res[entry]["fasta"] = None
                 else:
                     res[entry]["fasta"] = None
 
@@ -4058,7 +4039,7 @@ class SeerSDK:
                 print(f"Downloaded file to {download_path}/{file}")
 
     def _get_analysis_protocol_fasta_filenames(
-        self, analysis_protocol_id: str, analysis_protocol_engine: str
+        self, analysis_protocol_id: str, analysis_protocol_engine: str = None
     ):
         """
         Helper function - Get the fasta file name(s) associated with a given analysis protocol and engine.
@@ -4068,6 +4049,14 @@ class SeerSDK:
             Returns:
                 list[str]: A list of fasta file names associated with the analysis protocol.
         """
+        if not analysis_protocol_engine:
+            analysis_protocol_engine = self.get_analysis_protocol(
+                analysis_protocol_id=analysis_protocol_id
+            ).get("analysis_engine")
+            if not analysis_protocol_engine:
+                raise ValueError(
+                    f"Could not retrieve analysis protocol engine for analysis protocol {analysis_protocol_id}."
+                )
         analysis_protocol_engine = analysis_protocol_engine.lower()
         if analysis_protocol_engine == "diann":
             URL = f"{self._auth.url}api/v1/analysisProtocols/editableParameters/diann/{analysis_protocol_id}"
@@ -4107,8 +4096,35 @@ class SeerSDK:
                 raise ServerError("No fasta file name returned from server.")
             return fasta_filenames
 
-    def get_analysis_protocol_fasta_link(
-        self, analysis_protocol_id=None, analysis_id=None, analysis_name=None
+    def _get_analysis_protocol_fasta_url(
+        self, analysis_protocol_fasta_name: str
+    ):
+        """
+        Helper function - Get the download link for a given fasta file name.
+
+        Args:
+            analysis_protocol_fasta_name (str): Name of the fasta file.
+
+        Returns:
+            str: The URL to download the fasta file.
+        """
+        URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
+        with self._get_auth_session("getanalysisprotocolfilesurl") as s:
+            response = s.post(
+                URL, json={"filepath": analysis_protocol_fasta_name}
+            )
+            if response.status_code != 200:
+                raise ServerError(
+                    f"Could not retrieve download link for {analysis_protocol_fasta_name}."
+                )
+            url = response.json()["url"]
+            return url
+
+    def get_analysis_protocol_fasta_urls(
+        self,
+        analysis_protocol_id=None,
+        analysis_id=None,
+        analysis_name=None,
     ):
         """Get the download link(s) for the fasta file(s) associated with a given analysis protocol.
         Args:
@@ -4119,52 +4135,31 @@ class SeerSDK:
         Returns:
             list[dict]: A list of dictionaries containing the 'filename' and the 'url' to download the fasta file.
         """
-        if analysis_name and (not analysis_id):
-            analyses = self.find_analyses(analysis_name=analysis_name)
-            if len(analyses) > 1:
-                raise ValueError(
-                    f"Multiple analyses found with name {analysis_name}. Please provide an analysis ID instead."
-                )
-            elif len(analyses) == 0:
-                raise ValueError(
-                    f"No analyses found with name {analysis_name}."
-                )
-            else:
-                analysis_id = analyses[0]["id"]
-
-        if not (bool(analysis_protocol_id) ^ bool(analysis_id)):
-            raise ValueError(
-                "Please provide either an analysis ID or an analysis protocol ID."
-            )
-
         if not analysis_protocol_id:
-            try:
-                analysis_protocol_id = self.get_analysis(
-                    analysis_id=analysis_id
-                )["analysis_protocol_id"]
-            except KeyError:
-                raise ValueError(f"Could not parse server response.")
+            analysis = self.get_analysis(
+                analysis_id=analysis_id,
+                analysis_name=analysis_name,
+            )
+            analysis_protocol_id = analysis.get("analysis_protocol_id")
 
-        engine = self.get_analysis_protocol(
-            analysis_protocol_id=analysis_protocol_id
-        ).get("analysis_engine", None)
         fasta_filenames = self._get_analysis_protocol_fasta_filenames(
-            analysis_protocol_id=analysis_protocol_id,
-            analysis_protocol_engine=engine,
+            analysis_protocol_id=analysis_protocol_id
         )
-        URL = f"{self._auth.url}api/v1/analysisProtocolFiles/getUrl"
-        links = []
-        for file in fasta_filenames:
-            with self._get_auth_session("getanalysisprotocolfilesurl") as s:
-                filename = os.path.basename(file)
-                response = s.post(URL, json={"filepath": file})
-                if response.status_code != 200:
-                    print(
-                        f"ERROR: Could not retrieve download link for {filename}."
-                    )
-                    continue
-                url = response.json()["url"]
-                links.append({"filename": filename, "url": url})
+
+        links = {}
+        for filepath in fasta_filenames:
+            filename = os.path.basename(filepath)
+            try:
+                url = self._get_analysis_protocol_fasta_url(
+                    analysis_protocol_fasta_name=filepath
+                )
+            except ServerError:
+                print(
+                    f"ERROR: Could not retrieve download link for {filename}."
+                )
+                continue
+
+            links[filename] = url
         return links
 
     def download_analysis_protocol_fasta(
@@ -4185,20 +4180,28 @@ class SeerSDK:
         Returns:
             list[str] : The path to the downloaded fasta file(s).
         """
-
-        links = [
-            (x["filename"], x["url"])
-            for x in self.get_analysis_protocol_fasta_link(
-                analysis_protocol_id=analysis_protocol_id,
-                analysis_id=analysis_id,
-                analysis_name=analysis_name,
+        if not analysis_protocol_id:
+            analysis = self.get_analysis(
+                analysis_id=analysis_id, analysis_name=analysis_name
             )
-        ]
+            analysis_protocol_id = analysis.get("analysis_protocol_id")
+
+        filepaths = self._get_analysis_protocol_fasta_filenames(
+            analysis_protocol_id=analysis_protocol_id
+        )
         if not download_path:
             download_path = os.getcwd()
 
         downloads = []
-        for filename, url in links:
+        for filepath in filepaths:
+            # run sequentially to avoid signed url expiration
+            url = self._get_analysis_protocol_fasta_url(
+                analysis_protocol_fasta_name=filepath
+            )
+            filename = os.path.basename(filepath)
+
+            # relative path of the file after download
+            local_filename = f"{download_path}/{filename}"
             print(f"Downloading {filename}")
             for _ in range(2):
                 try:
@@ -4214,7 +4217,7 @@ class SeerSDK:
                         )
                         urllib.request.urlretrieve(
                             url,
-                            f"{download_path}/{filename}",
+                            local_filename,
                             reporthook=download_hook(t),
                             data=None,
                         )
@@ -4223,5 +4226,5 @@ class SeerSDK:
                     if not os.path.isdir(f"{download_path}"):
                         os.makedirs(f"{download_path}")
 
-            downloads.append(f"{download_path}/{filename}")
+            downloads.append(local_filename)
         return downloads
