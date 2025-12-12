@@ -57,7 +57,7 @@ class SeerSDK:
         if tenant_id is None and tenant is None:
             self.logout()
             raise ValueError(
-                f"Please specify either tenant or tenant_id. Please indicate one of the following tenants: \n{tenant_data.to_string(index=False)}"
+                f"Either tenant or tenant_id must be provided. Please indicate one of the following tenants: \n{tenant_data.to_string(index=False)}"
             )
 
         if tenant_id is None or (tenant_id not in tenant_ids):
