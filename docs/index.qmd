@@ -82,7 +82,7 @@ from seer_pas_sdk import SeerSDK
 # Assume tenant upon login
 sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE, tenant='My Active Tenant')
 
-sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE, tenant_id='myuuidstring-1234)
+sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE, tenant_id='myuuidstring-1234')
 
 # Retrieve value of current active tenant
 print(sdk.get_active_tenant())
