@@ -32,7 +32,12 @@ class SeerSDK:
     """
 
     def __init__(
-        self, username, password, instance="US", tenant=None, tenant_id=None
+        self,
+        username: str,
+        password: str,
+        instance: str = "US",
+        tenant: str = None,
+        tenant_id: str = None,
     ):
         try:
             self._auth = Auth(username, password, instance)
@@ -54,24 +59,28 @@ class SeerSDK:
         tenant_names = tenant_data["Tenant name"].tolist()
         tenant_ids = tenant_data["Tenant ID"].tolist()
 
+        # precondition: None is not a valid tenant_name or tenant_id.
         if tenant_id is None and tenant is None:
             self.logout()
+            if None in tenant_names:
+                print(
+                    "Warning: You have access to a tenant with no name. Please either provide a tenant name in the PAS website or specify a tenant_id to access that tenant."
+                )
             raise ValueError(
                 f"Either tenant or tenant_id must be provided. Please indicate one of the following tenants: \n{tenant_data.to_string(index=False)}"
             )
 
-        if tenant_id is None or (tenant_id not in tenant_ids):
-            if tenant and (tenant in tenant_names):
-                tenant_id = tenant_data.loc[
-                    tenant_data["Tenant name"] == tenant, "Tenant ID"
-                ].iat[0]
+        if tenant_id not in tenant_ids:
+            if tenant in tenant_names:
+                # if multiple tenants exist for the same institution name, fall back on multiple tenant error in switch_tenant.
+                self.switch_tenant(tenant)
             else:
                 self.logout()
                 raise ValueError(
                     f"Invalid tenant or tenant_id provided. Please indicate one of the following tenants: \n{tenant_data.to_string(index=False)}"
                 )
-
-        self.switch_tenant(tenant_id)
+        else:
+            self.switch_tenant(tenant_id)
 
     def logout(self):
         """
