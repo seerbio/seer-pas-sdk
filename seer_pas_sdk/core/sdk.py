@@ -31,30 +31,56 @@ class SeerSDK:
     >>> seer_sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
     """
 
-    def __init__(self, username, password, instance="US", tenant=None):
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        instance: str = "US",
+        tenant: str = None,
+        tenant_id: str = None,
+    ):
         try:
             self._auth = Auth(username, password, instance)
 
             self._auth._login()
             print(f"User '{username}' logged in.\n")
-
-            if not tenant:
-                tenant = self._auth.active_tenant_id
-            try:
-                self.switch_tenant(tenant)
-            except Exception as e:
-                print(
-                    f"Encountered an error directing you to tenant {tenant}: {e}."
-                )
-                print("Logging into home tenant...")
-                # If an error occurs while directing the user to a tenant, default to home tenant.
-                print(f"You are now active in {self.get_active_tenant_name()}")
-        except ServerError as e:
-            raise e
         except Exception as e:
             raise ValueError(
                 f"Could not log in.\nPlease check your credentials and/or instance: {e}."
             )
+
+        # direct logged in user to the specified tenant
+        tenant_data = pd.DataFrame(
+            self.get_user_tenant(index=False),
+            columns=["institution", "tenantId"],
+        ).rename(
+            columns={"institution": "Tenant name", "tenantId": "Tenant ID"}
+        )
+        tenant_names = tenant_data["Tenant name"].tolist()
+        tenant_ids = tenant_data["Tenant ID"].tolist()
+
+        # precondition: None is not a valid tenant_name or tenant_id.
+        if tenant_id is None and tenant is None:
+            self.logout()
+            if None in tenant_names:
+                print(
+                    "Warning: You have access to a tenant with no name. Please either provide a tenant name in the PAS website or specify a tenant_id to access that tenant."
+                )
+            raise ValueError(
+                f"Either tenant or tenant_id must be provided. Please indicate one of the following tenants: \n{tenant_data.to_string(index=False)}"
+            )
+
+        if tenant_id not in tenant_ids:
+            if tenant in tenant_names:
+                # if multiple tenants exist for the same institution name, fall back on multiple tenant error in switch_tenant.
+                self.switch_tenant(tenant)
+            else:
+                self.logout()
+                raise ValueError(
+                    f"Invalid tenant or tenant_id provided. Please indicate one of the following tenants: \n{tenant_data.to_string(index=False)}"
+                )
+        else:
+            self.switch_tenant(tenant_id)
 
     def logout(self):
         """
@@ -115,7 +141,7 @@ class SeerSDK:
             response = s.get(f"{self._auth.url}api/v1/usertenants")
 
             if response.status_code != 200:
-                raise ValueError(
+                raise ServerError(
                     "Invalid request. Please check your parameters."
                 )
 

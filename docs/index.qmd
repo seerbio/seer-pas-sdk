@@ -18,10 +18,25 @@ $ pip install seer-pas-sdk
 This page gives an overview of the SDK's feature. Complete documentation for each class / method can be found [here](reference/).
 
 ### Configuration
-PAS has a simple authorization system that just involves your username and password fields like on the web app. You can define your username and password for your own ready reference and convenience as follows:
+The PAS SDK has a simple authorization system that involves your username and password fields like on the web app. You can define your username and password for your own ready reference and convenience as follows:
 ```{python}
 USERNAME = "gnu403"
 PASSWORD = "Test!234567"
+```
+
+The PAS SDK requires either a `tenant` or `tenant_id` argument in the SDK object constructor.
+  
+`tenant` refers to the user provided name of the tenant.  
+
+`tenant_id` refers to the immutable and unique identifier of the tenant.   
+`tenant_id` is an absolute reference to the tenant, even if the tenant name is changed.  
+
+More details on multi-tenant management can be found in the [Multi Tenant Management](#multi-tenant-management) section below.  
+
+You can define your tenant name or tenant ID as follows:
+```{python}
+TENANT = "My Tenant Name"
+TENANT_ID = "abc1234abc1234"
 ```
 
 You may also choose to pass in an `instance` param in the SDK object to instantiate the PAS SDK to the EU or US instance.:
@@ -38,10 +53,13 @@ After importing the SeerSDK module, you can instantiate an object in the followi
 from seer_pas_sdk import SeerSDK
 
 # Instantiate an SDK object with your credentials:
-sdk = SeerSDK(USERNAME, PASSWORD)
+sdk = SeerSDK(USERNAME, PASSWORD, tenant=TENANT)
 
-# You could alternatively pass your credentials and/or the instance directly into the instantiated object.
-sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE)
+# Instantiate an SDK object with your credentials and instance:
+sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE, tenant=TENANT)
+
+# Instantiate an SDK object with your credentials and tenant ID:
+sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE, tenant_id=TENANT_ID)
 ```
 
 ```{python}
@@ -56,17 +74,15 @@ Additional information and examples can also be found below.
 ### Multi Tenant Management 
 Introduced in version 0.2.0
 
-By default, you will be active in your home tenant upon log in. The home tenant is defined as the organization account that issued the original invitation for the user to join PAS.
-The optional 'tenant' parameter is available in the SeerSDK constructor to navigate directly to a desired tenant.
-A notification message will display upon login.
-
-
 The following tools are available to navigate between tenants:
 ```{python}
 #| eval: false
 from seer_pas_sdk import SeerSDK
 
+# Assume tenant upon login
 sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE, tenant='My Active Tenant')
+
+sdk = SeerSDK(USERNAME, PASSWORD, INSTANCE, tenant_id='myuuidstring-1234')
 
 # Retrieve value of current active tenant
 print(sdk.get_active_tenant())
