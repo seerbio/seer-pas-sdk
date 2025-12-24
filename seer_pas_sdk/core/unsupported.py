@@ -1552,13 +1552,27 @@ class _UnsupportedSDK(_SeerSDK):
                 )
             if rollup == "panel":
                 search_results.fillna({"Sample Name": ""}, inplace=True)
+
                 # Create a mapping from sample name to file name (basename without extension)
+                # Handle empty strings and None values properly
+                def get_file_name(sample_name):
+                    if not sample_name:
+                        return None
+                    sample_uuid = sample_name_to_id.get(sample_name)
+                    if sample_uuid and sample_uuid in sample_to_msrun:
+                        raw_file_path = sample_to_msrun[sample_uuid].get(
+                            "raw_file_path"
+                        )
+                        if raw_file_path:
+                            return os.path.basename(raw_file_path).split(".")[
+                                0
+                            ]
+                    return None
+
+                # Pre-compute mapping for unique sample names to avoid repeated lookups
+                unique_samples = search_results["Sample Name"].unique()
                 sample_name_to_file = {
-                    sample_name: os.path.basename(
-                        sample_to_msrun[sample_uuid]["raw_file_path"]
-                    ).split(".")[0]
-                    for sample_name, sample_uuid in sample_name_to_id.items()
-                    if sample_uuid in sample_to_msrun
+                    s: get_file_name(s) for s in unique_samples
                 }
                 search_results["File Name"] = search_results[
                     "Sample Name"
