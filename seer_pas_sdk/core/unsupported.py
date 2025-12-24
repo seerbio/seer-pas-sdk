@@ -1552,22 +1552,24 @@ class _UnsupportedSDK(_SeerSDK):
                 )
             if rollup == "panel":
                 search_results.fillna({"Sample Name": ""}, inplace=True)
+                # Create a mapping from sample name to file name (basename without extension)
+                sample_name_to_file = {
+                    sample_name: os.path.basename(
+                        sample_to_msrun[sample_uuid]["raw_file_path"]
+                    ).split(".")[0]
+                    for sample_name, sample_uuid in sample_name_to_id.items()
+                    if sample_uuid in sample_to_msrun
+                }
                 search_results["File Name"] = search_results[
                     "Sample Name"
+                ].map(sample_name_to_file)
+            else:
+                # For np rollup, extract basename without extension
+                search_results["File Name"] = search_results[
+                    "File Name"
                 ].apply(
-                    lambda x: (
-                        os.path.basename(
-                            sample_to_msrun[sample_name_to_id[x]][
-                                "raw_file_path"
-                            ]
-                        ).split(".")[0]
-                        if x
-                        else None
-                    )
+                    lambda x: os.path.basename(x).split(".")[0] if x else None
                 )
-            search_results["File Name"] = search_results["File Name"].apply(
-                lambda x: os.path.basename(x).split(".")[0] if x else None
-            )
 
             search_results["Intensity Log10"] = search_results[
                 intensity_column
@@ -1634,35 +1636,32 @@ class _UnsupportedSDK(_SeerSDK):
                     included_columns.index("Sample ID") + 1, "Nanoparticle"
                 )
 
-            df["MsRun ID"] = df["File Name"].apply(
-                lambda x: (
-                    file_to_msrun[x]["id"] if x in file_to_msrun else None
-                )
-            )
-            df["Sample ID"] = df["File Name"].apply(
-                lambda x: (
-                    file_to_msrun[x]["sample_id"]
-                    if x in file_to_msrun
-                    else None
-                )
-            )
+            # Use map for efficient dictionary lookups instead of apply
+            file_to_msrun_id = {k: v["id"] for k, v in file_to_msrun.items()}
+            file_to_sample_id = {
+                k: v["sample_id"] for k, v in file_to_msrun.items()
+            }
+
+            df["MsRun ID"] = df["File Name"].map(file_to_msrun_id)
+            df["Sample ID"] = df["File Name"].map(file_to_sample_id)
             df = df[included_columns]
 
         else:
             # precursor
             # working only in report.tsv
             search_results["Intensity"] = search_results["Precursor.Quantity"]
-            search_results["MsRun ID"] = search_results["Run"].apply(
-                lambda x: (
-                    file_to_msrun[x]["id"] if x in file_to_msrun else None
-                )
+
+            # Use map for efficient dictionary lookups instead of apply
+            run_to_msrun_id = {k: v["id"] for k, v in file_to_msrun.items()}
+            run_to_sample_id = {
+                k: v["sample_id"] for k, v in file_to_msrun.items()
+            }
+
+            search_results["MsRun ID"] = search_results["Run"].map(
+                run_to_msrun_id
             )
-            search_results["Sample ID"] = search_results["Run"].apply(
-                lambda x: (
-                    file_to_msrun[x]["sample_id"]
-                    if x in file_to_msrun
-                    else None
-                )
+            search_results["Sample ID"] = search_results["Run"].map(
+                run_to_sample_id
             )
             search_results["Protein Group"] = search_results["Protein.Group"]
             search_results["Peptide"] = search_results["Stripped.Sequence"]
@@ -1692,9 +1691,8 @@ class _UnsupportedSDK(_SeerSDK):
 
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
         df["sample_uuid"] = df["sample_id"]
-        df["sample_id"] = df["sample_uuid"].apply(
-            lambda x: sample_uuid_to_id.get(x)
-        )
+        # Use map for efficient dictionary lookups instead of apply
+        df["sample_id"] = df["sample_uuid"].map(sample_uuid_to_id)
 
         if rollup == "panel":
             df.drop(columns=["msrun_id"], inplace=True, errors="ignore")
