@@ -1863,7 +1863,6 @@ class _UnsupportedSDK(_SeerSDK):
                     "Protein Group",
                     "Protein.Ids",
                     "Protein.Names",
-                    "Genes",
                     "Modified.Peptide",
                     "Proteotypic",
                     "Global.Q.Value",
