@@ -6,6 +6,8 @@ import os
 import shutil
 from pathlib import Path
 
+import sys
+import time
 from typing import List as _List
 
 from ..common import *
@@ -1480,28 +1482,46 @@ class _UnsupportedSDK(_SeerSDK):
                             'msrun_id', 'sample_id', 'nanoparticle' (if rollup is 'np'), 'protein_group', 'peptide' (for 'peptide' and 'precursor' analyte types), 'charge' (for 'precursor' analyte type),
                             'intensity_log10', 'protein_group_q_value', 'q_value' (for 'precursor' analyte type), 'rt' and 'irt' (for 'peptide' and 'precursor' analyte types)
         """
-        # 1. Get msrun data for analysis
+
+        def filepath_to_msrunid(filepath):
+            return os.path.basename(filepath).split(".")[0]
+
+        start_time = time.time()
+
+        # 1. Get samples and msrun data for analysis
+        print(f"analyte_type: {analyte_type}, rollup: {rollup}, norm_method: {norm_method}", file=sys.stderr)
+        start_samples_time = time.time()
         samples = self.find_samples(analysis_id=analysis_id)
-        sample_name_to_id = {s["sample_name"]: s["id"] for s in samples}
+        print(f"find_samples() executed in {(time.time() - start_samples_time):.2f} seconds", file=sys.stderr)
+
         sample_uuid_to_id = {s["id"]: s["sample_id"] for s in samples}
-        # for np rollup, a row represents an msrun
-        msruns = self.find_msruns(sample_ids=sample_name_to_id.values())
-        file_to_msrun = {
-            os.path.basename(msrun["raw_file_path"]).split(".")[0]: msrun
+        sample_id_to_uuid = {s["sample_id"]: s["id"] for s in samples}
+        # FIXME sample_name is not guaranteed to be unique (within PAS analysis)
+        sample_name_to_uuid = {s["sample_name"]: s["id"] for s in samples}
+
+        start_msruns_time = time.time()
+        msruns = self.find_msruns(sample_ids=[s["id"] for s in samples])
+        print(f"find_msruns() executed in {(time.time() - start_msruns_time):.2f} seconds", file=sys.stderr)
+        msrunid_to_info = {
+            filepath_to_msrunid(msrun["raw_file_path"]): msrun
             for msrun in msruns
         }
-        sample_to_msrun = {msrun["sample_id"]: msrun for msrun in msruns}
-
-        # for panel rollup, a row represents a sample
 
         # 2. Get search results
         # pull the np/panel file, or report.tsv for precursor mode
+        print("Fetching search results...", file=sys.stderr)
+        start_searchresult_time = time.time()
         search_results = self.get_search_result(
             analysis_id=analysis_id,
             analyte_type=analyte_type,
             rollup=rollup,
         )
+        print(f"Search results fetched in {(time.time() - start_searchresult_time):.2f} seconds", file=sys.stderr)
+        print("Search results columns:", file=sys.stderr)
+        print(search_results.columns, file=sys.stderr)
+
         if analyte_type in ["protein", "peptide"]:
+            # set the intensity column based on norm_method and PAS analysis protocol version
             intensity_column = None
             if norm_method == "raw":
                 intensity_column = (
@@ -1543,139 +1563,130 @@ class _UnsupportedSDK(_SeerSDK):
                     raise ValueError(
                         "Pepcal normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later with the Seer Peptide Calibrant option enabled. \n Please retry using different norm_method, such as 'median'"
                     )
-
                 intensity_column = "PepCal Intensities Log10"
-
             else:
                 raise ValueError(
                     f"norm_method = {norm_method} is not supported. Supported normalization methods are: raw, pepcal, engine, median, median80."
                 )
+
+            search_results["Intensity Log10"] = search_results[intensity_column]
+
             if rollup == "panel":
-                search_results.fillna({"Sample Name": ""}, inplace=True)
-                search_results["File Name"] = search_results[
-                    "Sample Name"
-                ].apply(
-                    lambda x: (
-                        os.path.basename(
-                            sample_to_msrun[sample_name_to_id[x]][
-                                "raw_file_path"
-                            ]
-                        ).split(".")[0]
-                        if x
-                        else None
-                    )
-                )
-            search_results["File Name"] = search_results["File Name"].apply(
-                lambda x: os.path.basename(x).split(".")[0] if x else None
-            )
+                search_results.rename(columns = {"Sample ID": "Sample UUID"}, inplace=True)
+                search_results["Sample UUID"] = search_results["Sample Name"].map(sample_name_to_uuid)
+                search_results["Sample ID"] = search_results["Sample UUID"].map(sample_uuid_to_id)
+                experiment_columns = ["Sample UUID", "Sample ID"]
 
-            search_results["Intensity Log10"] = search_results[
-                intensity_column
-            ]
+                # analyte info is limited to the id in the panel rollup
+                if analyte_type == "protein":
+                    analyte_id_column = "Protein Group"
+                else: # peptide
+                    analyte_id_column = "Peptide"
 
-            # 3. Merge report to search results to get Q value and other properties
-            report = self.get_search_result(
-                analysis_id=analysis_id,
-                analyte_type="precursor",
-                rollup="np",
-            )
-            report["File Name"] = report["Run"]
-            report["Protein Group"] = report["Protein.Group"]
-
-            if analyte_type == "protein":
-                report["Protein Q Value"] = report["Protein.Q.Value"]
-
-                report = report[
-                    ["File Name", "Protein Group", "Protein Q Value"]
-                ]
-                report.drop_duplicates(
-                    subset=["File Name", "Protein Group"], inplace=True
-                )
-                df = pd.merge(
-                    search_results,
-                    report,
-                    on=["File Name", "Protein Group"],
-                    how="left",
-                )
-                included_columns = [
-                    "MsRun ID",
-                    "Sample ID",
-                    "Protein Group",
-                    "Intensity Log10",
-                    "Protein Q Value",
-                ]
-
+                analyte_columns = [analyte_id_column]
+                df = search_results
             else:
-                report["Peptide"] = report["Stripped.Sequence"]
-                #  If analyte_type is peptide, attach retention time (RT, iRT)
-                report = report[["File Name", "Peptide", "RT", "iRT"]]
-                report.drop_duplicates(
-                    subset=["File Name", "Peptide"], inplace=True
+                # np rollup, extract basename without extension
+                path_to_msrunid = {
+                    path : filepath_to_msrunid(path)
+                    for path in search_results["File Name"].unique()
+                }
+                # strip path from the filename to allow merging with the precursor report
+                search_results["Run"] = search_results["File Name"].map(path_to_msrunid)
+
+                search_results["MsRun UUID"] = search_results["Run"].map(
+                    {k: v["id"] for k, v in msrunid_to_info.items()}
                 )
+                search_results["Sample ID"] = search_results["Run"].map(
+                    {k: v["sample_id"] for k, v in msrunid_to_info.items()}
+                )
+                search_results["Sample UUID"] = search_results["Sample ID"].map(sample_id_to_uuid)
+                search_results["Nanoparticle"] = search_results["Run"].map(
+                    {k: v["nanoparticle"] for k, v in msrunid_to_info.items()}
+                )
+                experiment_columns = ["MsRun UUID", "Nanoparticle", "Sample UUID", "Sample ID"]
+
+                # Merge report to search results to get Q value and other properties
+                # FIXME this downloads a very massive file just to get q.values
+                print("Fetching precursor-level search results...", file=sys.stderr)
+                analytes = self.get_search_result(
+                    analysis_id=analysis_id,
+                    analyte_type="precursor",
+                    rollup="np",
+                )
+                print(f"Precursor-level search results fetched in {(time.time() - start_time):.2f} seconds", file=sys.stderr)
+                analytes.rename(
+                    columns={
+                        "Protein.Group": "Protein Group",
+                        "Protein.Q.Value": "Protein Q Value",
+                        "Stripped.Sequence": "Peptide"
+                    },
+                    inplace=True
+                )
+
+                if analyte_type == "protein":
+                    analyte_id_column = "Protein Group"
+                    analyte_columns = [
+                        analyte_id_column,
+                        "Protein Q Value",
+                    ]
+
+                else: # peptide
+                    #  attach retention time (RT, iRT)
+                    analyte_id_column = "Peptide"
+                    analyte_columns = [
+                        analyte_id_column,
+                        "RT",
+                        "iRT"
+                    ]
+                # endif analyte_type
+
+                analytes.drop(columns=[col for col in analytes.columns if col != "Run" and col not in analyte_columns], inplace=True)
+                analytes.drop_duplicates(subset=["Run", analyte_id_column], inplace=True)
                 df = pd.merge(
                     search_results,
-                    report,
-                    on=["File Name", "Peptide"],
+                    analytes,
+                    on=["Run", analyte_id_column],
                     how="left",
-                )
-                included_columns = [
-                    "MsRun ID",
-                    "Sample ID",
-                    "Peptide",
-                    "Protein Group",
-                    "Intensity Log10",
-                    "RT",
-                    "iRT",
-                ]
-            # endif
-
-            if rollup == "np":
-                included_columns.insert(
-                    included_columns.index("Sample ID") + 1, "Nanoparticle"
+                    validate="one_to_one",
                 )
 
-            df["MsRun ID"] = df["File Name"].apply(
-                lambda x: (
-                    file_to_msrun[x]["id"] if x in file_to_msrun else None
-                )
-            )
-            df["Sample ID"] = df["File Name"].apply(
-                lambda x: (
-                    file_to_msrun[x]["sample_id"]
-                    if x in file_to_msrun
-                    else None
-                )
-            )
-            df = df[included_columns]
+            df = df[experiment_columns + analyte_columns + ["Intensity Log10"]]
 
         else:
             # precursor
             # working only in report.tsv
-            search_results["Intensity"] = search_results["Precursor.Quantity"]
-            search_results["MsRun ID"] = search_results["Run"].apply(
-                lambda x: (
-                    file_to_msrun[x]["id"] if x in file_to_msrun else None
+            if norm_method != "raw":
+                raise ValueError(
+                    "For precursor analyte type, only 'raw' norm_method is supported."
                 )
-            )
-            search_results["Sample ID"] = search_results["Run"].apply(
-                lambda x: (
-                    file_to_msrun[x]["sample_id"]
-                    if x in file_to_msrun
-                    else None
-                )
-            )
-            search_results["Protein Group"] = search_results["Protein.Group"]
-            search_results["Peptide"] = search_results["Stripped.Sequence"]
-            search_results["Charge"] = search_results["Precursor.Charge"]
-            search_results["Precursor Id"] = search_results["Precursor.Id"]
-            search_results["Precursor Q Value"] = search_results["Q.Value"]
-            search_results["Protein Q Value"] = search_results[
-                "Protein.Q.Value"
-            ]
 
-            included_columns = [
-                "MsRun ID",
-                "Sample ID",
+            search_results["MsRun UUID"] = search_results["Run"].map(
+                {k: v["id"] for k, v in msrunid_to_info.items()}
+            )
+            search_results["Sample ID"] = search_results["Run"].map(
+                {k: v["sample_id"] for k, v in msrunid_to_info.items()}
+            )
+            search_results["Sample UUID"] = search_results["Sample ID"].map(sample_id_to_uuid)
+            search_results["Nanoparticle"] = search_results["Run"].map(
+                {k: v["nanoparticle"] for k, v in msrunid_to_info.items()}
+            )
+            experiment_columns = ["MsRun UUID", "Nanoparticle", "Sample UUID", "Sample ID"]
+
+            search_results.rename(
+                columns={
+                    "Protein.Group": "Protein Group",
+                    "Stripped.Sequence": "Peptide",
+                    "Precursor.Charge": "Charge",
+                    "Precursor.Id": "Precursor Id",
+                    "Q.Value": "Precursor Q Value",
+                    "Protein.Q.Value": "Protein Q Value",
+                    "Precursor.Quantity": "Intensity",
+                },
+                inplace=True,
+            )
+
+            analyte_columns = [
                 "Protein Group",
                 "Protein Q Value",
                 "Peptide",
@@ -1688,19 +1699,17 @@ class _UnsupportedSDK(_SeerSDK):
                 "IM",
                 "iIM",
             ]
-            df = pd.DataFrame(search_results[included_columns])
+            df = pd.DataFrame(search_results[experiment_columns + analyte_columns])
 
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
-        df["sample_uuid"] = df["sample_id"]
-        df["sample_id"] = df["sample_uuid"].apply(
-            lambda x: sample_uuid_to_id.get(x)
-        )
+        print(f"get_search_data() finished in {(time.time() - start_time):.2f} seconds", file=sys.stderr)
 
-        if rollup == "panel":
-            df.drop(columns=["msrun_id"], inplace=True, errors="ignore")
         return df
 
     def get_search_data_analytes(self, analysis_id: str, analyte_type: str):
+        start_time = time.time()
+        print(f"get_search_data_analytest(analyte_type={analyte_type})...", file=sys.stderr)
+
         if analyte_type not in ["protein", "peptide", "precursor"]:
             raise ValueError(
                 f"Unknown analyte_type = {analyte_type}. Supported analytes are 'protein', 'peptide', or 'precursor'."
@@ -1714,10 +1723,6 @@ class _UnsupportedSDK(_SeerSDK):
             analysis_id=analysis_id, analyte_type="protein", rollup="np"
         )
 
-        report_results = self.get_search_result(
-            analysis_id=analysis_id, analyte_type="precursor", rollup="np"
-        )
-
         search_results = search_results[
             [
                 "Protein Group",
@@ -1729,8 +1734,46 @@ class _UnsupportedSDK(_SeerSDK):
             ]
         ]
         search_results.drop_duplicates(subset=["Protein Group"], inplace=True)
-        report_results["Protein Group"] = report_results["Protein.Group"]
-        report_results["Peptide"] = report_results["Stripped.Sequence"]
+
+        # 2. fetch precursor report to extract analyte-specific details
+        start_report_time = time.time()
+        print("Fetching precursor report...", file=sys.stderr)
+        report_results = self.get_search_result(
+            analysis_id=analysis_id, analyte_type="precursor", rollup="np"
+        )
+        print(f"Precursor report fetched in {(time.time() - start_report_time):.2f} seconds", file=sys.stderr)
+        report_results.rename(
+            columns={
+                "Protein.Group": "Protein Group",
+                "Stripped.Sequence": "Peptide",
+                "Modified.Sequence": "Modified.Peptide",
+            },
+            inplace=True,
+        )
+
+        # function to fix the potential bug, where different precursors
+        # of the same peptide map to different protein groups
+        def fix_peptide_to_protein_group_assignment(
+                df: pd.DataFrame
+        ) -> pd.DataFrame:
+            # for each peptide, sort protein groups by confidence
+            df = df.sort_values(
+                [
+                    "Peptide",
+                    "Global.PG.Q.Value",
+                    "Lib.PG.Q.Value",
+                    "Protein Group",
+                ]
+            )
+
+            # broadcast the best protein group across all rows with the same peptide
+            # to fix the potential bug, where different precursors of the same peptide
+            # map to different protein groups
+            for col in ["Protein Group", "Protein.Ids", "Protein.Names", "Genes"]:
+                if col in df.columns:
+                    df[col] = df.groupby("Peptide")[col].transform("first")
+
+            return df
 
         if analyte_type == "protein":
             report_results = report_results[
@@ -1752,40 +1795,22 @@ class _UnsupportedSDK(_SeerSDK):
             )
         elif analyte_type == "peptide":
 
-            # The below logic performs the following:
-            # 1. orders each peptide group by Global.PG.Q.Value, Lib.PG.Q.Value, and Protein Group (ascending)
-            # 2. for each peptide group, select the first row to find the precursor with the lowest Q values
-            # 3. broadcasts the associated protein group columns across all rows with the same peptide.
-            #
-            # This ensures that for each peptide, we retain consistent protein information while avoiding duplication.
-
-            report_results = report_results.sort_values(
+            # keep only the relevant columns
+            report_results = report_results[
                 [
                     "Peptide",
+                    "Protein Group",
+                    "Protein.Ids",
+                    "Protein.Names",
+                    # no "Genes" -- taken from protein group
+                    "Proteotypic",
                     "Global.PG.Q.Value",
                     "Lib.PG.Q.Value",
-                    "Protein Group",
                 ]
-            )
-
-            columns_to_broadcast = ["Protein Group", "Protein.Ids"]
-            broadcasted = (
-                report_results.groupby("Peptide")
-                .apply(
-                    lambda x: pd.Series(
-                        {
-                            col: x.iloc[0][col]
-                            for col in columns_to_broadcast + ["Peptide"]
-                        }
-                    )
-                )
-                .reset_index(drop=True)
-            )
-            report_results = (
-                report_results.drop(columns=columns_to_broadcast)
-                .merge(broadcasted, on="Peptide", how="left")
-                .drop_duplicates(subset=["Peptide"])
-            )
+            ]
+            report_results.drop_duplicates(inplace=True)
+            report_results = fix_peptide_to_protein_group_assignment(report_results)
+            report_results.drop_duplicates(subset=["Peptide"], inplace=True)
 
             df = pd.merge(
                 report_results,
@@ -1823,7 +1848,7 @@ class _UnsupportedSDK(_SeerSDK):
                     "Protein.Ids",
                     "Protein.Names",
                     "Genes",
-                    "Modified.Sequence",
+                    "Modified.Peptide",
                     "Proteotypic",
                     "Global.Q.Value",
                     "Global.PG.Q.Value",
@@ -1831,44 +1856,11 @@ class _UnsupportedSDK(_SeerSDK):
                     "Lib.PG.Q.Value",
                 ]
             ]
+            report_results.drop_duplicates(inplace=True)
 
-            # The below logic performs the following:
-            # 1. orders each peptide group by Global.PG.Q.Value, Lib.PG.Q.Value, and Protein Group (ascending)
-            # 2. for each peptide group, select the first row to find the precursor with the lowest Q values
-            # 3. broadcasts the associated protein group columns across all rows with the same peptide.
-            #
-            # This ensures that for each peptide, we retain consistent protein information while avoiding duplication.
-            columns_to_broadcast = [
-                "Protein Group",
-                "Protein.Ids",
-                "Protein.Names",
-                "Genes",
-            ]
-            report_results = report_results.sort_values(
-                [
-                    "Peptide",
-                    "Global.PG.Q.Value",
-                    "Lib.PG.Q.Value",
-                    "Protein Group",
-                ],
-            )
-            broadcasted = (
-                report_results.groupby("Peptide")
-                .apply(
-                    lambda x: pd.Series(
-                        {
-                            col: x.iloc[0][col]
-                            for col in columns_to_broadcast + ["Peptide"]
-                        }
-                    )
-                )
-                .reset_index(drop=True)
-            )
-            report_results = (
-                report_results.drop(columns=columns_to_broadcast)
-                .merge(broadcasted, on="Peptide", how="left")
-                .drop_duplicates(subset=["Peptide", "Precursor.Charge"])
-            )
+            report_results = fix_peptide_to_protein_group_assignment(report_results)
+            report_results.drop_duplicates(subset=["Peptide", "Precursor.Charge"], inplace=True)
+
             df = pd.merge(
                 report_results,
                 search_results,
@@ -1883,8 +1875,7 @@ class _UnsupportedSDK(_SeerSDK):
                     "Protein Group",
                     "Protein.Ids",
                     "Protein.Names",
-                    "Genes",
-                    "Modified.Sequence",
+                    "Modified.Peptide",
                     "Proteotypic",
                     "Global.Q.Value",
                     "Global.PG.Q.Value",
@@ -1893,9 +1884,8 @@ class _UnsupportedSDK(_SeerSDK):
                     "Gene Names",
                 ]
             ]
-            df.rename(
-                columns={"Modified.Sequence": "Modified.Peptide"}, inplace=True
-            )
         # endif
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
+
+        print(f"get_search_data_analytes() finished in {(time.time() - start_time):.2f} seconds", file=sys.stderr)
         return df
