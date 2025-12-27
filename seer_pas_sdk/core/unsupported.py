@@ -6,6 +6,8 @@ import os
 import shutil
 from pathlib import Path
 
+import sys
+import time
 from typing import List as _List
 
 from ..common import *
@@ -1484,15 +1486,22 @@ class _UnsupportedSDK(_SeerSDK):
         def filepath_to_msrunid(filepath):
             return os.path.basename(filepath).split(".")[0]
 
+        start_time = time.time()
+
         # 1. Get samples and msrun data for analysis
+        print(f"get_search_data(): analyte_type: {analyte_type}, rollup: {rollup}, norm_method: {norm_method}", file=sys.stderr)
+        start_samples_time = time.time()
         samples = self.find_samples(analysis_id=analysis_id)
+        print(f"find_samples() executed in {(time.time() - start_samples_time):.2f} seconds", file=sys.stderr)
 
         sample_uuid_to_id = {s["id"]: s["sample_id"] for s in samples}
         sample_id_to_uuid = {s["sample_id"]: s["id"] for s in samples}
         # FIXME sample_name is not guaranteed to be unique (within PAS analysis)
         sample_name_to_uuid = {s["sample_name"]: s["id"] for s in samples}
 
+        start_msruns_time = time.time()
         msruns = self.find_msruns(sample_ids=[s["id"] for s in samples])
+        print(f"find_msruns() executed in {(time.time() - start_msruns_time):.2f} seconds", file=sys.stderr)
         msrunid_to_info = {
             filepath_to_msrunid(msrun["raw_file_path"]): msrun
             for msrun in msruns
@@ -1500,11 +1509,17 @@ class _UnsupportedSDK(_SeerSDK):
 
         # 2. Get search results
         # pull the np/panel file, or report.tsv for precursor mode
+        print("Fetching search results...", file=sys.stderr)
+        start_searchresult_time = time.time()
         search_results = self.get_search_result(
             analysis_id=analysis_id,
             analyte_type=analyte_type,
             rollup=rollup,
         )
+        print(f"Search results fetched in {(time.time() - start_searchresult_time):.2f} seconds", file=sys.stderr)
+        print("Search results columns:", file=sys.stderr)
+        print(search_results.columns, file=sys.stderr)
+
         if analyte_type in ["protein", "peptide"]:
             # set the intensity column based on norm_method and PAS analysis protocol version
             intensity_column = None
@@ -1593,11 +1608,13 @@ class _UnsupportedSDK(_SeerSDK):
 
                 # Merge report to search results to get Q value and other properties
                 # FIXME this downloads a very massive file just to get q.values
+                print("Fetching precursor-level search results...", file=sys.stderr)
                 analytes = self.get_search_result(
                     analysis_id=analysis_id,
                     analyte_type="precursor",
                     rollup="np",
                 )
+                print(f"Precursor-level search results fetched in {(time.time() - start_time):.2f} seconds", file=sys.stderr)
                 analytes.rename(
                     columns={
                         "Protein.Group": "Protein Group",
@@ -1685,6 +1702,7 @@ class _UnsupportedSDK(_SeerSDK):
             df = pd.DataFrame(search_results[experiment_columns + analyte_columns])
 
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
+        print(f"get_search_data() finished in {(time.time() - start_time):.2f} seconds", file=sys.stderr)
 
         return df
 
