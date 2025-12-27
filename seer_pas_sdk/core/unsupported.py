@@ -1707,6 +1707,9 @@ class _UnsupportedSDK(_SeerSDK):
         return df
 
     def get_search_data_analytes(self, analysis_id: str, analyte_type: str):
+        start_time = time.time()
+        print(f"get_search_data_analytest(analyte_type={analyte_type})...", file=sys.stderr)
+
         if analyte_type not in ["protein", "peptide", "precursor"]:
             raise ValueError(
                 f"Unknown analyte_type = {analyte_type}. Supported analytes are 'protein', 'peptide', or 'precursor'."
@@ -1733,9 +1736,12 @@ class _UnsupportedSDK(_SeerSDK):
         search_results.drop_duplicates(subset=["Protein Group"], inplace=True)
 
         # 2. fetch precursor report to extract analyte-specific details
+        start_report_time = time.time()
+        print("Fetching precursor report...", file=sys.stderr)
         report_results = self.get_search_result(
             analysis_id=analysis_id, analyte_type="precursor", rollup="np"
         )
+        print(f"Precursor report fetched in {(time.time() - start_report_time):.2f} seconds", file=sys.stderr)
         report_results.rename(
             columns={
                 "Protein.Group": "Protein Group",
@@ -1891,4 +1897,6 @@ class _UnsupportedSDK(_SeerSDK):
             ]
         # endif
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
+
+        print(f"get_search_data_analytes() finished in {(time.time() - start_time):.2f} seconds", file=sys.stderr)
         return df
