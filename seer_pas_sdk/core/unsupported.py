@@ -1742,7 +1742,7 @@ class _UnsupportedSDK(_SeerSDK):
         # function to fix the potential bug, where different precursors
         # of the same peptide map to different protein groups
         def fix_peptide_to_protein_group_assignment(
-            df: pd.DataFrame
+            df: pd.DataFrame,
         ) -> pd.DataFrame:
             # for each peptide, sort protein groups by confidence
             df = df.sort_values(
@@ -1761,7 +1761,7 @@ class _UnsupportedSDK(_SeerSDK):
                 "Protein Group",
                 "Protein.Ids",
                 "Protein.Names",
-                "Genes"
+                "Genes",
             ]:
                 if col in df.columns:
                     df[col] = df.groupby("Peptide")[col].transform("first")
