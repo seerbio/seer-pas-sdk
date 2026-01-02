@@ -1310,18 +1310,21 @@ class SeerSDK:
         URL = f"{self._auth.url}api/v1/msdatas/items"
 
         res = []
-        for sample_id in sample_ids:
 
-            with self._get_auth_session("findmsdatas") as s:
+        params = {"all": "true"}
 
-                msdatas = s.post(URL, json={"sampleId": sample_id})
+        with self._get_auth_session("findmsdatas") as s:
 
-                if msdatas.status_code != 200 or not msdatas.json()["data"]:
-                    raise ValueError(
-                        f"Failed to fetch MS data for sample ID={sample_id}."
-                    )
+            msdatas = s.post(
+                URL, json={"sampleId": ",".join(sample_ids)}, params=params
+            )
 
-                res += [x for x in msdatas.json()["data"]]
+            if msdatas.status_code != 200 or not msdatas.json()["data"]:
+                raise ValueError(
+                    f"Failed to fetch MS data for sample IDs={sample_ids}."
+                )
+
+            res += [x for x in msdatas.json()["data"]]
 
         spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
         for entry in res:

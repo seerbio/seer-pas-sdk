@@ -1714,10 +1714,6 @@ class _UnsupportedSDK(_SeerSDK):
             analysis_id=analysis_id, analyte_type="protein", rollup="np"
         )
 
-        report_results = self.get_search_result(
-            analysis_id=analysis_id, analyte_type="precursor", rollup="np"
-        )
-
         search_results = search_results[
             [
                 "Protein Group",
@@ -1729,8 +1725,48 @@ class _UnsupportedSDK(_SeerSDK):
             ]
         ]
         search_results.drop_duplicates(subset=["Protein Group"], inplace=True)
-        report_results["Protein Group"] = report_results["Protein.Group"]
-        report_results["Peptide"] = report_results["Stripped.Sequence"]
+
+        # 2. fetch precursor report to extract analyte-specific details
+        report_results = self.get_search_result(
+            analysis_id=analysis_id, analyte_type="precursor", rollup="np"
+        )
+        report_results.rename(
+            columns={
+                "Protein.Group": "Protein Group",
+                "Stripped.Sequence": "Peptide",
+                "Modified.Sequence": "Modified.Peptide",
+            },
+            inplace=True,
+        )
+
+        # function to fix the potential bug, where different precursors
+        # of the same peptide map to different protein groups
+        def fix_peptide_to_protein_group_assignment(
+            df: pd.DataFrame,
+        ) -> pd.DataFrame:
+            # for each peptide, sort protein groups by confidence
+            df = df.sort_values(
+                [
+                    "Peptide",
+                    "Global.PG.Q.Value",
+                    "Lib.PG.Q.Value",
+                    "Protein Group",
+                ]
+            )
+
+            # broadcast the best protein group across all rows with the same peptide
+            # to fix the potential bug, where different precursors of the same peptide
+            # map to different protein groups
+            for col in [
+                "Protein Group",
+                "Protein.Ids",
+                "Protein.Names",
+                "Genes",
+            ]:
+                if col in df.columns:
+                    df[col] = df.groupby("Peptide")[col].transform("first")
+
+            return df
 
         if analyte_type == "protein":
             report_results = report_results[
@@ -1752,40 +1788,24 @@ class _UnsupportedSDK(_SeerSDK):
             )
         elif analyte_type == "peptide":
 
-            # The below logic performs the following:
-            # 1. orders each peptide group by Global.PG.Q.Value, Lib.PG.Q.Value, and Protein Group (ascending)
-            # 2. for each peptide group, select the first row to find the precursor with the lowest Q values
-            # 3. broadcasts the associated protein group columns across all rows with the same peptide.
-            #
-            # This ensures that for each peptide, we retain consistent protein information while avoiding duplication.
-
-            report_results = report_results.sort_values(
+            # keep only the relevant columns
+            report_results = report_results[
                 [
                     "Peptide",
+                    "Protein Group",
+                    "Protein.Ids",
+                    "Protein.Names",
+                    # no "Genes" -- taken from protein group
+                    "Proteotypic",
                     "Global.PG.Q.Value",
                     "Lib.PG.Q.Value",
-                    "Protein Group",
                 ]
+            ]
+            report_results.drop_duplicates(inplace=True)
+            report_results = fix_peptide_to_protein_group_assignment(
+                report_results
             )
-
-            columns_to_broadcast = ["Protein Group", "Protein.Ids"]
-            broadcasted = (
-                report_results.groupby("Peptide")
-                .apply(
-                    lambda x: pd.Series(
-                        {
-                            col: x.iloc[0][col]
-                            for col in columns_to_broadcast + ["Peptide"]
-                        }
-                    )
-                )
-                .reset_index(drop=True)
-            )
-            report_results = (
-                report_results.drop(columns=columns_to_broadcast)
-                .merge(broadcasted, on="Peptide", how="left")
-                .drop_duplicates(subset=["Peptide"])
-            )
+            report_results.drop_duplicates(subset=["Peptide"], inplace=True)
 
             df = pd.merge(
                 report_results,
@@ -1823,7 +1843,7 @@ class _UnsupportedSDK(_SeerSDK):
                     "Protein.Ids",
                     "Protein.Names",
                     "Genes",
-                    "Modified.Sequence",
+                    "Modified.Peptide",
                     "Proteotypic",
                     "Global.Q.Value",
                     "Global.PG.Q.Value",
@@ -1831,44 +1851,15 @@ class _UnsupportedSDK(_SeerSDK):
                     "Lib.PG.Q.Value",
                 ]
             ]
+            report_results.drop_duplicates(inplace=True)
 
-            # The below logic performs the following:
-            # 1. orders each peptide group by Global.PG.Q.Value, Lib.PG.Q.Value, and Protein Group (ascending)
-            # 2. for each peptide group, select the first row to find the precursor with the lowest Q values
-            # 3. broadcasts the associated protein group columns across all rows with the same peptide.
-            #
-            # This ensures that for each peptide, we retain consistent protein information while avoiding duplication.
-            columns_to_broadcast = [
-                "Protein Group",
-                "Protein.Ids",
-                "Protein.Names",
-                "Genes",
-            ]
-            report_results = report_results.sort_values(
-                [
-                    "Peptide",
-                    "Global.PG.Q.Value",
-                    "Lib.PG.Q.Value",
-                    "Protein Group",
-                ],
+            report_results = fix_peptide_to_protein_group_assignment(
+                report_results
             )
-            broadcasted = (
-                report_results.groupby("Peptide")
-                .apply(
-                    lambda x: pd.Series(
-                        {
-                            col: x.iloc[0][col]
-                            for col in columns_to_broadcast + ["Peptide"]
-                        }
-                    )
-                )
-                .reset_index(drop=True)
+            report_results.drop_duplicates(
+                subset=["Peptide", "Precursor.Charge"], inplace=True
             )
-            report_results = (
-                report_results.drop(columns=columns_to_broadcast)
-                .merge(broadcasted, on="Peptide", how="left")
-                .drop_duplicates(subset=["Peptide", "Precursor.Charge"])
-            )
+
             df = pd.merge(
                 report_results,
                 search_results,
@@ -1883,8 +1874,7 @@ class _UnsupportedSDK(_SeerSDK):
                     "Protein Group",
                     "Protein.Ids",
                     "Protein.Names",
-                    "Genes",
-                    "Modified.Sequence",
+                    "Modified.Peptide",
                     "Proteotypic",
                     "Global.Q.Value",
                     "Global.PG.Q.Value",
@@ -1893,9 +1883,6 @@ class _UnsupportedSDK(_SeerSDK):
                     "Gene Names",
                 ]
             ]
-            df.rename(
-                columns={"Modified.Sequence": "Modified.Peptide"}, inplace=True
-            )
         # endif
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
         return df
