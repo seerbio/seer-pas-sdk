@@ -1316,7 +1316,7 @@ class SeerSDK:
         with self._get_auth_session("findmsdatas") as s:
 
             msdatas = s.post(
-                URL, json={"sampleId": ','.join(sample_ids)}, params=params
+                URL, json={"sampleId": ",".join(sample_ids)}, params=params
             )
 
             if msdatas.status_code != 200 or not msdatas.json()["data"]:
