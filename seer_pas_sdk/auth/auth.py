@@ -5,6 +5,15 @@ import jwt
 from ..common import get_version
 from ..common.errors import ServerError
 
+import sys
+import logging
+
+# set up logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.INFO)
+logger.addHandler(console_handler)
 
 class Auth:
     _instances = {
@@ -104,7 +113,7 @@ class Auth:
                 raise ServerError(
                     "Unexpected return from server during MFA challenge. Please check the PAS SDK version and update the PAS SDK if necessary."
                 )
-            print(
+            logger.info(
                 "Multi-factor authentication (MFA) is enabled for your account."
             )
             mfa_code = input(
@@ -186,7 +195,7 @@ class Auth:
             raise ServerError("Could not logout from the PAS instance")
         self.refresh_token = None
         self.token_expiry = 0
-        print(
+        logger.info(
             f"User {self.username} logged out successfully. Thank you for using the PAS SDK."
         )
         return True

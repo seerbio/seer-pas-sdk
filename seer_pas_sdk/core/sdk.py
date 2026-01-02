@@ -6,7 +6,8 @@ import os
 import requests
 import urllib.request
 import ssl
-
+import logging
+import sys
 
 from typing import List as _List, Tuple as _Tuple
 
@@ -15,8 +16,12 @@ from ..auth import Auth
 from ..objects.volcanoplot import VolcanoPlotBuilder
 from ..objects.headers import *
 
-import warnings
-
+# set up logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.INFO)
+logger.addHandler(console_handler)
 
 class SeerSDK:
     """
@@ -43,7 +48,7 @@ class SeerSDK:
             self._auth = Auth(username, password, instance)
 
             self._auth._login()
-            print(f"User '{username}' logged in.\n")
+            logger.info(f"User '{username}' logged in.\n")
         except Exception as e:
             raise ValueError(
                 f"Could not log in.\nPlease check your credentials and/or instance: {e}."
@@ -63,7 +68,7 @@ class SeerSDK:
         if tenant_id is None and tenant is None:
             self.logout()
             if None in tenant_names:
-                print(
+                logger.warning(
                     "Warning: You have access to a tenant with no name. Please either provide a tenant name in the PAS website or specify a tenant_id to access that tenant."
                 )
             raise ValueError(
@@ -95,7 +100,7 @@ class SeerSDK:
             self._auth._logout()
             return True
         else:
-            print("The user's session is expired. No action taken.")
+            logger.info("The user's session is expired. No action taken.")
             return False
 
     def __del__(self):
@@ -234,7 +239,7 @@ class SeerSDK:
 
         self._auth.active_tenant_id = tenant_id
         self._auth.active_role = row["role"]
-        print(f"You are now active in {row['institution']}")
+        logger.info(f"You are now active in {row['institution']}")
         return self._auth.active_tenant_id, self._auth.active_role
 
     def get_active_tenant(self):
@@ -1856,7 +1861,7 @@ class SeerSDK:
                             )
                         )
                     except Exception as e:
-                        print("Warning: Could not fetch fasta files.")
+                        logger.error("Error: Could not fetch fasta files.")
                         res["fasta"] = None
                 else:
                     res["fasta"] = None
@@ -2068,8 +2073,8 @@ class SeerSDK:
                                 res[entry]["fasta"]
                             )
                         except:
-                            print(
-                                f"Warning: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
+                            logger.error(
+                                f"Error: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
                             )
                 else:
                     res[entry]["fasta"] = None
@@ -2496,7 +2501,7 @@ class SeerSDK:
         file_url = file["url"]
         filename = file["filename"]
 
-        print("Downloading file:", filename)
+        logger.info("Downloading file:", filename)
         for _ in range(2):
             try:
                 with tqdm(
@@ -2704,7 +2709,7 @@ class SeerSDK:
                         analysis_id, filename
                     )["url"]
                 except Exception as e:
-                    print(e)
+                    logger.error(e)
                     continue
 
         links = {
@@ -2713,7 +2718,7 @@ class SeerSDK:
         }
         if download_path:
             name = f"{download_path}/downloads/{analysis_id}"
-            print(f"Start download to path {name}")
+            logger.info(f"Start download to path {name}")
             if not os.path.exists(name):
                 os.makedirs(name)
             for filename, content in links.items():
@@ -2721,7 +2726,7 @@ class SeerSDK:
                 if filename.endswith(".tsv"):
                     separator = "\t"
                 content.to_csv(f"{name}/{filename}", sep=separator)
-            print("Download complete.")
+            logger.info("Download complete.")
 
         return links
 
@@ -3065,10 +3070,10 @@ class SeerSDK:
 
         if not download_path:
             download_path = os.getcwd()
-            print(f"\nDownload path not specified.\n")
+            logger.info(f"\nDownload path not specified.\n")
 
         if not os.path.isdir(download_path):
-            print(
+            logger.error(
                 f'\nThe path "{download_path}" you specified does not exist, was either invalid or not absolute.\n'
             )
             download_path = f"{os.getcwd()}/downloads"
@@ -3080,7 +3085,7 @@ class SeerSDK:
         if not os.path.exists(name):
             os.makedirs(name)
 
-        print(f'Downloading files to "{name}"\n')
+        logger.info(f'Downloading files to "{name}"\n')
 
         URL = f"{self._auth.url}api/v1/msdataindex/download/getUrl"
         tenant_id = self._auth.active_tenant_id
@@ -3106,7 +3111,7 @@ class SeerSDK:
             filename = paths[i].split("/")[-1]
             url = urls[i]
 
-            print(f"Downloading {filename}")
+            logger.info(f"Downloading {filename}")
 
             for _ in range(2):
                 try:
@@ -3142,7 +3147,7 @@ class SeerSDK:
                     "Your download failed. Please check if the backend is still running."
                 )
 
-            print(f"Finished downloading {filename}\n")
+            logger.info(f"Finished downloading {filename}\n")
 
         return downloads
 
@@ -4041,7 +4046,7 @@ class SeerSDK:
                     raise ServerError("Request failed.")
                 url = response.json()["url"]
                 filename = os.path.basename(file)
-                print(f"Downloading {filename}")
+                logger.info(f"Downloading {filename}")
                 for _ in range(2):
                     try:
                         with tqdm(
@@ -4065,7 +4070,7 @@ class SeerSDK:
                         if not os.path.isdir(f"{download_path}"):
                             os.makedirs(f"{download_path}")
 
-                print(f"Downloaded file to {download_path}/{file}")
+                logger.info(f"Downloaded file to {download_path}/{file}")
 
     def _get_analysis_protocol_fasta_filenames(
         self, analysis_protocol_id: str, analysis_protocol_engine: str = None
@@ -4183,7 +4188,7 @@ class SeerSDK:
                     analysis_protocol_fasta_name=filepath
                 )
             except ServerError:
-                print(
+                logger.error(
                     f"ERROR: Could not retrieve download link for {filename}."
                 )
                 continue
@@ -4231,7 +4236,7 @@ class SeerSDK:
 
             # relative path of the file after download
             local_filename = f"{download_path}/{filename}"
-            print(f"Downloading {filename}")
+            logger.info(f"Downloading {filename}")
             for _ in range(2):
                 try:
                     with tqdm(

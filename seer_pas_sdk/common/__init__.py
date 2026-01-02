@@ -12,6 +12,8 @@ import boto3
 import json
 import zipfile
 import tempfile
+import sys
+import logging
 
 import subprocess
 from importlib.metadata import version, PackageNotFoundError
@@ -19,6 +21,13 @@ from importlib.metadata import version, PackageNotFoundError
 from .groupanalysis import *
 
 from .errors import *
+
+# set up logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.INFO)
+logger.addHandler(console_handler)
 
 load_dotenv()
 
@@ -769,7 +778,7 @@ def rename_d_zip_file(source, destination):
                     arcname = f"{d_destination}/{os.path.relpath(file_path, temp_dir)}"  # substitute the original .d name with the new .d name
                     zip_ref.write(file_path, arcname)
 
-    print(f"Renamed {source} to {destination}")
+    logger.info(f"Renamed {source} to {destination}")
 
 
 def get_version():

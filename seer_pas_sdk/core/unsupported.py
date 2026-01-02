@@ -6,6 +6,7 @@ import os
 import shutil
 from pathlib import Path
 
+import logging
 import sys
 import time
 from typing import List as _List
@@ -15,6 +16,12 @@ from ..objects import PlateMap
 
 from .sdk import SeerSDK as _SeerSDK
 
+# set up logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.DEBUG)
+logger.addHandler(console_handler)
 
 class _UnsupportedSDK(_SeerSDK):
     """
@@ -641,7 +648,7 @@ class _UnsupportedSDK(_SeerSDK):
         if os.path.exists("generated_files") and not dir_exists:
             shutil.rmtree("generated_files")
 
-        print(f"Plate generated with id: '{id_uuid}'")
+        logger.info(f"Plate generated with id: '{id_uuid}'")
         return id_uuid
 
     def start_analysis(
@@ -927,7 +934,7 @@ class _UnsupportedSDK(_SeerSDK):
         for result in result_files:
             result["filePath"] = "/".join(result["filePath"].split("/")[1:])
 
-        print(
+        logger.info(
             f"Files uploaded successfully to {self.get_active_tenant_name()}."
         )
 
@@ -1390,7 +1397,7 @@ class _UnsupportedSDK(_SeerSDK):
                     "Failed to add samples to plate in PAS. Please check your connection and reauthenticate."
                 )
 
-        print(f"Plate generated with id: '{id_uuid}'")
+        logger.info(f"Plate generated with id: '{id_uuid}'")
         return id_uuid
 
     def _get_msdataindex(self, folder=""):
@@ -1489,10 +1496,10 @@ class _UnsupportedSDK(_SeerSDK):
         start_time = time.time()
 
         # 1. Get samples and msrun data for analysis
-        print(f"get_search_data(): analyte_type: {analyte_type}, rollup: {rollup}, norm_method: {norm_method}", file=sys.stderr)
+        logger.debug(f"get_search_data(): analyte_type: {analyte_type}, rollup: {rollup}, norm_method: {norm_method}")
         start_samples_time = time.time()
         samples = self.find_samples(analysis_id=analysis_id)
-        print(f"find_samples() executed in {(time.time() - start_samples_time):.2f} seconds", file=sys.stderr)
+        logger.debug(f"find_samples() executed in {(time.time() - start_samples_time):.2f} seconds")
 
         sample_uuid_to_id = {s["id"]: s["sample_id"] for s in samples}
         sample_id_to_uuid = {s["sample_id"]: s["id"] for s in samples}
@@ -1501,7 +1508,7 @@ class _UnsupportedSDK(_SeerSDK):
 
         start_msruns_time = time.time()
         msruns = self.find_msruns(sample_ids=[s["id"] for s in samples])
-        print(f"find_msruns() executed in {(time.time() - start_msruns_time):.2f} seconds", file=sys.stderr)
+        logger.debug(f"find_msruns() executed in {(time.time() - start_msruns_time):.2f} seconds")
         msrunid_to_info = {
             filepath_to_msrunid(msrun["raw_file_path"]): msrun
             for msrun in msruns
@@ -1509,16 +1516,16 @@ class _UnsupportedSDK(_SeerSDK):
 
         # 2. Get search results
         # pull the np/panel file, or report.tsv for precursor mode
-        print("Fetching search results...", file=sys.stderr)
+        logger.debug("Fetching search results...")
         start_searchresult_time = time.time()
         search_results = self.get_search_result(
             analysis_id=analysis_id,
             analyte_type=analyte_type,
             rollup=rollup,
         )
-        print(f"Search results fetched in {(time.time() - start_searchresult_time):.2f} seconds", file=sys.stderr)
-        print("Search results columns:", file=sys.stderr)
-        print(search_results.columns, file=sys.stderr)
+        logger.debug(f"Search results fetched in {(time.time() - start_searchresult_time):.2f} seconds")
+        logger.debug("Search results columns:")
+        logger.debug(search_results.columns)
 
         if analyte_type in ["protein", "peptide"]:
             # set the intensity column based on norm_method and PAS analysis protocol version
@@ -1608,13 +1615,13 @@ class _UnsupportedSDK(_SeerSDK):
 
                 # Merge report to search results to get Q value and other properties
                 # FIXME this downloads a very massive file just to get q.values
-                print("Fetching precursor-level search results...", file=sys.stderr)
+                logger.debug("Fetching precursor-level search results...")
                 analytes = self.get_search_result(
                     analysis_id=analysis_id,
                     analyte_type="precursor",
                     rollup="np",
                 )
-                print(f"Precursor-level search results fetched in {(time.time() - start_time):.2f} seconds", file=sys.stderr)
+                logger.debug(f"Precursor-level search results fetched in {(time.time() - start_time):.2f} seconds")
                 analytes.rename(
                     columns={
                         "Protein.Group": "Protein Group",
@@ -1702,13 +1709,13 @@ class _UnsupportedSDK(_SeerSDK):
             df = pd.DataFrame(search_results[experiment_columns + analyte_columns])
 
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
-        print(f"get_search_data() finished in {(time.time() - start_time):.2f} seconds", file=sys.stderr)
+        logger.debug(f"get_search_data() finished in {(time.time() - start_time):.2f} seconds")
 
         return df
 
     def get_search_data_analytes(self, analysis_id: str, analyte_type: str):
         start_time = time.time()
-        print(f"get_search_data_analytest(analyte_type={analyte_type})...", file=sys.stderr)
+        logger.debug(f"get_search_data_analytest(analyte_type={analyte_type})...")
 
         if analyte_type not in ["protein", "peptide", "precursor"]:
             raise ValueError(
@@ -1737,11 +1744,11 @@ class _UnsupportedSDK(_SeerSDK):
 
         # 2. fetch precursor report to extract analyte-specific details
         start_report_time = time.time()
-        print("Fetching precursor report...", file=sys.stderr)
+        logger.debug("Fetching precursor report...")
         report_results = self.get_search_result(
             analysis_id=analysis_id, analyte_type="precursor", rollup="np"
         )
-        print(f"Precursor report fetched in {(time.time() - start_report_time):.2f} seconds", file=sys.stderr)
+        logger.debug(f"Precursor report fetched in {(time.time() - start_report_time):.2f} seconds")
         report_results.rename(
             columns={
                 "Protein.Group": "Protein Group",
@@ -1898,5 +1905,5 @@ class _UnsupportedSDK(_SeerSDK):
         # endif
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
 
-        print(f"get_search_data_analytes() finished in {(time.time() - start_time):.2f} seconds", file=sys.stderr)
+        logger.debug(f"get_search_data_analytes() finished in {(time.time() - start_time):.2f} seconds")
         return df
