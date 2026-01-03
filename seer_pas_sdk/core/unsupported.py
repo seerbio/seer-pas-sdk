@@ -1591,7 +1591,7 @@ class _UnsupportedSDK(_SeerSDK):
 
             if rollup == "panel":
                 search_results.rename(
-                    columns = {"Sample ID": "Sample UUID"}, inplace=True
+                    columns={"Sample ID": "Sample UUID"}, inplace=True
                 )
                 search_results["Sample UUID"] = search_results[
                     "Sample Name"
@@ -1604,7 +1604,7 @@ class _UnsupportedSDK(_SeerSDK):
                 # analyte info is limited to the id in the panel rollup
                 if analyte_type == "protein":
                     analyte_id_column = "Protein Group"
-                else: # peptide
+                else:
                     analyte_id_column = "Peptide"
 
                 analyte_columns = [analyte_id_column]
@@ -1666,7 +1666,7 @@ class _UnsupportedSDK(_SeerSDK):
                         "Protein Q Value",
                     ]
 
-                else: # peptide
+                else:
                     #  attach retention time (RT, iRT)
                     analyte_id_column = "Peptide"
                     analyte_columns = [analyte_id_column, "RT", "iRT"]
