@@ -15,6 +15,7 @@ console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.INFO)
 logger.addHandler(console_handler)
 
+
 class Auth:
     _instances = {
         "US": "https://api.pas.seer.software/",

@@ -23,6 +23,7 @@ console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.DEBUG)
 logger.addHandler(console_handler)
 
+
 class _UnsupportedSDK(_SeerSDK):
     """
     **************
@@ -1496,10 +1497,14 @@ class _UnsupportedSDK(_SeerSDK):
         start_time = time.time()
 
         # 1. Get samples and msrun data for analysis
-        logger.debug(f"get_search_data(): analyte_type: {analyte_type}, rollup: {rollup}, norm_method: {norm_method}")
+        logger.debug(
+            f"get_search_data(): analyte_type: {analyte_type}, rollup: {rollup}, norm_method: {norm_method}"
+        )
         start_samples_time = time.time()
         samples = self.find_samples(analysis_id=analysis_id)
-        logger.debug(f"find_samples() executed in {(time.time() - start_samples_time):.2f} seconds")
+        logger.debug(
+            f"find_samples() executed in {(time.time() - start_samples_time):.2f} seconds"
+        )
 
         sample_uuid_to_id = {s["id"]: s["sample_id"] for s in samples}
         sample_id_to_uuid = {s["sample_id"]: s["id"] for s in samples}
@@ -1508,7 +1513,9 @@ class _UnsupportedSDK(_SeerSDK):
 
         start_msruns_time = time.time()
         msruns = self.find_msruns(sample_ids=[s["id"] for s in samples])
-        logger.debug(f"find_msruns() executed in {(time.time() - start_msruns_time):.2f} seconds")
+        logger.debug(
+            f"find_msruns() executed in {(time.time() - start_msruns_time):.2f} seconds"
+        )
         msrunid_to_info = {
             filepath_to_msrunid(msrun["raw_file_path"]): msrun
             for msrun in msruns
@@ -1523,7 +1530,9 @@ class _UnsupportedSDK(_SeerSDK):
             analyte_type=analyte_type,
             rollup=rollup,
         )
-        logger.debug(f"Search results fetched in {(time.time() - start_searchresult_time):.2f} seconds")
+        logger.debug(
+            f"Search results fetched in {(time.time() - start_searchresult_time):.2f} seconds"
+        )
         logger.debug("Search results columns:")
         logger.debug(search_results.columns)
 
@@ -1576,12 +1585,20 @@ class _UnsupportedSDK(_SeerSDK):
                     f"norm_method = {norm_method} is not supported. Supported normalization methods are: raw, pepcal, engine, median, median80."
                 )
 
-            search_results["Intensity Log10"] = search_results[intensity_column]
+            search_results["Intensity Log10"] = search_results[
+                intensity_column
+            ]
 
             if rollup == "panel":
-                search_results.rename(columns = {"Sample ID": "Sample UUID"}, inplace=True)
-                search_results["Sample UUID"] = search_results["Sample Name"].map(sample_name_to_uuid)
-                search_results["Sample ID"] = search_results["Sample UUID"].map(sample_uuid_to_id)
+                search_results.rename(
+                    columns = {"Sample ID": "Sample UUID"}, inplace=True
+                )
+                search_results["Sample UUID"] = search_results[
+                    "Sample Name"
+                ].map(sample_name_to_uuid)
+                search_results["Sample ID"] = search_results[
+                    "Sample UUID"
+                ].map(sample_uuid_to_id)
                 experiment_columns = ["Sample UUID", "Sample ID"]
 
                 # analyte info is limited to the id in the panel rollup
@@ -1595,11 +1612,13 @@ class _UnsupportedSDK(_SeerSDK):
             else:
                 # np rollup, extract basename without extension
                 path_to_msrunid = {
-                    path : filepath_to_msrunid(path)
+                    path: filepath_to_msrunid(path)
                     for path in search_results["File Name"].unique()
                 }
                 # strip path from the filename to allow merging with the precursor report
-                search_results["Run"] = search_results["File Name"].map(path_to_msrunid)
+                search_results["Run"] = search_results["File Name"].map(
+                    path_to_msrunid
+                )
 
                 search_results["MsRun UUID"] = search_results["Run"].map(
                     {k: v["id"] for k, v in msrunid_to_info.items()}
@@ -1607,11 +1626,18 @@ class _UnsupportedSDK(_SeerSDK):
                 search_results["Sample ID"] = search_results["Run"].map(
                     {k: v["sample_id"] for k, v in msrunid_to_info.items()}
                 )
-                search_results["Sample UUID"] = search_results["Sample ID"].map(sample_id_to_uuid)
+                search_results["Sample UUID"] = search_results[
+                    "Sample ID"
+                ].map(sample_id_to_uuid)
                 search_results["Nanoparticle"] = search_results["Run"].map(
                     {k: v["nanoparticle"] for k, v in msrunid_to_info.items()}
                 )
-                experiment_columns = ["MsRun UUID", "Nanoparticle", "Sample UUID", "Sample ID"]
+                experiment_columns = [
+                    "MsRun UUID",
+                    "Nanoparticle",
+                    "Sample UUID",
+                    "Sample ID",
+                ]
 
                 # Merge report to search results to get Q value and other properties
                 # FIXME this downloads a very massive file just to get q.values
@@ -1621,14 +1647,16 @@ class _UnsupportedSDK(_SeerSDK):
                     analyte_type="precursor",
                     rollup="np",
                 )
-                logger.debug(f"Precursor-level search results fetched in {(time.time() - start_time):.2f} seconds")
+                logger.debug(
+                    f"Precursor-level search results fetched in {(time.time() - start_time):.2f} seconds"
+                )
                 analytes.rename(
                     columns={
                         "Protein.Group": "Protein Group",
                         "Protein.Q.Value": "Protein Q Value",
-                        "Stripped.Sequence": "Peptide"
+                        "Stripped.Sequence": "Peptide",
                     },
-                    inplace=True
+                    inplace=True,
                 )
 
                 if analyte_type == "protein":
@@ -1641,15 +1669,20 @@ class _UnsupportedSDK(_SeerSDK):
                 else: # peptide
                     #  attach retention time (RT, iRT)
                     analyte_id_column = "Peptide"
-                    analyte_columns = [
-                        analyte_id_column,
-                        "RT",
-                        "iRT"
-                    ]
+                    analyte_columns = [analyte_id_column, "RT", "iRT"]
                 # endif analyte_type
 
-                analytes.drop(columns=[col for col in analytes.columns if col != "Run" and col not in analyte_columns], inplace=True)
-                analytes.drop_duplicates(subset=["Run", analyte_id_column], inplace=True)
+                analytes.drop(
+                    columns=[
+                        col
+                        for col in analytes.columns
+                        if col != "Run" and col not in analyte_columns
+                    ],
+                    inplace=True,
+                )
+                analytes.drop_duplicates(
+                    subset=["Run", analyte_id_column], inplace=True
+                )
                 df = pd.merge(
                     search_results,
                     analytes,
@@ -1674,11 +1707,18 @@ class _UnsupportedSDK(_SeerSDK):
             search_results["Sample ID"] = search_results["Run"].map(
                 {k: v["sample_id"] for k, v in msrunid_to_info.items()}
             )
-            search_results["Sample UUID"] = search_results["Sample ID"].map(sample_id_to_uuid)
+            search_results["Sample UUID"] = search_results["Sample ID"].map(
+                sample_id_to_uuid
+            )
             search_results["Nanoparticle"] = search_results["Run"].map(
                 {k: v["nanoparticle"] for k, v in msrunid_to_info.items()}
             )
-            experiment_columns = ["MsRun UUID", "Nanoparticle", "Sample UUID", "Sample ID"]
+            experiment_columns = [
+                "MsRun UUID",
+                "Nanoparticle",
+                "Sample UUID",
+                "Sample ID",
+            ]
 
             search_results.rename(
                 columns={
@@ -1706,16 +1746,22 @@ class _UnsupportedSDK(_SeerSDK):
                 "IM",
                 "iIM",
             ]
-            df = pd.DataFrame(search_results[experiment_columns + analyte_columns])
+            df = pd.DataFrame(
+                search_results[experiment_columns + analyte_columns]
+            )
 
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
-        logger.debug(f"get_search_data() finished in {(time.time() - start_time):.2f} seconds")
+        logger.debug(
+            f"get_search_data() finished in {(time.time() - start_time):.2f} seconds"
+        )
 
         return df
 
     def get_search_data_analytes(self, analysis_id: str, analyte_type: str):
         start_time = time.time()
-        logger.debug(f"get_search_data_analytest(analyte_type={analyte_type})...")
+        logger.debug(
+            f"get_search_data_analytest(analyte_type={analyte_type})..."
+        )
 
         if analyte_type not in ["protein", "peptide", "precursor"]:
             raise ValueError(
@@ -1748,7 +1794,9 @@ class _UnsupportedSDK(_SeerSDK):
         report_results = self.get_search_result(
             analysis_id=analysis_id, analyte_type="precursor", rollup="np"
         )
-        logger.debug(f"Precursor report fetched in {(time.time() - start_report_time):.2f} seconds")
+        logger.debug(
+            f"Precursor report fetched in {(time.time() - start_report_time):.2f} seconds"
+        )
         report_results.rename(
             columns={
                 "Protein.Group": "Protein Group",
@@ -1905,5 +1953,7 @@ class _UnsupportedSDK(_SeerSDK):
         # endif
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
 
-        logger.debug(f"get_search_data_analytes() finished in {(time.time() - start_time):.2f} seconds")
+        logger.debug(
+            f"get_search_data_analytes() finished in {(time.time() - start_time):.2f} seconds"
+        )
         return df

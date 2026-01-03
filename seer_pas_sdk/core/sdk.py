@@ -23,6 +23,7 @@ console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.INFO)
 logger.addHandler(console_handler)
 
+
 class SeerSDK:
     """
     Object exposing SDK methods. Requires a username and password; the optional `instance` param denotes the instance of PAS (defaults to "US").
