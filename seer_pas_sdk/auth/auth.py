@@ -8,11 +8,14 @@ from ..common.errors import ServerError
 import sys
 import logging
 
+
 # set up logging
 class StreamFlushingHandler(logging.StreamHandler):
     def emit(self, record):
         super().emit(record)
         self.flush()
+
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 console_handler = StreamFlushingHandler(sys.stdout)
