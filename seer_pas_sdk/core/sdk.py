@@ -17,9 +17,13 @@ from ..objects.volcanoplot import VolcanoPlotBuilder
 from ..objects.headers import *
 
 # set up logging
+class StreamFlushingHandler(logging.StreamHandler):
+    def emit(self, record):
+        super().emit(record)
+        self.flush()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-console_handler = logging.StreamHandler(sys.stdout)
+console_handler = StreamFlushingHandler(sys.stdout)
 console_handler.setLevel(logging.INFO)
 logger.addHandler(console_handler)
 
