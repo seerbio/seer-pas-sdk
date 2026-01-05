@@ -1496,7 +1496,8 @@ class _UnsupportedSDK(_SeerSDK):
         start_samples_time = time.time()
         samples = self.find_samples(analysis_id=analysis_id)
         print(
-            f"find_samples() executed in {(time.time() - start_samples_time):.2f} seconds", file=sys.stderr
+            f"find_samples() executed in {(time.time() - start_samples_time):.2f} seconds",
+            file=sys.stderr,
         )
 
         sample_uuid_to_id = {s["id"]: s["sample_id"] for s in samples}
