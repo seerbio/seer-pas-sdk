@@ -1490,7 +1490,8 @@ class _UnsupportedSDK(_SeerSDK):
 
         # 1. Get samples and msrun data for analysis
         print(
-            f"get_search_data(): analyte_type: {analyte_type}, rollup: {rollup}, norm_method: {norm_method}", file=sys.stderr
+            f"get_search_data(): analyte_type: {analyte_type}, rollup: {rollup}, norm_method: {norm_method}",
+            file=sys.stderr,
         )
         start_samples_time = time.time()
         samples = self.find_samples(analysis_id=analysis_id)
@@ -1506,7 +1507,8 @@ class _UnsupportedSDK(_SeerSDK):
         start_msruns_time = time.time()
         msruns = self.find_msruns(sample_ids=[s["id"] for s in samples])
         print(
-            f"find_msruns() executed in {(time.time() - start_msruns_time):.2f} seconds", file=sys.stderr
+            f"find_msruns() executed in {(time.time() - start_msruns_time):.2f} seconds",
+            file=sys.stderr,
         )
         msrunid_to_info = {
             filepath_to_msrunid(msrun["raw_file_path"]): msrun
@@ -1515,9 +1517,7 @@ class _UnsupportedSDK(_SeerSDK):
 
         # 2. Get search results
         # pull the np/panel file, or report.tsv for precursor mode
-        print(
-            "Fetching search results...", file=sys.stderr
-        )
+        print("Fetching search results...", file=sys.stderr)
         start_searchresult_time = time.time()
         search_results = self.get_search_result(
             analysis_id=analysis_id,
@@ -1525,14 +1525,11 @@ class _UnsupportedSDK(_SeerSDK):
             rollup=rollup,
         )
         print(
-            f"Search results fetched in {(time.time() - start_searchresult_time):.2f} seconds", file=sys.stderr
+            f"Search results fetched in {(time.time() - start_searchresult_time):.2f} seconds",
+            file=sys.stderr,
         )
-        print(
-            "Search results columns:", file=sys.stderr
-        )
-        print(
-            search_results.columns, file=sys.stderr
-        )
+        print("Search results columns:", file=sys.stderr)
+        print(search_results.columns, file=sys.stderr)
 
         if analyte_type in ["protein", "peptide"]:
             # set the intensity column based on norm_method and PAS analysis protocol version
@@ -1640,7 +1637,8 @@ class _UnsupportedSDK(_SeerSDK):
                 # Merge report to search results to get Q value and other properties
                 # FIXME this downloads a very massive file just to get q.values
                 print(
-                    "Fetching precursor-level search results...", file=sys.stderr
+                    "Fetching precursor-level search results...",
+                    file=sys.stderr,
                 )
                 analytes = self.get_search_result(
                     analysis_id=analysis_id,
@@ -1648,7 +1646,8 @@ class _UnsupportedSDK(_SeerSDK):
                     rollup="np",
                 )
                 print(
-                    f"Precursor-level search results fetched in {(time.time() - start_time):.2f} seconds", file=sys.stderr
+                    f"Precursor-level search results fetched in {(time.time() - start_time):.2f} seconds",
+                    file=sys.stderr,
                 )
                 analytes.rename(
                     columns={
@@ -1752,7 +1751,8 @@ class _UnsupportedSDK(_SeerSDK):
 
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
         print(
-            f"get_search_data() finished in {(time.time() - start_time):.2f} seconds", file=sys.stderr
+            f"get_search_data() finished in {(time.time() - start_time):.2f} seconds",
+            file=sys.stderr,
         )
 
         return df
@@ -1760,7 +1760,8 @@ class _UnsupportedSDK(_SeerSDK):
     def get_search_data_analytes(self, analysis_id: str, analyte_type: str):
         start_time = time.time()
         print(
-            f"get_search_data_analytest(analyte_type={analyte_type})...", file=sys.stderr
+            f"get_search_data_analytest(analyte_type={analyte_type})...",
+            file=sys.stderr,
         )
 
         if analyte_type not in ["protein", "peptide", "precursor"]:
@@ -1790,14 +1791,13 @@ class _UnsupportedSDK(_SeerSDK):
 
         # 2. fetch precursor report to extract analyte-specific details
         start_report_time = time.time()
-        print(
-            "Fetching precursor report...", file=sys.stderr
-        )
+        print("Fetching precursor report...", file=sys.stderr)
         report_results = self.get_search_result(
             analysis_id=analysis_id, analyte_type="precursor", rollup="np"
         )
         print(
-            f"Precursor report fetched in {(time.time() - start_report_time):.2f} seconds", file=sys.stderr
+            f"Precursor report fetched in {(time.time() - start_report_time):.2f} seconds",
+            file=sys.stderr,
         )
         report_results.rename(
             columns={
@@ -1956,6 +1956,7 @@ class _UnsupportedSDK(_SeerSDK):
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
 
         print(
-            f"get_search_data_analytes() finished in {(time.time() - start_time):.2f} seconds", file=sys.stderr
+            f"get_search_data_analytes() finished in {(time.time() - start_time):.2f} seconds",
+            file=sys.stderr,
         )
         return df
