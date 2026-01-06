@@ -7,15 +7,12 @@ import requests
 import urllib.request
 import ssl
 
-
 from typing import List as _List, Tuple as _Tuple
 
 from ..common import *
 from ..auth import Auth
 from ..objects.volcanoplot import VolcanoPlotBuilder
 from ..objects.headers import *
-
-import warnings
 
 
 class SeerSDK:
@@ -1856,7 +1853,7 @@ class SeerSDK:
                             )
                         )
                     except Exception as e:
-                        print("Warning: Could not fetch fasta files.")
+                        print("Error: Could not fetch fasta files.")
                         res["fasta"] = None
                 else:
                     res["fasta"] = None
@@ -2069,7 +2066,7 @@ class SeerSDK:
                             )
                         except:
                             print(
-                                f"Warning: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
+                                f"Error: Could not fetch fasta files for analysis {res[entry].get('analysis_name')}."
                             )
                 else:
                     res[entry]["fasta"] = None

@@ -139,11 +139,10 @@ def download_df(url, is_tsv=True, dtype={}):
 
     if not url:
         return pd.DataFrame()
-    url_content = io.StringIO(requests.get(url).content.decode("utf-8"))
     if is_tsv:
-        csv = pd.read_csv(url_content, sep="\t", dtype=dtype)
+        csv = pd.read_csv(url, sep="\t", dtype=dtype)
     else:
-        csv = pd.read_csv(url_content, dtype=dtype)
+        csv = pd.read_csv(url, dtype=dtype)
     return csv
 
 
