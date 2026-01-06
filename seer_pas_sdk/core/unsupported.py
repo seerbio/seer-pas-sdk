@@ -1620,11 +1620,11 @@ class _UnsupportedSDK(_SeerSDK):
                     {k: v["id"] for k, v in msrunid_to_info.items()}
                 )
                 search_results["Sample ID"] = search_results["Run"].map(
+                    {k: v["sample_id_tracking"] for k, v in msrunid_to_info.items()}
+                )
+                search_results["Sample UUID"] = search_results["Run"].map(
                     {k: v["sample_id"] for k, v in msrunid_to_info.items()}
                 )
-                search_results["Sample UUID"] = search_results[
-                    "Sample ID"
-                ].map(sample_id_to_uuid)
                 search_results["Nanoparticle"] = search_results["Run"].map(
                     {k: v["nanoparticle"] for k, v in msrunid_to_info.items()}
                 )
