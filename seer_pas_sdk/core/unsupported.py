@@ -1761,7 +1761,7 @@ class _UnsupportedSDK(_SeerSDK):
     def get_search_data_analytes(self, analysis_id: str, analyte_type: str):
         start_time = time.time()
         print(
-            f"get_search_data_analytest(analyte_type={analyte_type})...",
+            f"get_search_data_analytes(analyte_type={analyte_type})...",
             file=sys.stderr,
         )
 
