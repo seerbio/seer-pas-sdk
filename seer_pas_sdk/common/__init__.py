@@ -146,7 +146,9 @@ def download_df(url, is_tsv=True, dtype={}, usecols=None):
         if usecols is None:
             csv = pd.read_csv(url, sep="\t", dtype=dtype)
         else:
-            csv = pd.read_csv(url, sep="\t", dtype=dtype, usecols=lambda x: x in usecols)
+            csv = pd.read_csv(
+                url, sep="\t", dtype=dtype, usecols=lambda x: x in usecols
+            )
     else:
         if usecols is None:
             csv = pd.read_csv(url, dtype=dtype)

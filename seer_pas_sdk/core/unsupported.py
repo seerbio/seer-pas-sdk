@@ -1622,13 +1622,13 @@ class _UnsupportedSDK(_SeerSDK):
 
                 # Merge report to search results to get Q value and other properties
                 columns = ["Run", "Protein.Group", "Protein.Q.Value"]
-                if analyte_type == 'peptide':
+                if analyte_type == "peptide":
                     columns = ["Run", "Stripped.Sequence", "RT", "iRT"]
                 analytes = self.get_search_result(
                     analysis_id=analysis_id,
                     analyte_type="precursor",
                     rollup="np",
-                    columns=columns
+                    columns=columns,
                 )
                 # pandas Dataframe.rename() default behavior is to ignore the columns that do not exist in the data frame.
                 analytes.rename(
