@@ -1551,7 +1551,9 @@ class _UnsupportedSDK(_SeerSDK):
                     )
                 intensity_column = "PepCal Intensities Log10"
             elif norm_method == "pepcal.batch":
-                if not ("PepCal Batch Intensities Log10" in search_results.columns):
+                if not (
+                    "PepCal Batch Intensities Log10" in search_results.columns
+                ):
                     raise ValueError(
                         "Pepcal normalized batch corrected intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later with the Seer Peptide Calibrant option enabled. \n Please retry using different norm_method, such as 'median'"
                     )
