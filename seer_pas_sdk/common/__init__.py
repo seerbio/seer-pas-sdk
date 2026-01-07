@@ -99,7 +99,7 @@ def dict_to_df(data):
 
 
 # Most cases appear to be a .tsv file.
-def download_df(url, is_tsv=True, dtype={}):
+def download_df(url, is_tsv=True, dtype={}, usecols=None):
     """
     Fetches a TSV/CSV file from a URL and returns as a Pandas DataFrame.
 
@@ -113,6 +113,9 @@ def download_df(url, is_tsv=True, dtype={}):
 
     dtype : dict
         Data type conversion when intaking columns. e.g. {'a': str, 'b': np.float64}
+
+    usecols : list
+        Subset of columns to seelct, denoted by column names.
 
     Returns
     -------
@@ -140,9 +143,15 @@ def download_df(url, is_tsv=True, dtype={}):
     if not url:
         return pd.DataFrame()
     if is_tsv:
-        csv = pd.read_csv(url, sep="\t", dtype=dtype)
+        if usecols is None:
+            csv = pd.read_csv(url, sep="\t", dtype=dtype)
+        else:
+            csv = pd.read_csv(url, sep="\t", dtype=dtype, usecols=lambda x: x in usecols)
     else:
-        csv = pd.read_csv(url, dtype=dtype)
+        if usecols is None:
+            csv = pd.read_csv(url, dtype=dtype)
+        else:
+            csv = pd.read_csv(url, dtype=dtype, usecols=lambda x: x in usecols)
     return csv
 
 

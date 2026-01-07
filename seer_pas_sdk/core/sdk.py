@@ -2382,7 +2382,7 @@ class SeerSDK:
             return files
 
     def get_search_result(
-        self, analysis_id: str, analyte_type: str, rollup: str
+        self, analysis_id: str, analyte_type: str, rollup: str, columns: list[str] = None
     ):
         """
         Load one of the files available via the "Download result files" button on the PAS UI.
@@ -2447,10 +2447,18 @@ class SeerSDK:
                     dtype=dtype,
                 )
         else:
+            if columns is None:
+                columnsExperiment = ["Run"]
+                columnsProtein = ["Protein.Group", "Protein.Ids", "Protein.Names", "Genes"]
+                columnsPeptide = ["Stripped.Sequence", "Modified.Sequence", "Proteotypic"]
+                columnsPrecursor = ["Precursor.Id", "Precursor.Charge", "Precursor.Quantity", "RT", "iRT", "IM", "iIM"]
+                columnsQValue = ["Q.Value", "Protein.Q.Value", "Global.Q.Value", "Global.PG.Q.Value", "Lib.Q.Value", "Lib.PG.Q.Value"]
+                columns = [*columnsExperiment, *columnsProtein, *columnsPeptide, *columnsPrecursor, *columnsQValue]
             return download_df(
                 self.get_search_result_file_url(
                     analysis_id, filename="report.tsv"
-                )["url"]
+                )["url"],
+                usecols=columns,
             )
 
     def download_search_output_file(
