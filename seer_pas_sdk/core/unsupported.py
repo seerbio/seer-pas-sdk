@@ -1473,7 +1473,7 @@ class _UnsupportedSDK(_SeerSDK):
             analysis_id (str): ID of the analysis.
             analyte_type (str): Type of the analyte. Must be either 'protein', 'peptide', precursor.
             rollup (str): Intensities rollup method. Must be either 'np' or 'panel'.
-            norm_method (str): Search engine. Supported engines are: raw, engine, median, median80, pepcal. Default is 'pepcal'.
+            norm_method (str): Search engine. Supported engines are: raw, engine, median, median80, pepcal, pepcal_batch. Default is 'pepcal'.
 
         Returns:
             pd.DataFrame: A dataframe with each row containing the analyte intensity measurement:
@@ -1550,7 +1550,7 @@ class _UnsupportedSDK(_SeerSDK):
                         "Pepcal normalized intensities not found in search results. This is only available with analyses processed with DIA-NN Seer Protocol v2.0 or later with the Seer Peptide Calibrant option enabled. \n Please retry using different norm_method, such as 'median'"
                     )
                 intensity_column = "PepCal Intensities Log10"
-            elif norm_method == "pepcal.batch":
+            elif norm_method == "pepcal_batch":
                 if not (
                     "PepCal Batch Intensities Log10" in search_results.columns
                 ):
