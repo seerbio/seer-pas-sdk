@@ -1828,7 +1828,10 @@ class _UnsupportedSDK(_SeerSDK):
             *columnsQValue,
         ]
         report_results = self.get_search_result(
-            analysis_id=analysis_id, analyte_type="precursor", rollup="np", columns=columns
+            analysis_id=analysis_id,
+            analyte_type="precursor",
+            rollup="np",
+            columns=columns,
         )
         report_results.rename(
             columns={
