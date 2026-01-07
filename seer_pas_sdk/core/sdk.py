@@ -2427,6 +2427,7 @@ class SeerSDK:
                         "npLink"
                     ]["url"],
                     dtype=dtype,
+                    usecols=columns,
                 )
             elif rollup == "panel":
                 return download_df(
@@ -2434,6 +2435,7 @@ class SeerSDK:
                         "panelLink"
                     ]["url"],
                     dtype=dtype,
+                    usecols=columns,
                 )
         elif analyte_type == "peptide":
             if rollup == "np":
@@ -2442,6 +2444,7 @@ class SeerSDK:
                         "npLink"
                     ]["url"],
                     dtype=dtype,
+                    usecols=columns,
                 )
             elif rollup == "panel":
                 return download_df(
@@ -2449,6 +2452,7 @@ class SeerSDK:
                         "panelLink"
                     ]["url"],
                     dtype=dtype,
+                    usecols=columns,
                 )
         else:
             return download_df(
