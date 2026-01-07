@@ -115,7 +115,7 @@ def download_df(url, is_tsv=True, dtype={}, usecols=None):
         Data type conversion when intaking columns. e.g. {'a': str, 'b': np.float64}
 
     usecols : list
-        Subset of columns to seelct, denoted by column names.
+        Subset of columns to download. If not specified, downloads all columns.
 
     Returns
     -------
