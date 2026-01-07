@@ -2386,7 +2386,7 @@ class SeerSDK:
         analysis_id: str,
         analyte_type: str,
         rollup: str,
-        columns: list[str] = None,
+        columns: _List[str] = None,
     ):
         """
         Load one of the files available via the "Download result files" button on the PAS UI.
