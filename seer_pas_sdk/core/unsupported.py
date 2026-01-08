@@ -1825,7 +1825,7 @@ class _UnsupportedSDK(_SeerSDK):
             columns += [
                 *columnsPeptide,
                 *columnsPrecursor,
-                *columnsPrecursorQValue
+                *columnsPrecursorQValue,
             ]
         report_results = self.get_search_result(
             analysis_id=analysis_id,
