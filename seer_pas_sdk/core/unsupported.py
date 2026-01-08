@@ -1792,12 +1792,10 @@ class _UnsupportedSDK(_SeerSDK):
         search_results.drop_duplicates(subset=["Protein Group"], inplace=True)
 
         # 2. fetch precursor report to extract analyte-specific details
-        columnsExperiment = ["Run"]
         columnsProtein = [
             "Protein.Group",
             "Protein.Ids",
             "Protein.Names",
-            "Genes",
         ]
         columnsPeptide = [
             "Stripped.Sequence",
@@ -1809,23 +1807,22 @@ class _UnsupportedSDK(_SeerSDK):
             "Precursor.Quantity",
             "Modified.Sequence",
         ]
-        columnsPQQValue = [
+        columnsPGQValue = [
             "Global.PG.Q.Value",
             "Lib.PG.Q.Value",
         ]
-        columnsQValue = [
+        columnsPrecursorQValue = [
             "Global.Q.Value",
             "Lib.Q.Value",
         ]
         columns = [
-            *columnsExperiment,
             *columnsProtein,
-            *columnsPQQValue,
+            *columnsPGQValue,
         ]
         if analyte_type == "peptide":
             columns += [*columnsPeptide]
         elif analyte_type == "precursor":
-            columns += [*columnsPeptide, *columnsPrecursor, *columnsQValue]
+            columns += [*columnsPeptide, *columnsPrecursor, *columnsPrecursorQValue]
         report_results = self.get_search_result(
             analysis_id=analysis_id,
             analyte_type="precursor",
@@ -1871,14 +1868,6 @@ class _UnsupportedSDK(_SeerSDK):
             return df
 
         if analyte_type == "protein":
-            report_results = report_results[
-                [
-                    "Protein Group",
-                    "Protein.Ids",
-                    "Global.PG.Q.Value",
-                    "Lib.PG.Q.Value",
-                ]
-            ]
             report_results.drop_duplicates(
                 subset=["Protein Group"], inplace=True
             )
@@ -1889,20 +1878,16 @@ class _UnsupportedSDK(_SeerSDK):
                 how="left",
             )
         elif analyte_type == "peptide":
-
-            # keep only the relevant columns
-            report_results = report_results[
+            search_results = search_results[
                 [
-                    "Peptide",
                     "Protein Group",
-                    "Protein.Ids",
-                    "Protein.Names",
-                    # no "Genes" -- taken from protein group
-                    "Proteotypic",
-                    "Global.PG.Q.Value",
-                    "Lib.PG.Q.Value",
+                    "Protein Names",
+                    "Gene Names",
                 ]
             ]
+            search_results.drop_duplicates(
+                subset=["Protein Group"], inplace=True
+            )
             report_results.drop_duplicates(inplace=True)
             report_results = fix_peptide_to_protein_group_assignment(
                 report_results
@@ -1915,15 +1900,6 @@ class _UnsupportedSDK(_SeerSDK):
                 on=["Protein Group"],
                 how="left",
             )
-            df = df[
-                [
-                    "Peptide",
-                    "Protein Group",
-                    "Protein.Ids",
-                    "Protein Names",
-                    "Gene Names",
-                ]
-            ]
         else:
             # precursor
             search_results = search_results[
@@ -1936,23 +1912,6 @@ class _UnsupportedSDK(_SeerSDK):
             search_results.drop_duplicates(
                 subset=["Protein Group"], inplace=True
             )
-            report_results = report_results[
-                [
-                    "Precursor.Id",
-                    "Precursor.Charge",
-                    "Peptide",
-                    "Protein Group",
-                    "Protein.Ids",
-                    "Protein.Names",
-                    "Genes",
-                    "Modified.Peptide",
-                    "Proteotypic",
-                    "Global.Q.Value",
-                    "Global.PG.Q.Value",
-                    "Lib.Q.Value",
-                    "Lib.PG.Q.Value",
-                ]
-            ]
             report_results.drop_duplicates(inplace=True)
 
             report_results = fix_peptide_to_protein_group_assignment(
@@ -1969,23 +1928,6 @@ class _UnsupportedSDK(_SeerSDK):
                 on=["Protein Group"],
                 how="left",
             )
-            df = df[
-                [
-                    "Precursor.Id",
-                    "Precursor.Charge",
-                    "Peptide",
-                    "Protein Group",
-                    "Protein.Ids",
-                    "Protein.Names",
-                    "Modified.Peptide",
-                    "Proteotypic",
-                    "Global.Q.Value",
-                    "Global.PG.Q.Value",
-                    "Lib.Q.Value",
-                    "Lib.PG.Q.Value",
-                    "Gene Names",
-                ]
-            ]
         # endif
         df.columns = [title_case_to_snake_case(x) for x in df.columns]
 
