@@ -1654,7 +1654,7 @@ class _UnsupportedSDK(_SeerSDK):
                 if analyte_type == "protein":
                     columns = ["Run", "Protein.Group", "Protein.Q.Value"]
                 elif analyte_type == "peptide":
-                  columns = ["Run", "Stripped.Sequence", "Protein.Q.Value"]
+                    columns = ["Run", "Stripped.Sequence", "Protein.Q.Value"]
                 analytes = self.get_search_result(
                     analysis_id=analysis_id,
                     analyte_type="precursor",
@@ -1959,7 +1959,8 @@ class _UnsupportedSDK(_SeerSDK):
                 report_results
             )
             report_results.drop_duplicates(
-                subset=["Peptide", "Modified.Peptide", "Precursor.Charge"], inplace=True
+                subset=["Peptide", "Modified.Peptide", "Precursor.Charge"],
+                inplace=True,
             )
 
             df = pd.merge(

@@ -142,7 +142,9 @@ def download_df(url, is_tsv=True, dtype={}, usecols=None):
 
     if not url:
         return pd.DataFrame()
-    csv = pd.read_csv(url, dtype=dtype, sep="\t" if is_tsv else ",", usecols=usecols)
+    csv = pd.read_csv(
+        url, dtype=dtype, sep="\t" if is_tsv else ",", usecols=usecols
+    )
     return csv
 
 
