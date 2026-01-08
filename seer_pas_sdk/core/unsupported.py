@@ -1822,7 +1822,11 @@ class _UnsupportedSDK(_SeerSDK):
         if analyte_type == "peptide":
             columns += [*columnsPeptide]
         elif analyte_type == "precursor":
-            columns += [*columnsPeptide, *columnsPrecursor, *columnsPrecursorQValue]
+            columns += [
+                *columnsPeptide,
+                *columnsPrecursor,
+                *columnsPrecursorQValue
+            ]
         report_results = self.get_search_result(
             analysis_id=analysis_id,
             analyte_type="precursor",
