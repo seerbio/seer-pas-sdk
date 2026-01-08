@@ -1792,12 +1792,11 @@ class _UnsupportedSDK(_SeerSDK):
         search_results.drop_duplicates(subset=["Protein Group"], inplace=True)
 
         # 2. fetch precursor report to extract analyte-specific details
-        columnsProtein = [
+        columnsPG = [
             "Protein.Group",
-            "Protein.Ids",
-            "Protein.Names",
         ]
         columnsPeptide = [
+            "Protein.Ids",
             "Stripped.Sequence",
             "Proteotypic",
         ]
@@ -1816,7 +1815,7 @@ class _UnsupportedSDK(_SeerSDK):
             "Lib.Q.Value",
         ]
         columns = [
-            *columnsProtein,
+            *columnsPG,
             *columnsPGQValue,
         ]
         if analyte_type == "peptide":
@@ -1889,9 +1888,6 @@ class _UnsupportedSDK(_SeerSDK):
                     "Gene Names",
                 ]
             ]
-            search_results.drop_duplicates(
-                subset=["Protein Group"], inplace=True
-            )
             report_results.drop_duplicates(inplace=True)
             report_results = fix_peptide_to_protein_group_assignment(
                 report_results
@@ -1913,9 +1909,6 @@ class _UnsupportedSDK(_SeerSDK):
                     "Gene Names",
                 ]
             ]
-            search_results.drop_duplicates(
-                subset=["Protein Group"], inplace=True
-            )
             report_results.drop_duplicates(inplace=True)
 
             report_results = fix_peptide_to_protein_group_assignment(
