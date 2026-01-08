@@ -1499,7 +1499,7 @@ class _UnsupportedSDK(_SeerSDK):
         }
 
         # 2. Get search results
-        # pull the np/panel file, or report.tsv for precursor mode
+        # pull the np/panel file, or the relevant columns from the report.tsv for precursor mode
         columns = None
         if analyte_type == "precursor" and rollup == "np":
             columnsExperiment = ["Run"]
@@ -1651,9 +1651,10 @@ class _UnsupportedSDK(_SeerSDK):
                 ]
 
                 # Merge report to search results to get Q value and other properties
-                columns = ["Run", "Protein.Group", "Protein.Q.Value"]
-                if analyte_type == "peptide":
-                    columns = ["Run", "Stripped.Sequence"]
+                if analyte_type == "protein":
+                    columns = ["Run", "Protein.Group", "Protein.Q.Value"]
+                elif analyte_type == "peptide":
+                  columns = ["Run", "Stripped.Sequence", "Protein.Q.Value"]
                 analytes = self.get_search_result(
                     analysis_id=analysis_id,
                     analyte_type="precursor",
@@ -1800,33 +1801,31 @@ class _UnsupportedSDK(_SeerSDK):
         ]
         columnsPeptide = [
             "Stripped.Sequence",
-            "Modified.Sequence",
             "Proteotypic",
         ]
         columnsPrecursor = [
             "Precursor.Id",
             "Precursor.Charge",
             "Precursor.Quantity",
-            "RT",
-            "iRT",
-            "IM",
-            "iIM",
+            "Modified.Sequence",
+        ]
+        columnsPQQValue = [
+            "Global.PG.Q.Value",
+            "Lib.PG.Q.Value",
         ]
         columnsQValue = [
-            "Q.Value",
-            "Protein.Q.Value",
             "Global.Q.Value",
-            "Global.PG.Q.Value",
             "Lib.Q.Value",
-            "Lib.PG.Q.Value",
         ]
         columns = [
             *columnsExperiment,
             *columnsProtein,
-            *columnsPeptide,
-            *columnsPrecursor,
-            *columnsQValue,
+            *columnsPQQValue,
         ]
+        if analyte_type == "peptide":
+            columns += [*columnsPeptide]
+        elif analyte_type == "precursor":
+            columns += [*columnsPeptide, *columnsPrecursor, *columnsQValue]
         report_results = self.get_search_result(
             analysis_id=analysis_id,
             analyte_type="precursor",
@@ -1960,7 +1959,7 @@ class _UnsupportedSDK(_SeerSDK):
                 report_results
             )
             report_results.drop_duplicates(
-                subset=["Peptide", "Precursor.Charge"], inplace=True
+                subset=["Peptide", "Modified.Peptide", "Precursor.Charge"], inplace=True
             )
 
             df = pd.merge(
