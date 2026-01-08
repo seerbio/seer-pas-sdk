@@ -1225,8 +1225,8 @@ class SeerSDK:
 
         >>> seer_sdk.get_msruns(sample_ids)
         >>> [
-            {"id": "SAMPLE_ID_1_HERE" ... },
-            {"id": "SAMPLE_ID_2_HERE" ... }
+            {"id": "MSRUN_ID_1_HERE" ... },
+            {"id": "MSRUN_ID_2_HERE" ... }
         ]
 
         >>> seer_sdk.get_msruns(sample_ids, as_df=True)
@@ -1292,8 +1292,8 @@ class SeerSDK:
 
         >>> seer_sdk.find_msruns(sample_ids)
         >>> [
-            {"id": "SAMPLE_ID_1_HERE" ... },
-            {"id": "SAMPLE_ID_2_HERE" ... }
+            {"id": "MSRUN_ID_1_HERE" ... },
+            {"id": "MSRUN_ID_2_HERE" ... }
         ]
 
         >>> seer_sdk.find_msruns(sample_ids, as_df=True)
@@ -1324,11 +1324,17 @@ class SeerSDK:
             res += [x for x in msdatas.json()["data"]]
 
         spaces = {x["id"]: x["usergroup_name"] for x in self.get_spaces()}
+
+        def filepath_to_msrunid(filepath):
+            return os.path.basename(filepath).split(".")[0]
+
         for entry in res:
             if "tenant_id" in entry:
                 del entry["tenant_id"]
 
             if "raw_file_path" in entry:
+                # Provide a human-readable MS run id
+                entry["Run"] = filepath_to_msrunid(entry["raw_file_path"])
                 # Simple lambda function to find the third occurrence of '/' in the raw file path
                 location = lambda s: len(s) - len(s.split("/", 3)[-1])
                 # Slicing the string from the location
@@ -1338,6 +1344,13 @@ class SeerSDK:
             if "user_group" in entry:
                 entry["space"] = spaces.get(entry["user_group"], "General")
                 del entry["user_group"]
+
+            # Rename the key sample_id to sample_uuid
+            if "sample_id" in entry:
+                entry["sample_uuid"] = entry.pop("sample_id")
+            # Rename the key sample_id_tracking to sample_id
+            if "sample_id_tracking" in entry:
+                entry["sample_id"] = entry.pop("sample_id_tracking")
 
         if not res and as_df:
             return pd.DataFrame(columns=MSRUN_COLUMNS)
