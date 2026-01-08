@@ -2382,7 +2382,11 @@ class SeerSDK:
             return files
 
     def get_search_result(
-        self, analysis_id: str, analyte_type: str, rollup: str
+        self,
+        analysis_id: str,
+        analyte_type: str,
+        rollup: str,
+        columns: _List[str] = None,
     ):
         """
         Load one of the files available via the "Download result files" button on the PAS UI.
@@ -2423,6 +2427,7 @@ class SeerSDK:
                         "npLink"
                     ]["url"],
                     dtype=dtype,
+                    usecols=columns,
                 )
             elif rollup == "panel":
                 return download_df(
@@ -2430,6 +2435,7 @@ class SeerSDK:
                         "panelLink"
                     ]["url"],
                     dtype=dtype,
+                    usecols=columns,
                 )
         elif analyte_type == "peptide":
             if rollup == "np":
@@ -2438,6 +2444,7 @@ class SeerSDK:
                         "npLink"
                     ]["url"],
                     dtype=dtype,
+                    usecols=columns,
                 )
             elif rollup == "panel":
                 return download_df(
@@ -2445,12 +2452,14 @@ class SeerSDK:
                         "panelLink"
                     ]["url"],
                     dtype=dtype,
+                    usecols=columns,
                 )
         else:
             return download_df(
                 self.get_search_result_file_url(
                     analysis_id, filename="report.tsv"
-                )["url"]
+                )["url"],
+                usecols=columns,
             )
 
     def download_search_output_file(
