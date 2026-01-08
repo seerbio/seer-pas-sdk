@@ -1629,10 +1629,7 @@ class _UnsupportedSDK(_SeerSDK):
                     {k: v["id"] for k, v in msrunid_to_info.items()}
                 )
                 search_results["Sample ID"] = search_results["Run"].map(
-                    {
-                        k: v["sample_id"]
-                        for k, v in msrunid_to_info.items()
-                    }
+                    {k: v["sample_id"] for k, v in msrunid_to_info.items()}
                 )
                 search_results["Sample UUID"] = search_results["Run"].map(
                     {k: v["sample_uuid"] for k, v in msrunid_to_info.items()}
