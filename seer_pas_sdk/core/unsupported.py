@@ -1639,6 +1639,7 @@ class _UnsupportedSDK(_SeerSDK):
                 )
                 experiment_columns = [
                     "MsRun UUID",
+                    "Run",
                     "Nanoparticle",
                     "Sample UUID",
                     "Sample ID",
@@ -1720,6 +1721,7 @@ class _UnsupportedSDK(_SeerSDK):
             )
             experiment_columns = [
                 "MsRun UUID",
+                "Run",
                 "Nanoparticle",
                 "Sample UUID",
                 "Sample ID",
