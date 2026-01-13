@@ -1493,10 +1493,7 @@ class _UnsupportedSDK(_SeerSDK):
         sample_name_to_uuid = {s["sample_name"]: s["id"] for s in samples}
 
         msruns = self.find_msruns(sample_ids=[s["id"] for s in samples])
-        msrunid_to_info = {
-            filepath_to_msrunid(msrun["raw_file_path"]): msrun
-            for msrun in msruns
-        }
+        msrunid_to_info = {msrun["Run"]: msrun for msrun in msruns}
 
         # 2. Get search results
         # pull the np/panel file, or the relevant columns from the report.tsv for precursor mode
@@ -1632,19 +1629,17 @@ class _UnsupportedSDK(_SeerSDK):
                     {k: v["id"] for k, v in msrunid_to_info.items()}
                 )
                 search_results["Sample ID"] = search_results["Run"].map(
-                    {
-                        k: v["sample_id_tracking"]
-                        for k, v in msrunid_to_info.items()
-                    }
+                    {k: v["sample_id"] for k, v in msrunid_to_info.items()}
                 )
                 search_results["Sample UUID"] = search_results["Run"].map(
-                    {k: v["sample_id"] for k, v in msrunid_to_info.items()}
+                    {k: v["sample_uuid"] for k, v in msrunid_to_info.items()}
                 )
                 search_results["Nanoparticle"] = search_results["Run"].map(
                     {k: v["nanoparticle"] for k, v in msrunid_to_info.items()}
                 )
                 experiment_columns = [
                     "MsRun UUID",
+                    "Run",
                     "Nanoparticle",
                     "Sample UUID",
                     "Sample ID",
@@ -1726,6 +1721,7 @@ class _UnsupportedSDK(_SeerSDK):
             )
             experiment_columns = [
                 "MsRun UUID",
+                "Run",
                 "Nanoparticle",
                 "Sample UUID",
                 "Sample ID",
